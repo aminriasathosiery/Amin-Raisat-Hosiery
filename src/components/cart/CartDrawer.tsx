@@ -80,7 +80,7 @@ export const CartDrawer: React.FC = () => {
 
   if (!isDrawerOpen) return null;
 
-  const minRetailQty = settings.shipping?.minOrderQty || 3;
+  const minRetailQty = settings.shipping?.minOrderQty || 1;
   const isRetailMinMet = totalQuantity >= minRetailQty;
   const canCheckout = hasWholesaleItems ? isWholesaleMinimumMet : isRetailMinMet;
   const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;

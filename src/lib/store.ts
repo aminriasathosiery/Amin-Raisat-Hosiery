@@ -521,7 +521,9 @@ export class DataStore {
                   size: v.size,
                   price: Number(v.price) || 0,
                   salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-                  wholesalePrice: v.wholesale_price ? Number(v.wholesale_price) : Math.round((Number(v.price) || 480) * 0.82),
+                  wholesalePrice: v.wholesale_price !== undefined && v.wholesale_price !== null && !isNaN(Number(v.wholesale_price))
+                    ? Number(v.wholesale_price)
+                    : Math.round((Number(v.price) || 480) * 0.82),
                   wholesaleTiers: Array.isArray(v.wholesale_tiers) ? v.wholesale_tiers : undefined,
                   stock: Number(v.stock) || 0,
                   sku: v.sku || '',
@@ -1220,6 +1222,12 @@ export class DataStore {
             announcementStrips: siteData?.announcement_strips || INITIAL_SITE_SETTINGS.announcementStrips,
             isStoreOpen: siteData?.is_store_open ?? true,
             announcementText: siteData?.announcement_text || INITIAL_SITE_SETTINGS.announcementText,
+            wholesale: siteData?.wholesale || {
+              ...INITIAL_SITE_SETTINGS.wholesale,
+              isEnabled: siteData?.wholesale_enabled ?? true,
+              defaultMinQty: siteData?.wholesale_min_qty ? Number(siteData.wholesale_min_qty) : 12,
+              minQuantity: siteData?.wholesale_min_qty ? Number(siteData.wholesale_min_qty) : 12,
+            },
           };
         }
       } catch (err) {
@@ -1292,6 +1300,11 @@ export class DataStore {
         }
         if (settings.paymentMethods) {
           siteUpdatePayload.payment_methods = settings.paymentMethods;
+        }
+        if (settings.wholesale) {
+          siteUpdatePayload.wholesale = settings.wholesale;
+          siteUpdatePayload.wholesale_enabled = settings.wholesale.isEnabled ?? true;
+          siteUpdatePayload.wholesale_min_qty = Number(settings.wholesale.defaultMinQty || settings.wholesale.minQuantity) || 12;
         }
         await adminDb
           .from('site_settings')

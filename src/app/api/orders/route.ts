@@ -102,13 +102,20 @@ export async function POST(req: Request) {
     });
 
     // 3. Authoritative verification of all items & compute subtotal
+    const totalItemCount = items.reduce(
+      (sum: number, it: any) => sum + Math.max(1, Number(it.quantity) || 1),
+      0
+    );
+    const hasWholesale =
+      Boolean(clientIsWholesale) ||
+      items.some((it: any) => Boolean(it.isWholesale)) ||
+      totalItemCount >= wholesaleMinQty;
+
     let subtotal = 0;
     let totalSavings = 0;
-    let totalItemCount = 0;
 
     const verifiedItems = items.map((clientItem: any) => {
       const qty = Math.max(1, Number(clientItem.quantity) || 1);
-      totalItemCount += qty;
 
       // Find variant in DB or in initial data
       let variant = dbVariants.find(
@@ -127,24 +134,41 @@ export async function POST(req: Request) {
 
       if (variant) {
         retailPrice = Number(variant.sale_price) || Number(variant.price) || 480;
-        wholesalePrice = Number(variant.wholesale_price) || Math.round(retailPrice * 0.82);
+        wholesalePrice =
+          variant.wholesale_price !== undefined &&
+          variant.wholesale_price !== null &&
+          !isNaN(Number(variant.wholesale_price))
+            ? Number(variant.wholesale_price)
+            : Math.round(retailPrice * 0.82);
       } else {
         const initialVar =
           initialVariantsMap.get(clientItem.variantId) ||
-          initialVariantsMap.get(`${clientItem.productId}_${clientItem.quality}_${clientItem.sleeve}_${clientItem.size}`);
+          initialVariantsMap.get(
+            `${clientItem.productId}_${clientItem.quality}_${clientItem.sleeve}_${clientItem.size}`
+          );
         if (initialVar) {
           retailPrice = Number(initialVar.salePrice) || Number(initialVar.price) || 480;
-          wholesalePrice = Number(initialVar.wholesalePrice) || Math.round(retailPrice * 0.82);
+          wholesalePrice =
+            initialVar.wholesalePrice !== undefined &&
+            initialVar.wholesalePrice !== null &&
+            !isNaN(Number(initialVar.wholesalePrice))
+              ? Number(initialVar.wholesalePrice)
+              : Math.round(retailPrice * 0.82);
           productName = initialVar.productName || productName;
         } else {
-          retailPrice = Number(clientItem.unitPrice) || 480;
-          wholesalePrice = Math.round(retailPrice * 0.82);
+          retailPrice = Number(clientItem.regularPrice || clientItem.unitPrice) || 480;
+          wholesalePrice =
+            clientItem.wholesalePrice !== undefined &&
+            clientItem.wholesalePrice !== null &&
+            !isNaN(Number(clientItem.wholesalePrice))
+              ? Number(clientItem.wholesalePrice)
+              : Math.round(retailPrice * 0.82);
         }
       }
 
-      // Check wholesale criteria
-      const isEligibleForWholesale = clientIsWholesale || totalItemCount >= wholesaleMinQty;
-      unitPrice = isEligibleForWholesale ? wholesalePrice : retailPrice;
+      // Check wholesale criteria for this item
+      const isItemWholesale = Boolean(clientItem.isWholesale) || hasWholesale;
+      unitPrice = isItemWholesale ? wholesalePrice : retailPrice;
 
       const itemTotal = unitPrice * qty;
       const normalTotal = retailPrice * qty;
@@ -161,6 +185,9 @@ export async function POST(req: Request) {
         sleeve: clientItem.sleeve || variant?.sleeve || 'Sleeveless',
         size: clientItem.size || variant?.size || 'L',
         unitPrice,
+        regularPrice: retailPrice,
+        wholesalePrice,
+        isWholesale: isItemWholesale,
         quantity: qty,
         totalPrice: itemTotal,
         image: clientItem.image || null,
@@ -168,17 +195,25 @@ export async function POST(req: Request) {
     });
 
     // Enforce MOQ check
-    if (totalItemCount < minOrderQty) {
+    if (hasWholesale && totalItemCount < wholesaleMinQty) {
       return NextResponse.json(
         {
-          error: `Minimum order quantity requirement not met. Minimum ${minOrderQty} pieces required per order.`,
+          error: `Wholesale order quantity requirement not met. Minimum ${wholesaleMinQty} pieces required for wholesale pricing.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!hasWholesale && totalItemCount < 1) {
+      return NextResponse.json(
+        {
+          error: 'Please add at least 1 item to place an order.',
         },
         { status: 400 }
       );
     }
 
     // Determine final delivery fee
-    const hasWholesale = totalItemCount >= wholesaleMinQty || clientIsWholesale;
     let deliveryFee = baseDeliveryCharge;
     if (totalItemCount >= freeDeliveryThreshold || hasWholesale) {
       deliveryFee = 0;
@@ -236,7 +271,6 @@ export async function POST(req: Request) {
           console.warn('Initial order insert failed, attempting clean fallback:', ordErr.message);
           const fallbackPayload: any = {
             order_number: orderNumber,
-            user_id: orderPayload.user_id,
             customer_name: cleanName,
             customer_phone: cleanPhone,
             customer_email: customerEmail?.trim() || null,
@@ -267,10 +301,14 @@ export async function POST(req: Request) {
         if (!ordErr && insertedOrder) {
           orderId = insertedOrder.id;
 
+          const isUuid = (id?: string | null) =>
+            typeof id === 'string' &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
           const itemsPayload = verifiedItems.map((it: any) => ({
             order_id: insertedOrder.id,
-            product_id: it.productId,
-            variant_id: it.variantId,
+            product_id: isUuid(it.productId) ? it.productId : null,
+            variant_id: isUuid(it.variantId) ? it.variantId : null,
             product_name: it.productName,
             quality: it.quality,
             sleeve: it.sleeve,

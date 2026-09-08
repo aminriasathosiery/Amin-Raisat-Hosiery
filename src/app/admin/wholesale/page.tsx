@@ -132,7 +132,9 @@ export default function AdminWholesalePage() {
     setSelectedProductForModal(prod);
     const preparedVariants = (prod.variants || []).map((v) => ({
       ...v,
-      wholesalePrice: v.wholesalePrice ? Number(v.wholesalePrice) : Math.round((Number(v.price) || 480) * 0.82),
+      wholesalePrice: v.wholesalePrice !== undefined && v.wholesalePrice !== null && !isNaN(Number(v.wholesalePrice))
+        ? Number(v.wholesalePrice)
+        : Math.round((Number(v.price) || 480) * 0.82),
     }));
     setModalVariants(preparedVariants);
     setModalIsWholesaleEnabled(prod.isWholesaleEnabled !== false);
@@ -141,7 +143,7 @@ export default function AdminWholesalePage() {
 
   const handleModalVariantWholesaleChange = (variantId: string, newWholesale: number) => {
     setModalVariants((prev) =>
-      prev.map((v) => (v.id === variantId ? { ...v, wholesalePrice: newWholesale } : v))
+      prev.map((v) => (v.id === variantId ? { ...v, wholesalePrice: Number(newWholesale) || 0 } : v))
     );
   };
 
@@ -168,7 +170,10 @@ export default function AdminWholesalePage() {
       ...selectedProductForModal,
       isWholesaleEnabled: modalIsWholesaleEnabled,
       wholesaleMinQty: Number(modalMinQty) || 12,
-      variants: modalVariants,
+      variants: modalVariants.map((v) => ({
+        ...v,
+        wholesalePrice: Number(v.wholesalePrice) || 0,
+      })),
     };
 
     try {

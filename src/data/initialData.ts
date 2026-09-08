@@ -55,7 +55,7 @@ export const INITIAL_HERO_SLIDES: HeroSlide[] = [
 ];
 
 export const INITIAL_SHIPPING_SETTINGS: ShippingSettings = {
-  minOrderQty: 3,
+  minOrderQty: 1,
   maxOrderQty: 12,
   baseDeliveryCharge: 200,
   freeDeliveryThreshold: 3,

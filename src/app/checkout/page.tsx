@@ -135,7 +135,7 @@ export default function CheckoutPage() {
   }
 
   // Retail Minimum Order Check
-  const minRetailQty = settings.shipping.minOrderQty || 3;
+  const minRetailQty = settings.shipping.minOrderQty || 1;
   if (!hasWholesaleItems && totalQuantity < minRetailQty) {
     return (
       <div className="max-w-xl mx-auto px-4 py-24 text-center space-y-4 bg-light-bg dark:bg-[#11110F] text-charcoal-900 dark:text-[#F4F1E9] min-h-[70vh] flex flex-col items-center justify-center">

@@ -7,7 +7,7 @@ import { useStore } from '@/context/StoreContext';
 export const FeaturesSection: React.FC = () => {
   const { settings } = useStore();
   const freeThreshold = settings.shipping?.freeDeliveryThreshold ?? 3;
-  const minOrder = settings.shipping?.minOrderQty ?? 3;
+  const minOrder = settings.shipping?.minOrderQty ?? 1;
   const baseCharge = settings.shipping?.baseDeliveryCharge ?? 200;
 
   return (
@@ -34,7 +34,7 @@ export const FeaturesSection: React.FC = () => {
               </div>
               <h3 className="text-base font-bold text-charcoal-900 dark:text-gray-100">Nationwide Free Delivery</h3>
               <p className="text-xs text-charcoal-600 dark:text-gray-400 leading-relaxed font-normal">
-                Minimum order is {minOrder} pieces. Orders of <strong className="text-[#A07D38] dark:text-gold-400">{freeThreshold} or more pieces</strong> unlock <strong className="text-emerald-700 dark:text-emerald-400">100% FREE DELIVERY</strong> anywhere in Pakistan.
+                Order from {minOrder} piece. Orders of <strong className="text-[#A07D38] dark:text-gold-400">{freeThreshold} or more pieces</strong> unlock <strong className="text-emerald-700 dark:text-emerald-400">100% FREE DELIVERY</strong> anywhere in Pakistan.
               </p>
             </div>
             <div className="mt-5 pt-3.5 border-t border-light-border dark:border-dark-border flex items-center justify-between text-xs font-semibold text-charcoal-700 dark:text-gray-300">

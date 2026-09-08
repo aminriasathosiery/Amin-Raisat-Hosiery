@@ -41,7 +41,7 @@ export default function CartPage() {
   } = useCart();
   const { settings } = useStore();
 
-  const minRetailQty = settings.shipping.minOrderQty || 3;
+  const minRetailQty = settings.shipping.minOrderQty || 1;
   const isRetailMinMet = totalQuantity >= minRetailQty;
   const canProceed = hasWholesaleItems ? isWholesaleMinimumMet : isRetailMinMet;
   const freeThreshold = settings.shipping.freeDeliveryThreshold || 3;

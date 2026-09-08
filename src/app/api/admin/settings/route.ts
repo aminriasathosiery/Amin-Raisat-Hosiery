@@ -43,7 +43,7 @@ export async function GET() {
       market: siteData?.market || INITIAL_SITE_SETTINGS.market,
       currency: siteData?.currency || INITIAL_SITE_SETTINGS.currency,
       shipping: {
-        minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Number(shipData.min_order_qty) : INITIAL_SITE_SETTINGS.shipping.minOrderQty,
+        minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Math.min(1, Number(shipData.min_order_qty)) : 1,
         maxOrderQty: shipData?.max_order_qty !== undefined && shipData?.max_order_qty !== null ? Number(shipData.max_order_qty) : INITIAL_SITE_SETTINGS.shipping.maxOrderQty,
         baseDeliveryCharge: shipData?.base_delivery_charge !== undefined && shipData?.base_delivery_charge !== null ? Number(shipData.base_delivery_charge) : INITIAL_SITE_SETTINGS.shipping.baseDeliveryCharge,
         freeDeliveryThreshold: shipData?.free_delivery_threshold !== undefined && shipData?.free_delivery_threshold !== null ? Number(shipData.free_delivery_threshold) : INITIAL_SITE_SETTINGS.shipping.freeDeliveryThreshold,
@@ -66,6 +66,12 @@ export async function GET() {
       announcementText: siteData?.announcement_text || INITIAL_SITE_SETTINGS.announcementText,
       exchangeReturnDays: siteData?.exchange_return_days ? Number(siteData.exchange_return_days) : 7,
       isWhatsAppFloatingEnabled: siteData?.is_whatsapp_floating_enabled ?? true,
+      wholesale: siteData?.wholesale || {
+        ...INITIAL_SITE_SETTINGS.wholesale,
+        isEnabled: siteData?.wholesale_enabled ?? true,
+        defaultMinQty: siteData?.wholesale_min_qty ? Number(siteData.wholesale_min_qty) : 12,
+        minQuantity: siteData?.wholesale_min_qty ? Number(siteData.wholesale_min_qty) : 12,
+      },
     };
 
     return NextResponse.json({ settings: mergedSettings });
@@ -89,9 +95,9 @@ export async function POST(req: Request) {
     }
 
     // 1. Update Shipping Settings
-    const minQty = Math.max(1, Number(body.shipping?.minOrderQty) || 2);
+    const minQty = Math.max(1, Number(body.shipping?.minOrderQty) || 1);
     const maxQty = Math.max(minQty, Number(body.shipping?.maxOrderQty) || 100);
-    const baseFee = Math.max(0, Number(body.shipping?.baseDeliveryCharge) || 200);
+    const baseFee = Math.max(0, Number(body.shipping?.baseDeliveryCharge) ?? 200);
     const threshold = Math.max(1, Number(body.shipping?.freeDeliveryThreshold) || 3);
 
     // Get all existing shipping_settings rows
@@ -164,6 +170,11 @@ export async function POST(req: Request) {
     }
     if (body.paymentMethods) {
       sitePayload.payment_methods = body.paymentMethods;
+    }
+    if (body.wholesale) {
+      sitePayload.wholesale = body.wholesale;
+      sitePayload.wholesale_enabled = body.wholesale.isEnabled ?? true;
+      sitePayload.wholesale_min_qty = Number(body.wholesale.defaultMinQty || body.wholesale.minQuantity) || 12;
     }
 
     let { error: siteErr } = await db.from('site_settings').upsert(sitePayload);

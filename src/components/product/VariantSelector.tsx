@@ -52,7 +52,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const [isWholesaleMode, setIsWholesaleMode] = useState(
     lockWholesaleMode ? true : lockRetailMode ? false : defaultWholesale || isWholesaleFromQuery
   );
-  const [quantity, setQuantity] = useState(isWholesaleMode ? (product.wholesaleMinQty || 12) : 3);
+  const wholesaleMin = product.wholesaleMinQty || 12;
+  const [quantity, setQuantity] = useState(isWholesaleMode ? wholesaleMin : 1);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isAddedToast, setIsAddedToast] = useState(false);
 
@@ -65,8 +66,6 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [isSizeGuideOpen]);
-
-  const wholesaleMin = product.wholesaleMinQty || 12;
 
   // Sync mode if props or query change
   React.useEffect(() => {
@@ -139,8 +138,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const stock = currentVariant ? currentVariant.stock : 50;
   const isAvailable = currentVariant ? currentVariant.isAvailable && stock > 0 : true;
 
-  const minOrder = isWholesaleMode ? wholesaleMin : (settings.shipping.minOrderQty || 3);
-  const maxOrder = isWholesaleMode ? 5000 : Math.min(settings.shipping.maxOrderQty || 12, stock || 12);
+  const minOrder = isWholesaleMode ? wholesaleMin : 1;
+  const maxOrder = isWholesaleMode ? 5000 : Math.min(settings.shipping.maxOrderQty || 100, stock || 100);
   const freeDeliveryThreshold = settings.shipping.freeDeliveryThreshold || 3;
 
   const totalPrice = effectiveUnitPrice * quantity;
@@ -154,7 +153,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     if (wholesale) {
       setQuantity((prev) => Math.max(wholesaleMin, prev));
     } else {
-      setQuantity((prev) => Math.min(12, Math.max(3, prev)));
+      setQuantity((prev) => Math.min(12, Math.max(1, prev)));
     }
   };
 
@@ -261,24 +260,22 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
           <button
             type="button"
             onClick={() => toggleOrderMode(false)}
-            className={`flex-1 min-h-[42px] sm:min-h-[46px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
-              !isWholesaleMode
+            className={`flex-1 min-h-[42px] sm:min-h-[46px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${!isWholesaleMode
                 ? 'bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] shadow-sm border border-light-border dark:border-[#34322D]'
                 : 'text-charcoal-600 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]'
-            }`}
+              }`}
           >
             <span>Retail Order</span>
-            <span className="text-[10px] sm:text-xs text-charcoal-500 dark:text-[#8E8A80] font-normal">(Min 3 pcs)</span>
+            <span className="text-[10px] sm:text-xs text-charcoal-500 dark:text-[#8E8A80] font-normal">(1+ pcs)</span>
           </button>
 
           <button
             type="button"
             onClick={() => toggleOrderMode(true)}
-            className={`flex-1 min-h-[42px] sm:min-h-[46px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
-              isWholesaleMode
+            className={`flex-1 min-h-[42px] sm:min-h-[46px] py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${isWholesaleMode
                 ? 'bg-champagne-500 text-charcoal-950 shadow-xs font-extrabold'
                 : 'text-charcoal-600 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]'
-            }`}
+              }`}
           >
             <span>Wholesale</span>
             <span className="text-[10px] bg-charcoal-950/15 text-charcoal-950 px-1.5 py-0.2 rounded font-bold">Min 12 pcs</span>
@@ -373,11 +370,10 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
                   key={sl}
                   type="button"
                   onClick={() => setSelectedSleeve(sl)}
-                  className={`h-11 sm:h-12 px-3 rounded-xl border text-center font-bold text-xs sm:text-sm transition-all flex items-center justify-center whitespace-nowrap ${
-                    isSelected
+                  className={`h-11 sm:h-12 px-3 rounded-xl border text-center font-bold text-xs sm:text-sm transition-all flex items-center justify-center whitespace-nowrap ${isSelected
                       ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-50 dark:bg-[#22211E] text-[#96763D] dark:text-[#C9A96A] shadow-xs'
                       : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] text-charcoal-700 dark:text-[#B8B3A8] hover:border-[#B89555]/40'
-                  }`}
+                    }`}
                 >
                   {sl}
                 </button>
@@ -418,13 +414,12 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
                   key={s}
                   type="button"
                   onClick={() => setSelectedSize(s)}
-                  className={`h-11 sm:h-12 min-w-[48px] sm:min-w-[56px] px-3.5 sm:px-4 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center ${
-                    isSelected
+                  className={`h-11 sm:h-12 min-w-[48px] sm:min-w-[56px] px-3.5 sm:px-4 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center ${isSelected
                       ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-500 text-charcoal-950 font-extrabold shadow-xs scale-105'
                       : isOutOfStock
-                      ? 'border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] text-charcoal-400 dark:text-[#8E8A80] line-through opacity-50 cursor-not-allowed'
-                      : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] hover:border-[#B89555]/50 active:scale-95'
-                  }`}
+                        ? 'border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] text-charcoal-400 dark:text-[#8E8A80] line-through opacity-50 cursor-not-allowed'
+                        : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] hover:border-[#B89555]/50 active:scale-95'
+                    }`}
                 >
                   <span>{s}</span>
                 </button>
@@ -451,11 +446,10 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
                   key={pack.count}
                   type="button"
                   onClick={() => setQuantity(pack.count)}
-                  className={`h-10 sm:h-11 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center text-center ${
-                    isSelected
+                  className={`h-10 sm:h-11 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center text-center ${isSelected
                       ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-500 text-charcoal-950 shadow-xs font-extrabold'
                       : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] text-charcoal-700 dark:text-[#B8B3A8] hover:border-[#B89555]/40'
-                  }`}
+                    }`}
                 >
                   {pack.label}
                 </button>
@@ -473,7 +467,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
               Quantity (Pieces)
             </label>
             <span className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8] font-normal">
-              Minimum {isWholesaleMode ? 'wholesale' : 'retail'}: {minOrder} pieces
+              {isWholesaleMode ? `Minimum wholesale: ${minOrder} pieces` : 'Flexible quantity (1+ pieces)'}
             </span>
           </div>
 
@@ -527,18 +521,17 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
           type="button"
           disabled={!isAvailable}
           onClick={handleBuyNow}
-          className={`w-full min-h-[46px] sm:min-h-[50px] py-3 px-6 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${
-            isAvailable
+          className={`w-full min-h-[46px] sm:min-h-[50px] py-3 px-6 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${isAvailable
               ? 'bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 active:scale-[0.99]'
               : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-400 dark:text-[#8E8A80] border border-light-border dark:border-[#34322D] cursor-not-allowed'
-          }`}
+            }`}
         >
           <Zap className="w-4 h-4 fill-current stroke-[2.5]" />
           <span>
             {isAvailable
               ? isWholesaleMode
-                ? `ORDER WHOLESALE PACK (${quantity} PCS) • Rs. ${totalPrice}`
-                : `BUY NOW • Rs. ${totalPrice} (FREE DELIVERY)`
+                ? `ORDER WHOLESALE PACK (${quantity} PCS) • Rs. ${totalPrice.toLocaleString()}`
+                : `BUY NOW (${quantity} PC${quantity > 1 ? 'S' : ''}) • Rs. ${totalPrice.toLocaleString()}${isFreeDeliveryForThis ? ' (FREE DELIVERY)' : ''}`
               : 'Out of Stock'}
           </span>
         </button>

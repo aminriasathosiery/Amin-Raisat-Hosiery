@@ -79,7 +79,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
     e.stopPropagation();
     if (!isAvailable) return;
 
-    const qty = isWholesaleView ? (product.wholesaleMinQty || 12) : 3;
+    const qty = isWholesaleView ? (product.wholesaleMinQty || 12) : 1;
 
     addItem({
       productId: product.id,
@@ -103,7 +103,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
     e.stopPropagation();
     if (!isAvailable) return;
 
-    const qty = isWholesaleView ? (product.wholesaleMinQty || 12) : 3;
+    const qty = isWholesaleView ? (product.wholesaleMinQty || 12) : 1;
 
     addItem({
       productId: product.id,

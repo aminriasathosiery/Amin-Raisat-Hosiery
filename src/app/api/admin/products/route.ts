@@ -93,7 +93,9 @@ export async function GET() {
               size: v.size,
               price: Number(v.price) || 0,
               salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-              wholesalePrice: v.wholesale_price ? Number(v.wholesale_price) : Math.round((Number(v.price) || 480) * 0.82),
+              wholesalePrice: v.wholesale_price !== undefined && v.wholesale_price !== null && !isNaN(Number(v.wholesale_price))
+                ? Number(v.wholesale_price)
+                : Math.round((Number(v.price) || 480) * 0.82),
               wholesaleTiers: Array.isArray(v.wholesale_tiers) ? v.wholesale_tiers : undefined,
               stock: Number(v.stock) || 0,
               sku: v.sku || '',
@@ -298,11 +300,16 @@ export async function POST(req: Request) {
             updated_at: new Date().toISOString(),
           };
           if (includeWholesale) {
-            if (v.wholesalePrice !== undefined) {
-              item.wholesale_price = Number(v.wholesalePrice);
+            const rawV = v as any;
+            if (rawV.wholesalePrice !== undefined && rawV.wholesalePrice !== null) {
+              item.wholesale_price = Number(rawV.wholesalePrice);
+            } else if (rawV.wholesale_price !== undefined && rawV.wholesale_price !== null) {
+              item.wholesale_price = Number(rawV.wholesale_price);
             }
-            if (v.wholesaleTiers !== undefined) {
-              item.wholesale_tiers = v.wholesaleTiers;
+            if (rawV.wholesaleTiers !== undefined) {
+              item.wholesale_tiers = rawV.wholesaleTiers;
+            } else if (rawV.wholesale_tiers !== undefined) {
+              item.wholesale_tiers = rawV.wholesale_tiers;
             }
           }
           return item;
@@ -434,7 +441,9 @@ export async function POST(req: Request) {
         size: v.size,
         price: Number(v.price) || 0,
         salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-        wholesalePrice: Number(v.wholesale_price) || Math.round((Number(v.price) || 480) * 0.82),
+        wholesalePrice: v.wholesale_price !== undefined && v.wholesale_price !== null && !isNaN(Number(v.wholesale_price))
+          ? Number(v.wholesale_price)
+          : Math.round((Number(v.price) || 480) * 0.82),
         wholesaleTiers: v.wholesale_tiers || undefined,
         stock: Number(v.stock) || 0,
         sku: v.sku || '',
