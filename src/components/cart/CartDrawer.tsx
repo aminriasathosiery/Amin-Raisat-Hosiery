@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -50,12 +50,14 @@ export const CartDrawer: React.FC = () => {
   } = useCart();
   const { settings } = useStore();
 
-  // Auto close drawer when route changes
+  // Auto close drawer only when route actually changes
+  const prevPathnameRef = useRef(pathname);
   useEffect(() => {
-    if (isDrawerOpen) {
+    if (prevPathnameRef.current !== pathname) {
+      prevPathnameRef.current = pathname;
       closeDrawer();
     }
-  }, [pathname, isDrawerOpen, closeDrawer]);
+  }, [pathname, closeDrawer]);
 
   // Lock body scroll while drawer is open + Escape key handler
   useEffect(() => {

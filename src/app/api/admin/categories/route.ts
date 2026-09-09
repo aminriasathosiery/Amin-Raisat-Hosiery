@@ -2,14 +2,25 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { Category, Subcategory } from '@/types';
 import { INITIAL_CATEGORIES, INITIAL_SUBCATEGORIES } from '@/data/initialData';
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
 import crypto from 'crypto';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 const isUuid = (id?: string): boolean => {
   if (!id) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 };
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ categories: INITIAL_CATEGORIES, subcategories: INITIAL_SUBCATEGORIES });
   }
@@ -61,6 +72,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase Database is not configured.' }, { status: 500 });
   }
@@ -165,6 +183,13 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase is not configured.' }, { status: 500 });
   }
@@ -192,4 +217,12 @@ export async function DELETE(req: Request) {
     console.error('API /api/admin/categories DELETE exception:', err);
     return NextResponse.json({ error: 'Failed to delete record from database.' }, { status: 500 });
   }
+}
+
+export async function PUT(req: Request) {
+  return POST(req);
+}
+
+export async function PATCH(req: Request) {
+  return POST(req);
 }

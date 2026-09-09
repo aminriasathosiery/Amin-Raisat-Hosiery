@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, isSupabaseConfigured } from '@/lib/supabase';
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ profiles: [], addresses: [] });
   }

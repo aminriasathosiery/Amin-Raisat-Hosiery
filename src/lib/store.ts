@@ -20,7 +20,7 @@ import {
   INITIAL_SITE_SETTINGS,
   INITIAL_HERO_SLIDES,
 } from '@/data/initialData';
-import { supabaseBrowser, supabaseServer, isSupabaseConfigured, createAdminClient } from './supabase';
+import { supabaseBrowser, isSupabaseConfigured } from './supabase/client';
 
 const LOCAL_STORAGE_KEYS = {
   PRODUCTS: 'arh_products_v6',
@@ -143,6 +143,10 @@ export class DataStore {
       }
 
       if (data) {
+        if (folderOrBucket === 'payment-receipts' || folderOrBucket === 'receipts') {
+          // Return private internal storage reference for receipts to shield from public exposure
+          return storagePath;
+        }
         const { data: publicUrlData } = supabaseBrowser.storage
           .from(targetBucket)
           .getPublicUrl(storagePath);
@@ -240,7 +244,7 @@ export class DataStore {
     }
 
     if (isSupabaseConfigured()) {
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subcat.id);
       const payload: any = {
         category_id: subcat.categoryId,
@@ -288,7 +292,7 @@ export class DataStore {
     }
 
     if (isSupabaseConfigured()) {
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const { error } = await adminDb.from('subcategories').delete().eq('id', id);
       if (error) {
         console.error('FULL SUPABASE DELETE SUBCATEGORY ERROR:', error);
@@ -390,7 +394,7 @@ export class DataStore {
     }
 
     if (isSupabaseConfigured()) {
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(category.id);
       const payload: any = {
         name: category.name,
@@ -437,7 +441,7 @@ export class DataStore {
     }
 
     if (isSupabaseConfigured()) {
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const { error } = await adminDb.from('categories').delete().eq('id', id);
       if (error) {
         console.error('FULL SUPABASE DELETE CATEGORY ERROR:', error);
@@ -455,7 +459,9 @@ export class DataStore {
     // 1. Client-side authoritative fetch through server API route
     if (this.isClient()) {
       try {
-        const res = await fetch('/api/admin/products', { cache: 'no-store' });
+        const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+        const endpoint = isAdminRoute ? '/api/admin/products' : '/api/products';
+        const res = await fetch(endpoint, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           // Trust the API response as authoritative. Do NOT filter out empty arrays —
@@ -481,7 +487,7 @@ export class DataStore {
     // 2. Direct Supabase Client fallback (for server components or offline/direct query)
     if (products.length === 0 && isSupabaseConfigured()) {
       try {
-        const db = this.isClient() ? supabaseBrowser : supabaseServer;
+        const db = supabaseBrowser;
         const { data: prods, error } = await db
           .from('products')
           .select('*, product_variants(*), product_media(*)')
@@ -631,7 +637,7 @@ export class DataStore {
     }
 
     if (isSupabaseConfigured()) {
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product.id);
       const productPayload: any = {
         category_id: product.categoryId || null,
@@ -694,7 +700,7 @@ export class DataStore {
     }
 
     if (isSupabaseConfigured()) {
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const { error } = await adminDb.from('products').delete().eq('id', id);
       if (error) {
         console.error('FULL SUPABASE DELETE ERROR:', error);
@@ -713,90 +719,14 @@ export class DataStore {
         if (res.ok) {
           const data = await res.json();
           if (data.orders && Array.isArray(data.orders)) {
-            try {
-              localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(data.orders));
-            } catch {}
             return data.orders;
           }
         }
       } catch (err) {
-        console.warn('API /api/admin/orders fetch notice, using fallback:', err);
+        console.warn('API /api/admin/orders fetch notice:', err);
       }
     }
 
-    if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabaseBrowser
-          .from('orders')
-          .select('*, order_items(*)')
-          .order('created_at', { ascending: false });
-
-        if (!error && data) {
-          const mapped = data.map((o: any) => ({
-            id: o.id,
-            orderNumber: o.order_number,
-            customerType: o.customer_type || (o.user_id ? 'REGISTERED' : 'GUEST'),
-            customerName: o.customer_name,
-            customerPhone: o.customer_phone,
-            customerEmail: o.customer_email || undefined,
-            address: o.address || o.shipping_address || '',
-            city: o.city,
-            province: o.province,
-            orderNotes: o.order_notes || undefined,
-            subtotal: Number(o.subtotal) || 0,
-            deliveryFee: Number(o.delivery_fee) || 0,
-            totalAmount: Number(o.total_amount) || 0,
-            paymentMethod: o.payment_method || 'cod',
-            paymentReference: o.payment_reference || undefined,
-            paymentScreenshotUrl: o.payment_screenshot_url || undefined,
-            paymentStatus: o.payment_status || (o.payment_method === 'cod' ? 'COD_PENDING' : 'PENDING_VERIFICATION'),
-            paymentVerifiedAt: o.payment_verified_at || undefined,
-            paymentVerifiedBy: o.payment_verified_by || undefined,
-            paymentRejectionReason: o.payment_rejection_reason || undefined,
-            status: (o.status || 'Pending') as OrderStatus,
-            isWholesale: o.is_wholesale ?? false,
-            wholesaleDiscount: o.wholesale_discount ? Number(o.wholesale_discount) : undefined,
-            createdAt: o.created_at,
-            items: Array.isArray(o.order_items)
-              ? o.order_items.map((it: any) => ({
-                  id: it.id,
-                  orderId: it.order_id,
-                  productId: it.product_id,
-                  variantId: it.variant_id,
-                  productName: it.product_name,
-                  quality: it.quality,
-                  sleeve: it.sleeve,
-                  size: it.size,
-                  unitPrice: Number(it.unit_price) || 0,
-                  regularPrice: it.regular_price ? Number(it.regular_price) : undefined,
-                  wholesalePrice: it.wholesale_price ? Number(it.wholesale_price) : undefined,
-                  isWholesale: it.is_wholesale ?? false,
-                  quantity: Number(it.quantity) || 1,
-                  totalPrice: Number(it.total_price) || 0,
-                  image: it.image_url,
-                }))
-              : [],
-          }));
-          if (this.isClient()) {
-            try {
-              localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(mapped));
-            } catch {}
-          }
-          return mapped;
-        }
-      } catch (err) {
-        console.warn('Supabase getOrders error', err);
-      }
-    }
-
-    if (this.isClient()) {
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.ORDERS);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {}
-      }
-    }
     return [];
   }
 
@@ -836,7 +766,7 @@ export class DataStore {
 
     if (isSupabaseConfigured()) {
       try {
-        const adminDb = createAdminClient();
+        const adminDb = supabaseBrowser;
         const { data: insertedOrder, error: orderErr } = await adminDb
           .from('orders')
           .insert({
@@ -884,7 +814,7 @@ export class DataStore {
               is_wholesale: it.isWholesale ?? false,
               wholesale_price: it.wholesalePrice || null,
             }));
-            const adminDb = createAdminClient();
+            const adminDb = supabaseBrowser;
             await adminDb.from('order_items').insert(itemsPayload);
           }
         }
@@ -926,7 +856,7 @@ export class DataStore {
 
     if (isSupabaseConfigured()) {
       try {
-        const adminDb = createAdminClient();
+        const adminDb = supabaseBrowser;
         await adminDb
           .from('orders')
           .update({ status, updated_at: new Date().toISOString() })
@@ -978,7 +908,7 @@ export class DataStore {
 
     if (isSupabaseConfigured()) {
       try {
-        const adminDb = createAdminClient();
+        const adminDb = supabaseBrowser;
         await adminDb.from('order_items').delete().in('order_id', cleanIds);
         await adminDb.from('reviews').update({ order_id: null }).in('order_id', cleanIds);
         const { error } = await adminDb.from('orders').delete().in('id', cleanIds);
@@ -1112,7 +1042,7 @@ export class DataStore {
       if (isUuid) {
         payload.id = slide.id;
       }
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const { error } = await adminDb.from('hero_slides').upsert(payload);
       if (error) {
         console.error('FULL SUPABASE HERO ERROR:', error);
@@ -1145,7 +1075,7 @@ export class DataStore {
     }
 
     if (isSupabaseConfigured()) {
-      const adminDb = createAdminClient();
+      const adminDb = supabaseBrowser;
       const { error } = await adminDb.from('hero_slides').delete().eq('id', id);
       if (error) {
         console.error('FULL SUPABASE DELETE HERO ERROR:', error);
@@ -1192,7 +1122,7 @@ export class DataStore {
 
     if (isSupabaseConfigured()) {
       try {
-        const db = this.isClient() ? supabaseBrowser : supabaseServer;
+        const db = supabaseBrowser;
         const { data: siteData } = await db.from('site_settings').select('*').limit(1).single();
         const { data: shipData } = await db.from('shipping_settings').select('*').limit(1).single();
 
@@ -1274,7 +1204,7 @@ export class DataStore {
 
     if (isSupabaseConfigured()) {
       try {
-        const adminDb = createAdminClient();
+        const adminDb = supabaseBrowser;
         const siteUpdatePayload: any = {
             brand_name: settings.brandName,
             owner_name: settings.ownerName,
@@ -1349,7 +1279,12 @@ export class DataStore {
   static async getReviews(productId?: string): Promise<ProductReview[]> {
     if (this.isClient()) {
       try {
-        const url = productId ? `/api/reviews?productId=${encodeURIComponent(productId)}` : '/api/reviews';
+        const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+        const url = isAdminRoute
+          ? '/api/admin/reviews'
+          : productId
+          ? `/api/reviews?productId=${encodeURIComponent(productId)}`
+          : '/api/reviews';
         const res = await fetch(url, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
@@ -1482,25 +1417,25 @@ export class DataStore {
   }
 
   static async updateReviewApproval(reviewId: string, isApproved: boolean): Promise<void> {
-    if (isSupabaseConfigured()) {
-      try {
-        const adminDb = createAdminClient();
-        await adminDb
-          .from('reviews')
-          .update({ is_approved: isApproved })
-          .eq('id', reviewId);
-      } catch (err) {
-        console.warn('Supabase updateReviewApproval error', err);
-      }
-    }
-
     if (this.isClient()) {
-      const reviews = await this.getReviews();
-      const index = reviews.findIndex((r) => r.id === reviewId);
-      if (index !== -1) {
-        reviews[index].isApproved = isApproved;
-        localStorage.setItem(LOCAL_STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
+      const res = await fetch('/api/admin/reviews', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewId, isApproved }),
+      });
+      if (res.ok) {
+        const reviews = await this.getReviews();
+        const index = reviews.findIndex((r) => r.id === reviewId);
+        if (index !== -1) {
+          reviews[index].isApproved = isApproved;
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
+          } catch {}
+        }
+        return;
       }
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.error || 'Failed to update review approval.');
     }
   }
 
@@ -1527,19 +1462,20 @@ export class DataStore {
   }
 
   static async deleteReview(reviewId: string): Promise<void> {
-    if (isSupabaseConfigured()) {
-      try {
-        const adminDb = createAdminClient();
-        await adminDb.from('reviews').delete().eq('id', reviewId);
-      } catch (err) {
-        console.warn('Supabase deleteReview error', err);
-      }
-    }
-
     if (this.isClient()) {
-      const reviews = await this.getReviews();
-      const filtered = reviews.filter((r) => r.id !== reviewId);
-      localStorage.setItem(LOCAL_STORAGE_KEYS.REVIEWS, JSON.stringify(filtered));
+      const res = await fetch(`/api/admin/reviews?id=${encodeURIComponent(reviewId)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const reviews = await this.getReviews();
+        const filtered = reviews.filter((r) => r.id !== reviewId);
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEYS.REVIEWS, JSON.stringify(filtered));
+        } catch {}
+        return;
+      }
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.error || 'Failed to delete review.');
     }
   }
 

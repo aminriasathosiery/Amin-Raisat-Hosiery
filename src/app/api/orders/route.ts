@@ -379,16 +379,70 @@ export async function POST(req: Request) {
   }
 }
 
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
+
 export async function GET(req: Request) {
   try {
+    const isAdmin = verifyAdminSession(req);
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
+    const orderNumber = searchParams.get('orderNumber')?.trim();
+    const phone = searchParams.get('phone')?.trim();
 
     let dbClient = supabaseServer;
     try {
       dbClient = createAdminClient();
     } catch {}
 
+    // Unauthenticated visitors cannot list all orders
+    if (!isAdmin) {
+      if (!orderNumber || !phone || phone.length < 7) {
+        return NextResponse.json(
+          { error: 'Unauthorized. Admin session required to view order records.' },
+          { status: 401 }
+        );
+      }
+
+      // Guest order tracking: allow lookup of single order matching both orderNumber and phone
+      const { data: matchedOrder, error: matchErr } = await dbClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('order_number', orderNumber)
+        .eq('customer_phone', phone)
+        .maybeSingle();
+
+      if (matchErr || !matchedOrder) {
+        return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+      }
+
+      // Sanitize: strip payment screenshot and private details
+      const sanitized = {
+        orderNumber: matchedOrder.order_number,
+        status: matchedOrder.status,
+        customerName: matchedOrder.customer_name,
+        city: matchedOrder.city,
+        subtotal: Number(matchedOrder.subtotal) || 0,
+        deliveryFee: Number(matchedOrder.delivery_fee) || 0,
+        totalAmount: Number(matchedOrder.total_amount) || 0,
+        paymentMethod: matchedOrder.payment_method,
+        paymentStatus: matchedOrder.payment_status,
+        createdAt: matchedOrder.created_at,
+        items: Array.isArray(matchedOrder.order_items)
+          ? matchedOrder.order_items.map((it: any) => ({
+              productName: it.product_name,
+              quality: it.quality,
+              sleeve: it.sleeve,
+              size: it.size,
+              quantity: Number(it.quantity) || 1,
+              totalPrice: Number(it.total_price) || 0,
+            }))
+          : [],
+      };
+
+      return NextResponse.json({ success: true, order: sanitized });
+    }
+
+    // Authenticated Admin flow
+    const userId = searchParams.get('userId');
     let query = dbClient
       .from('orders')
       .select('*, order_items(*)')
@@ -420,7 +474,7 @@ export async function GET(req: Request) {
       totalAmount: Number(o.total_amount) || 0,
       paymentMethod: o.payment_method || 'cod',
       paymentReference: o.payment_reference || undefined,
-      paymentScreenshotUrl: o.payment_screenshot_url || undefined,
+      paymentScreenshotUrl: o.payment_screenshot_url ? `/api/admin/orders/receipt?orderId=${o.id}` : undefined,
       paymentStatus: o.payment_status || (o.payment_method === 'cod' ? 'COD_PENDING' : 'PENDING_VERIFICATION'),
       paymentVerifiedAt: o.payment_verified_at || undefined,
       paymentVerifiedBy: o.payment_verified_by || undefined,
@@ -455,4 +509,28 @@ export async function GET(req: Request) {
     console.error('GET orders error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+export async function DELETE(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+  return NextResponse.json({ error: 'Please use /api/admin/orders for deletions.' }, { status: 400 });
+}
+
+export async function PATCH(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+  return NextResponse.json({ error: 'Please use /api/admin/orders for order updates.' }, { status: 400 });
+}
+
+export async function PUT(req: Request) {
+  return PATCH(req);
 }

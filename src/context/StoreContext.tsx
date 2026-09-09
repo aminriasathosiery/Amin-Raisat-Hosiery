@@ -38,6 +38,8 @@ interface StoreContextType {
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
   bulkDeleteOrders: (orderIds: string[]) => Promise<void>;
+  loadOrders: () => Promise<void>;
+  loadReviews: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -116,11 +118,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
       setHeroSlides(slides);
       setIsLoading(false);
 
-      // Non-blocking background fetch for secondary/admin data
-      DataStore.getOrders().then((ords) => {
-        if (ords) setOrders(ords);
-      }).catch((err) => console.warn('Non-critical orders fetch notice:', err));
-
+      // Non-blocking background fetch for public reviews
       DataStore.getReviews().then((revs) => {
         if (revs && revs.length > 0) setReviews(revs);
       }).catch((err) => console.warn('Non-critical reviews fetch notice:', err));
@@ -193,14 +191,29 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
     return rev;
   };
 
+  const loadReviews = async () => {
+    try {
+      const revs = await DataStore.getReviews();
+      if (revs && Array.isArray(revs)) {
+        setReviews(revs);
+      }
+    } catch (err) {
+      console.warn('Reviews fetch notice:', err);
+    }
+  };
+
   const approveReview = async (id: string, isApproved: boolean) => {
     await DataStore.approveReview(id, isApproved);
-    await loadData();
+    setReviews((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, isApproved } : r))
+    );
+    await loadReviews();
   };
 
   const deleteReview = async (id: string) => {
     await DataStore.deleteReview(id);
-    await loadData();
+    setReviews((prev) => prev.filter((r) => r.id !== id));
+    await loadReviews();
   };
 
   const updateSettings = async (newSettings: SiteSettings) => {
@@ -241,6 +254,17 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
     await loadData();
   };
 
+  const loadOrders = async () => {
+    try {
+      const ords = await DataStore.getOrders();
+      if (ords && Array.isArray(ords)) {
+        setOrders(ords);
+      }
+    } catch (err) {
+      console.warn('Orders fetch notice:', err);
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -273,6 +297,8 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
         updateOrderStatus,
         deleteOrder,
         bulkDeleteOrders,
+        loadOrders,
+        loadReviews,
       }}
     >
       {children}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { CartItem } from '@/types';
 import { useStore } from './StoreContext';
 
@@ -40,6 +40,9 @@ interface CartContextType {
   isWholesaleMinimumMet: boolean;
   wholesalePiecesNeeded: number;
   wholesaleMinQty: number;
+  buyNowItem: CartItem | null;
+  setBuyNowItem: (item: Omit<CartItem, 'id'> | null) => void;
+  clearBuyNow: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -52,6 +55,42 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [modeConflict, setModeConflict] = useState<ModeConflictInfo | null>(null);
+
+  // Isolated Buy Now State (Never pollutes or overwrites general cart items)
+  const [buyNowItem, setBuyNowItemState] = useState<CartItem | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem('arh_buynow_item_v1');
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return null;
+  });
+
+  const setBuyNowItem = (item: Omit<CartItem, 'id'> | null) => {
+    if (!item) {
+      setBuyNowItemState(null);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem('arh_buynow_item_v1');
+        } catch {}
+      }
+      return;
+    }
+    const isWholesale = Boolean(item.isWholesale);
+    const id = `buynow_${item.productId}_${item.quality}_${item.sleeve}_${item.size}${isWholesale ? '_wholesale' : ''}`;
+    const fullItem: CartItem = { ...item, id, isWholesale };
+    setBuyNowItemState(fullItem);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('arh_buynow_item_v1', JSON.stringify(fullItem));
+      } catch {}
+    }
+  };
+
+  const clearBuyNow = () => {
+    setBuyNowItem(null);
+  };
 
   const wholesaleMinQty = settings.wholesale?.defaultMinQty || 12;
 
@@ -76,13 +115,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [items, isInitialized]);
 
-  const openDrawer = () => setIsDrawerOpen(true);
-  const closeDrawer = () => {
+  const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => {
     setIsDrawerOpen(false);
     setModeConflict(null);
-  };
-  const toggleDrawer = () => setIsDrawerOpen((prev) => !prev);
-  const clearModeConflict = () => setModeConflict(null);
+  }, []);
+  const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
+  const clearModeConflict = useCallback(() => setModeConflict(null), []);
 
   // Compute active cart mode
   const hasWholesaleItems = items.some((item) => item.isWholesale);
@@ -238,6 +277,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isWholesaleMinimumMet,
         wholesalePiecesNeeded,
         wholesaleMinQty,
+        buyNowItem,
+        setBuyNowItem,
+        clearBuyNow,
       }}
     >
       {children}

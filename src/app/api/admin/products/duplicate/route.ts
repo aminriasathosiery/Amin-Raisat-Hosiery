@@ -14,6 +14,8 @@ function getDbClient() {
   }
 }
 
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
+
 function generateSlug(text: string): string {
   return text
     .toLowerCase()
@@ -24,6 +26,13 @@ function generateSlug(text: string): string {
 }
 
 export async function POST(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase Database is not configured.' }, { status: 500 });
   }

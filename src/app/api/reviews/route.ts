@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
+import { isReviewDeleted, getReviewApprovalOverride } from '@/lib/reviews/moderationStore';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,18 +64,25 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const reviews = (reviewsData || []).map((r: any) => ({
-      id: r.id,
-      productId: r.product_id,
-      userId: r.user_id || undefined,
-      orderId: r.order_id || undefined,
-      customerName: r.customer_name,
-      customerCity: r.customer_city || '',
-      rating: Number(r.rating) || 5,
-      comment: r.comment,
-      createdAt: r.created_at,
-      isApproved: r.is_approved ?? true,
-    }));
+    const reviews = (reviewsData || [])
+      .filter((r: any) => {
+        if (isReviewDeleted(r.id)) return false;
+        const override = getReviewApprovalOverride(r.id);
+        if (override === false) return false;
+        return true;
+      })
+      .map((r: any) => ({
+        id: r.id,
+        productId: r.product_id,
+        userId: r.user_id || undefined,
+        orderId: r.order_id || undefined,
+        customerName: r.customer_name,
+        customerCity: r.customer_city || '',
+        rating: Number(r.rating) || 5,
+        comment: r.comment,
+        createdAt: r.created_at,
+        isApproved: true,
+      }));
 
     const totalReviews = reviews.length;
     const ratingBreakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };

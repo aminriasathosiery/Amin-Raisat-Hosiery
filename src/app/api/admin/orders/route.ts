@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
+
 function getDbClient() {
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
@@ -12,8 +14,15 @@ function getDbClient() {
   return supabaseServer;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    if (!verifyAdminSession(req)) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin session required.' },
+        { status: 401 }
+      );
+    }
+
     if (!isSupabaseConfigured()) {
       return NextResponse.json({ success: true, orders: [] });
     }
@@ -45,7 +54,7 @@ export async function GET() {
       totalAmount: Number(o.total_amount) || 0,
       paymentMethod: o.payment_method || 'cod',
       paymentReference: o.payment_reference || undefined,
-      paymentScreenshotUrl: o.payment_screenshot_url || undefined,
+      paymentScreenshotUrl: o.payment_screenshot_url ? `/api/admin/orders/receipt?orderId=${o.id}` : undefined,
       paymentStatus: o.payment_status || (o.payment_method === 'cod' ? 'COD_PENDING' : 'PENDING_VERIFICATION'),
       paymentVerifiedAt: o.payment_verified_at || undefined,
       paymentVerifiedBy: o.payment_verified_by || undefined,
@@ -84,6 +93,13 @@ export async function GET() {
 
 export async function DELETE(req: Request) {
   try {
+    if (!verifyAdminSession(req)) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin session required.' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const queryId = searchParams.get('id') || searchParams.get('orderId');
 
@@ -241,6 +257,13 @@ export async function DELETE(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    if (!verifyAdminSession(req)) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin session required.' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { orderId, status } = body;
 
@@ -270,6 +293,10 @@ export async function PATCH(req: Request) {
     console.error('Admin PATCH order error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+export async function PUT(req: Request) {
+  return PATCH(req);
 }
 
 

@@ -1,6 +1,5 @@
 'use client';
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useStore } from '@/context/StoreContext';
@@ -22,7 +21,11 @@ import {
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
 
 export default function AdminDashboardPage() {
-  const { orders, products, reviews, settings, isLoading } = useStore();
+  const { orders, products, reviews, settings, loadOrders, isLoading } = useStore();
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   const lowStockThreshold = 10;
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabaseBrowser, isSupabaseConfigured } from '@/lib/supabase';
+import { supabaseBrowser, isSupabaseConfigured } from '@/lib/supabase/client';
 import { CustomerProfile, CustomerAddress } from '@/types';
 import type { User, Session } from '@supabase/supabase-js';
 

@@ -9,6 +9,8 @@ export const revalidate = 0;
 const CANONICAL_SHIPPING_ID = 'a0000000-0000-0000-0000-000000000001';
 const CANONICAL_SITE_ID = 'b0000000-0000-0000-0000-000000000001';
 
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
+
 function getDbClient() {
   try {
     return createAdminClient();
@@ -17,7 +19,14 @@ function getDbClient() {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ settings: INITIAL_SITE_SETTINGS });
   }
@@ -82,6 +91,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase is not configured' }, { status: 500 });
   }
@@ -232,4 +248,12 @@ export async function POST(req: Request) {
     console.error('API /api/admin/settings POST error:', err);
     return NextResponse.json({ error: err.message || 'Internal Server Error' }, { status: 500 });
   }
+}
+
+export async function PUT(req: Request) {
+  return POST(req);
+}
+
+export async function PATCH(req: Request) {
+  return POST(req);
 }

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { PaymentMethodType } from '@/types';
@@ -54,22 +54,45 @@ const POPULAR_CITIES = [
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isBuyNowParam = searchParams.get('buyNow') === '1';
+
   const {
-    items,
-    totalQuantity,
-    subtotal,
-    deliveryFee,
-    totalAmount,
+    items: cartItems,
+    totalQuantity: cartTotalQuantity,
+    subtotal: cartSubtotal,
+    deliveryFee: cartDeliveryFee,
+    totalAmount: cartTotalAmount,
     clearCart,
-    hasWholesaleItems,
-    isWholesaleMinimumMet,
-    wholesalePiecesNeeded,
+    hasWholesaleItems: cartHasWholesale,
+    isWholesaleMinimumMet: cartIsWholesaleMinMet,
+    wholesalePiecesNeeded: cartWholesalePiecesNeeded,
     wholesaleMinQty,
-    totalSavings,
+    totalSavings: cartTotalSavings,
+    buyNowItem,
+    clearBuyNow,
   } = useCart();
   const { settings, createOrder, uploadMediaFile } = useStore();
 
+  const isBuyNow = isBuyNowParam && Boolean(buyNowItem);
+  const items = isBuyNow && buyNowItem ? [buyNowItem] : cartItems;
+
+  const totalQuantity = isBuyNow && buyNowItem ? buyNowItem.quantity : cartTotalQuantity;
+  const subtotal = isBuyNow && buyNowItem ? buyNowItem.unitPrice * buyNowItem.quantity : cartSubtotal;
+  const regularSubtotal = isBuyNow && buyNowItem ? (buyNowItem.regularPrice || buyNowItem.unitPrice) * buyNowItem.quantity : subtotal;
+  const totalSavings = isBuyNow && buyNowItem ? Math.max(0, regularSubtotal - subtotal) : cartTotalSavings;
+
+  const hasWholesaleItems = isBuyNow && buyNowItem ? Boolean(buyNowItem.isWholesale) : cartHasWholesale;
+  const isWholesaleMinimumMet = isBuyNow && buyNowItem ? (!buyNowItem.isWholesale || buyNowItem.quantity >= wholesaleMinQty) : cartIsWholesaleMinMet;
+  const wholesalePiecesNeeded = isBuyNow && buyNowItem ? Math.max(0, wholesaleMinQty - buyNowItem.quantity) : cartWholesalePiecesNeeded;
+
+  const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
+  const isFreeDeliveryUnlocked = totalQuantity >= freeDeliveryThreshold || hasWholesaleItems;
+  const deliveryFee = totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : (settings.shipping?.baseDeliveryCharge ?? 200);
+  const totalAmount = subtotal + deliveryFee;
+
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState('');
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
   const [isUploadingScreenshot, setIsUploadingScreenshot] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -226,7 +249,11 @@ export default function CheckoutPage() {
       };
 
       const createdOrder = await createOrder(orderPayload);
-      clearCart();
+      if (isBuyNow) {
+        clearBuyNow();
+      } else {
+        clearCart();
+      }
       router.push(`/order-confirmation/${createdOrder.id}`);
     } catch (err: any) {
       console.error('Checkout error:', err);
@@ -704,8 +731,8 @@ export default function CheckoutPage() {
                           <div className="flex items-center gap-3">
                             <div className="relative w-12 h-12 rounded-lg overflow-hidden border border-emerald-300 dark:border-emerald-700 flex-shrink-0 bg-white dark:bg-black">
                               <img
-                                src={paymentScreenshotUrl}
-                                alt="Payment Screenshot"
+                                src={receiptPreviewUrl || paymentScreenshotUrl}
+                                alt="Payment receipt preview"
                                 className="w-full h-full object-cover"
                               />
                             </div>
@@ -713,19 +740,17 @@ export default function CheckoutPage() {
                               <p className="font-bold text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-1">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Screenshot Attached
                               </p>
-                              <a
-                                href={paymentScreenshotUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline"
-                              >
-                                View full receipt
-                              </a>
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                                Receipt secured &amp; ready to submit
+                              </span>
                             </div>
                           </div>
                           <button
                             type="button"
-                            onClick={() => setPaymentScreenshotUrl('')}
+                            onClick={() => {
+                              setPaymentScreenshotUrl('');
+                              setReceiptPreviewUrl('');
+                            }}
                             className="text-xs text-rose-600 hover:underline font-semibold"
                           >
                             Remove
@@ -742,11 +767,14 @@ export default function CheckoutPage() {
                               if (!file) return;
                               try {
                                 setIsUploadingScreenshot(true);
-                                const url = await uploadMediaFile(file, 'payment-receipts');
-                                setPaymentScreenshotUrl(url);
+                                const preview = URL.createObjectURL(file);
+                                setReceiptPreviewUrl(preview);
+                                const path = await uploadMediaFile(file, 'payment-receipts');
+                                setPaymentScreenshotUrl(path);
                               } catch (uploadErr) {
                                 console.error('Screenshot upload failed:', uploadErr);
                                 setErrorMsg('Failed to upload screenshot. Please try another image.');
+                                setReceiptPreviewUrl('');
                               } finally {
                                 setIsUploadingScreenshot(false);
                               }

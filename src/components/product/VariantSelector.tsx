@@ -46,7 +46,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const searchParams = useSearchParams();
   const isWholesaleFromQuery = searchParams.get('wholesale') === 'true' || searchParams.get('mode') === 'wholesale';
 
-  const { addItem, openDrawer } = useCart();
+  const { addItem, openDrawer, setBuyNowItem } = useCart();
   const { settings } = useStore();
 
   const [isWholesaleMode, setIsWholesaleMode] = useState(
@@ -167,7 +167,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const handleBuyNow = () => {
     if (!isAvailable) return;
 
-    addItem({
+    setBuyNowItem({
       productId: product.id,
       productName: product.name,
       productSlug: product.slug,
@@ -182,7 +182,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       image: getVariantMediaUrl(),
     });
 
-    router.push('/checkout');
+    router.push('/checkout?buyNow=1');
   };
 
   const handleAddToCart = () => {

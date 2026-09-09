@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '@/context/StoreContext';
 import { Star, Trash2, CheckCircle, XCircle, MessageSquare, Check } from 'lucide-react';
 import { ConfirmModal } from '@/components/admin/ConfirmModal';
 
 export default function AdminReviewsPage() {
-  const { reviews, products, approveReview, deleteReview } = useStore();
+  const { reviews, products, approveReview, deleteReview, loadReviews } = useStore();
   const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    loadReviews();
+  }, []);
 
   // Delete Confirm Modal
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; reviewId: string; author: string }>({

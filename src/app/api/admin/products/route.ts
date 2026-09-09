@@ -28,6 +28,8 @@ function getDbClient() {
   }
 }
 
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
+
 function generateSlug(text: string): string {
   return text
     .toLowerCase()
@@ -37,7 +39,14 @@ function generateSlug(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ products: INITIAL_PRODUCTS });
   }
@@ -127,6 +136,13 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase Database is not configured.' }, { status: 500 });
   }
@@ -472,6 +488,13 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  if (!verifyAdminSession(req)) {
+    return NextResponse.json(
+      { error: 'Unauthorized. Admin session required.' },
+      { status: 401 }
+    );
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: 'Supabase is not configured.' }, { status: 500 });
   }

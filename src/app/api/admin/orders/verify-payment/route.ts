@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
+import { verifyAdminSession } from '@/lib/auth/adminAuth';
 
 function getDbClient() {
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -14,6 +15,13 @@ function getDbClient() {
 
 export async function POST(req: Request) {
   try {
+    if (!verifyAdminSession(req)) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Admin session required.' },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const { orderId, action, rejectionReason, verifiedBy } = body;
 

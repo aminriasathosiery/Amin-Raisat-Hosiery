@@ -24,12 +24,10 @@ import {
 import { useStore } from '@/context/StoreContext';
 import { useTheme } from '@/context/ThemeContext';
 
-const ADMIN_AUTH_KEY = 'arh_admin_auth_token_v1';
-
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { settings } = useStore();
+  const { settings, loadOrders } = useStore();
   const { theme, isDark, toggleTheme } = useTheme();
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -41,17 +39,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
 
-    const auth = localStorage.getItem(ADMIN_AUTH_KEY);
-    if (auth === 'authenticated') {
-      setIsAuthenticated(true);
-    } else {
-      setIsAuthenticated(false);
-      router.push('/admin/login');
-    }
+    let isMounted = true;
+    fetch('/api/admin/auth/check', { cache: 'no-store' })
+      .then((res) => res.json().catch(() => ({})))
+      .then((data) => {
+        if (!isMounted) return;
+        if (data && data.authenticated) {
+          setIsAuthenticated(true);
+          loadOrders();
+        } else {
+          setIsAuthenticated(false);
+          router.push('/admin/login');
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setIsAuthenticated(false);
+        router.push('/admin/login');
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [pathname, router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem(ADMIN_AUTH_KEY);
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST' });
+    } catch {}
     setIsAuthenticated(false);
     router.push('/admin/login');
   };

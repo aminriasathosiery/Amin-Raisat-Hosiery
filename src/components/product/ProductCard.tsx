@@ -18,7 +18,7 @@ const AVAILABLE_SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleView = false }) => {
   const router = useRouter();
-  const { addItem, openDrawer } = useCart();
+  const { addItem, openDrawer, setBuyNowItem } = useCart();
   const { categories } = useStore();
 
   const [selectedSleeve, setSelectedSleeve] = useState<SleeveType>(() => {
@@ -48,23 +48,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
   }, [product.variants]);
 
   // Compute matched variant
-  const currentVariant =
-    product.variants.find(
-      (v) => v.sleeve === selectedSleeve && v.size === selectedSize
-    ) ||
-    product.variants.find((v) => v.sleeve === selectedSleeve) ||
-    product.variants[0];
+  const currentVariant = useMemo(() => {
+    return (
+      product.variants.find(
+        (v) => v.sleeve === selectedSleeve && v.size === selectedSize
+      ) ||
+      product.variants.find((v) => v.sleeve === selectedSleeve) ||
+      product.variants[0]
+    );
+  }, [product.variants, selectedSleeve, selectedSize]);
 
-  const retailPrice = currentVariant ? (currentVariant.salePrice || currentVariant.price) : 480;
-  const wholesalePrice = currentVariant?.wholesalePrice || Math.round(retailPrice * 0.82);
-  const price = isWholesaleView ? wholesalePrice : retailPrice;
-  const comparePrice = isWholesaleView ? retailPrice : (currentVariant?.salePrice ? currentVariant.price + 120 : undefined);
+  // Compute reactive price & stock based on view mode (Retail vs Wholesale)
+  const retailPrice = currentVariant?.salePrice || currentVariant?.price || 480;
+  const baseWholesalePrice =
+    currentVariant?.wholesalePrice !== undefined &&
+    currentVariant?.wholesalePrice !== null &&
+    !isNaN(Number(currentVariant?.wholesalePrice))
+      ? Number(currentVariant.wholesalePrice)
+      : Math.round(retailPrice * 0.82);
+
+  const price = isWholesaleView ? baseWholesalePrice : retailPrice;
+  const wholesalePrice = baseWholesalePrice;
   const unitSavings = retailPrice - wholesalePrice;
-  const stock = currentVariant ? currentVariant.stock : 50;
-  const isAvailable = currentVariant ? currentVariant.isAvailable && stock > 0 : true;
+  const comparePrice = isWholesaleView ? retailPrice : (currentVariant?.salePrice ? currentVariant.price + 120 : undefined);
+  const isAvailable = currentVariant ? currentVariant.isAvailable && currentVariant.stock > 0 : false;
 
-  // Media photos list
-  const photoMedia = product.media.filter((m) => m.type === 'photo');
+  const photoMedia = useMemo(() => {
+    return (product.media || []).filter((m) => m.type !== 'video' && m.type !== 'size_guide');
+  }, [product.media]);
 
   // Resolve matching photo for chosen sleeve
   const currentPhoto = useMemo(() => {
@@ -81,7 +92,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
 
     const qty = isWholesaleView ? (product.wholesaleMinQty || 12) : 1;
 
-    addItem({
+    setBuyNowItem({
       productId: product.id,
       productName: product.name,
       productSlug: product.slug,
@@ -95,7 +106,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
       quantity: qty,
       image: currentPhoto,
     });
-    router.push('/checkout');
+    router.push('/checkout?buyNow=1');
   };
 
   const handleQuickAdd = (e: React.MouseEvent) => {

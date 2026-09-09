@@ -5,25 +5,34 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
-const ADMIN_AUTH_KEY = 'arh_admin_auth_token_v1';
-const REQUIRED_ADMIN_PASS = 'Amin7866@';
-
 export default function AdminLoginPage() {
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    if (password === REQUIRED_ADMIN_PASS) {
-      localStorage.setItem(ADMIN_AUTH_KEY, 'authenticated');
-      router.push('/admin');
-    } else {
-      setError('Incorrect password. Please verify and try again.');
+    try {
+      const res = await fetch('/api/admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        router.push('/admin');
+      } else {
+        setError(data.error || 'Incorrect password. Please verify and try again.');
+        setIsLoading(false);
+      }
+    } catch (err) {
+      setError('Unable to authenticate with server. Please try again.');
       setIsLoading(false);
     }
   };

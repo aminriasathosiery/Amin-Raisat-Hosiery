@@ -29,3 +29,15 @@ export function createBrowserClient() {
 }
 
 export const supabaseBrowser = createBrowserClient();
+
+export const isSupabaseConfigured = (): boolean => {
+  return (
+    isValidHttpUrl(rawUrl) &&
+    !rawUrl!.includes('placeholder') &&
+    !!rawKey &&
+    !rawKey.includes('placeholder') &&
+    !rawKey.includes('PASTE_') &&
+    rawKey.length > 20
+  );
+};
+

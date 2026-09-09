@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/context/StoreContext';
 import { Order, OrderStatus } from '@/types';
 import {
@@ -30,7 +30,11 @@ import { formatWhatsAppNumber } from '@/lib/whatsapp';
 const ALL_STATUSES: OrderStatus[] = ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
 
 export default function AdminOrdersPage() {
-  const { orders, products, updateOrderStatus, deleteOrder, bulkDeleteOrders, refreshData, isLoading } = useStore();
+  const { orders, products, updateOrderStatus, deleteOrder, bulkDeleteOrders, refreshData, loadOrders, isLoading } = useStore();
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [wholesaleFilter, setWholesaleFilter] = useState<string>('all');
