@@ -132,31 +132,47 @@ export async function DELETE(req: Request) {
     const dbClient = getDbClient();
 
     // 1. Fetch matching orders to verify existence and extract storage file references
-    let { data: existingOrders, error: fetchErr } = await dbClient
-      .from('orders')
-      .select('id, order_number')
-      .in('id', targetIds);
+    const isUuid = (str: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-    // If not found by UUID, attempt search by order_number
-    if (!existingOrders || existingOrders.length === 0) {
-      const { data: byOrderNumber } = await dbClient
+    const uuidIds = targetIds.filter(isUuid);
+    const orderNumberIds = targetIds.filter((id) => !isUuid(id));
+
+    let existingOrders: any[] = [];
+
+    if (uuidIds.length > 0) {
+      const { data: byId, error: fetchErr } = await dbClient
         .from('orders')
         .select('id, order_number')
-        .in('order_number', targetIds);
-      if (byOrderNumber && byOrderNumber.length > 0) {
-        existingOrders = byOrderNumber;
+        .in('id', uuidIds);
+
+      if (fetchErr) {
+        console.error('Fetch orders prior to delete error:', fetchErr);
+        return NextResponse.json(
+          { error: 'Database error during order verification' },
+          { status: 500 }
+        );
       }
+      if (byId) existingOrders.push(...byId);
     }
 
-    if (fetchErr) {
-      console.error('Fetch orders prior to delete error:', fetchErr);
-      return NextResponse.json(
-        { error: `Database error during order verification: ${fetchErr.message}` },
-        { status: 500 }
-      );
+    if (orderNumberIds.length > 0) {
+      const { data: byOrderNumber, error: fetchNumErr } = await dbClient
+        .from('orders')
+        .select('id, order_number')
+        .in('order_number', orderNumberIds);
+
+      if (fetchNumErr) {
+        console.error('Fetch orders by order_number error:', fetchNumErr);
+        return NextResponse.json(
+          { error: 'Database error during order verification' },
+          { status: 500 }
+        );
+      }
+      if (byOrderNumber) existingOrders.push(...byOrderNumber);
     }
 
-    if (!existingOrders || existingOrders.length === 0) {
+    if (existingOrders.length === 0) {
       return NextResponse.json(
         { error: `No matching order found with ID: ${targetIds.join(', ')}` },
         { status: 404 }

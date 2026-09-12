@@ -1356,7 +1356,7 @@ export class DataStore {
       ...review,
       id: `rev-${Date.now()}`,
       createdAt: new Date().toISOString(),
-      isApproved: true,
+      isApproved: false,
     };
 
     if (isSupabaseConfigured()) {
@@ -1371,7 +1371,7 @@ export class DataStore {
             customer_city: review.customerCity || null,
             rating: review.rating,
             comment: review.comment,
-            is_approved: true,
+            is_approved: false,
           })
           .select()
           .single();

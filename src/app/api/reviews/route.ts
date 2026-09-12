@@ -34,7 +34,7 @@ function isRateLimited(ip: string): boolean {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const productId = searchParams.get('productId');
+    const rawProductId = searchParams.get('productId')?.trim();
 
     if (!isSupabaseConfigured()) {
       return NextResponse.json({
@@ -46,6 +46,13 @@ export async function GET(req: Request) {
       });
     }
 
+    if (rawProductId) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawProductId);
+      if (!isUuid) {
+        return NextResponse.json({ error: 'Invalid productId' }, { status: 400 });
+      }
+    }
+
     const dbClient = getDbClient();
     let query = dbClient
       .from('reviews')
@@ -53,15 +60,15 @@ export async function GET(req: Request) {
       .eq('is_approved', true)
       .order('created_at', { ascending: false });
 
-    if (productId) {
-      query = query.eq('product_id', productId);
+    if (rawProductId) {
+      query = query.eq('product_id', rawProductId);
     }
 
     const { data: reviewsData, error } = await query;
 
     if (error) {
       console.error('Fetch reviews error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 });
     }
 
     const reviews = (reviewsData || [])
@@ -153,8 +160,10 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!productId) {
-      return NextResponse.json({ error: 'Product ID is required.' }, { status: 400 });
+    const rawProdId = productId ? String(productId).trim() : '';
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawProdId);
+    if (!rawProdId || !isUuid) {
+      return NextResponse.json({ error: 'Invalid productId' }, { status: 400 });
     }
 
     // Spam check: reject suspiciously long identical content or HTML
@@ -169,24 +178,22 @@ export async function POST(req: Request) {
       const { data: productRow } = await dbClient
         .from('products')
         .select('id')
-        .eq('id', productId)
+        .eq('id', rawProdId)
         .maybeSingle();
 
       if (!productRow) {
         return NextResponse.json({ error: 'Product not found.' }, { status: 404 });
       }
 
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
-
       const reviewPayload: any = {
-        product_id: isUuid ? productId : null,
+        product_id: rawProdId,
         user_id: null,
         order_id: null,
         customer_name: cleanName,
         customer_city: cleanCity || null,
         rating: parsedRating,
         comment: cleanComment,
-        is_approved: true,
+        is_approved: false,
       };
 
       let insertedId = `rev-${Date.now()}`;
@@ -213,7 +220,7 @@ export async function POST(req: Request) {
 
       if (insErr) {
         console.error('Supabase review insert error:', insErr);
-        return NextResponse.json({ error: insErr.message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to submit review' }, { status: 500 });
       }
 
       if (insertedData) {
@@ -222,7 +229,7 @@ export async function POST(req: Request) {
 
       const review = {
         id: insertedId,
-        productId,
+        productId: rawProdId,
         userId: undefined,
         orderId: undefined,
         customerName: cleanName,
@@ -230,26 +237,40 @@ export async function POST(req: Request) {
         rating: parsedRating,
         comment: cleanComment,
         createdAt: new Date().toISOString(),
-        isApproved: true,
+        isApproved: false,
       };
 
-      return NextResponse.json({ success: true, review }, { status: 201 });
+      return NextResponse.json(
+        {
+          success: true,
+          message: 'Review submitted successfully and is pending approval.',
+          review,
+        },
+        { status: 201 }
+      );
     }
 
     // Fallback if Supabase not configured (demo mode)
     const demoReview = {
       id: `rev-${Date.now()}`,
-      productId,
+      productId: rawProdId,
       userId: undefined,
       customerName: cleanName,
       customerCity: cleanCity || undefined,
       rating: parsedRating,
       comment: cleanComment,
       createdAt: new Date().toISOString(),
-      isApproved: true,
+      isApproved: false,
     };
 
-    return NextResponse.json({ success: true, review: demoReview }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        message: 'Review submitted successfully and is pending approval.',
+        review: demoReview,
+      },
+      { status: 201 }
+    );
   } catch (err: any) {
     console.error('Review API error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
