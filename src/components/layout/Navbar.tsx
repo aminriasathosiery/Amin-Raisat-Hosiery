@@ -99,14 +99,8 @@ export const Navbar: React.FC = () => {
     setSearchOpen(false);
     setMobileMenuOpen(false);
 
-    // 3. Preserve wholesale storefront context if currently in wholesale
-    const isWholesaleMode = pathname.startsWith('/wholesale');
-    const targetUrl = isWholesaleMode
-      ? `/search?q=${encodeURIComponent(trimmedQuery)}&mode=wholesale`
-      : `/search?q=${encodeURIComponent(trimmedQuery)}`;
-
-    // 4. Client-side navigation via Next.js router
-    router.push(targetUrl);
+    // 3. Client-side navigation via Next.js router
+    router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -115,7 +109,6 @@ export const Navbar: React.FC = () => {
   };
 
   const isCategoryActive = pathname.startsWith('/category');
-  const isWholesaleActive = pathname.startsWith('/wholesale');
 
   // Dynamic header logo based on theme
   const logoSrc = isDark ? '/images/header logo.png' : '/images/light logo.png';
@@ -242,341 +235,162 @@ export const Navbar: React.FC = () => {
                 </Link>
               </div>
 
-              {/* Desktop Navigation Links: Mode-Specific */}
-              {isWholesaleActive ? (
-                <div className="flex items-center space-x-1 lg:space-x-1.5">
-                  {/* 1. WHOLESALE HOME */}
-                  <Link
-                    href="/wholesale"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/wholesale'
+              {/* Desktop Navigation Links */}
+              <div className="flex items-center space-x-1 lg:space-x-1.5">
+                {/* 1. HOME */}
+                <Link
+                  href="/"
+                  className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
+                    pathname === '/'
+                      ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
+                      : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
+                  }`}
+                >
+                  Home
+                </Link>
+
+                {/* 2. DYNAMIC CATEGORIES ▾ DROPDOWN / MEGA MENU */}
+                <div
+                  className="relative"
+                  onMouseEnter={handleMouseEnterCategories}
+                  onMouseLeave={handleMouseLeaveCategories}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoriesDropdownOpen(!isCategoriesDropdownOpen)}
+                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg flex items-center gap-1.5 ${
+                      isCategoryActive || isCategoriesDropdownOpen
                         ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
                         : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
                     }`}
+                    aria-expanded={isCategoriesDropdownOpen}
                   >
-                    Wholesale
-                  </Link>
-
-                  {/* 2. DYNAMIC WHOLESALE CATEGORIES ▾ DROPDOWN */}
-                  <div
-                    className="relative"
-                    onMouseEnter={handleMouseEnterCategories}
-                    onMouseLeave={handleMouseLeaveCategories}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setIsCategoriesDropdownOpen(!isCategoriesDropdownOpen)}
-                      className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg flex items-center gap-1.5 ${
-                        pathname.startsWith('/wholesale/category') || isCategoriesDropdownOpen
-                          ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                          : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
+                    <span>Categories</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-charcoal-400 dark:text-[#8E8A80] transition-transform duration-200 ${
+                        isCategoriesDropdownOpen ? 'rotate-180 text-[#B89555] dark:text-[#C9A96A]' : ''
                       }`}
-                      aria-expanded={isCategoriesDropdownOpen}
-                    >
-                      <span>Categories</span>
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 text-charcoal-400 dark:text-[#8E8A80] transition-transform duration-200 ${
-                          isCategoriesDropdownOpen ? 'rotate-180 text-[#B89555] dark:text-[#C9A96A]' : ''
-                        }`}
-                      />
-                    </button>
+                    />
+                  </button>
 
-                    {/* Desktop Dropdown Container */}
-                    {isCategoriesDropdownOpen && (
+                  {/* Desktop Dropdown Container */}
+                  {isCategoriesDropdownOpen && (
+                    <div
+                      className={`absolute top-full left-0 mt-1 bg-white dark:bg-[#191917] rounded-2xl shadow-elevation border border-light-border dark:border-[#34322D] p-4 z-50 animate-in fade-in slide-in-from-top-1 duration-150 max-h-[75vh] overflow-y-auto ${
+                        activeCategories.length > 3
+                          ? 'w-[560px] lg:w-[640px]'
+                          : activeCategories.length > 1
+                          ? 'w-[420px]'
+                          : 'w-[290px]'
+                      }`}
+                    >
+                      <div className="px-3 py-2 border-b border-light-border dark:border-[#34322D] mb-3 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                          <span>Garment Collections ({activeCategories.length})</span>
+                        </span>
+                        <Link
+                          href="/shop"
+                          onClick={() => setIsCategoriesDropdownOpen(false)}
+                          className="text-[11px] font-semibold text-[#B89555] dark:text-[#C9A96A] hover:underline transition-colors"
+                        >
+                          View All Products &rarr;
+                        </Link>
+                      </div>
+
+                      {/* Adaptive Grid for Categories */}
                       <div
-                        className={`absolute top-full left-0 mt-1 bg-white dark:bg-[#191917] rounded-2xl shadow-elevation border border-light-border dark:border-[#34322D] p-4 z-50 animate-in fade-in slide-in-from-top-1 duration-150 max-h-[75vh] overflow-y-auto ${
+                        className={`grid gap-4 ${
                           activeCategories.length > 3
-                            ? 'w-[560px] lg:w-[640px]'
+                            ? 'grid-cols-3'
                             : activeCategories.length > 1
-                            ? 'w-[420px]'
-                            : 'w-[290px]'
+                            ? 'grid-cols-2'
+                            : 'grid-cols-1'
                         }`}
                       >
-                        <div className="px-3 py-2 border-b border-light-border dark:border-[#34322D] mb-3 flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider flex items-center gap-1.5">
-                            <Layers className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
-                            <span>Wholesale Collections ({activeCategories.length})</span>
-                          </span>
-                          <Link
-                            href="/wholesale"
-                            onClick={() => setIsCategoriesDropdownOpen(false)}
-                            className="text-[11px] font-semibold text-[#B89555] dark:text-[#C9A96A] hover:underline transition-colors"
-                          >
-                            View All Wholesale &rarr;
-                          </Link>
-                        </div>
+                        {activeCategories.map((category) => {
+                          const subs = getActiveSubcategoriesForCat(category.id, category.subcategories);
 
-                        {/* Adaptive Grid for Categories */}
-                        <div
-                          className={`grid gap-4 ${
-                            activeCategories.length > 3
-                              ? 'grid-cols-3'
-                              : activeCategories.length > 1
-                              ? 'grid-cols-2'
-                              : 'grid-cols-1'
-                          }`}
-                        >
-                          {activeCategories.map((category) => {
-                            const subs = getActiveSubcategoriesForCat(category.id, category.subcategories);
+                          return (
+                            <div key={category.id} className="space-y-2 p-2 rounded-xl hover:bg-light-hover dark:hover:bg-[#22211E] transition-colors">
+                              <Link
+                                href={`/category/${category.slug}`}
+                                onClick={() => setIsCategoriesDropdownOpen(false)}
+                                className="block font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors border-b border-light-border dark:border-[#34322D] pb-1.5"
+                              >
+                                <span>{category.name}</span>
+                              </Link>
 
-                            return (
-                              <div key={category.id} className="space-y-2 p-2 rounded-xl hover:bg-light-hover dark:hover:bg-[#22211E] transition-colors">
-                                <Link
-                                  href={`/wholesale/category/${category.slug}`}
-                                  onClick={() => setIsCategoriesDropdownOpen(false)}
-                                  className="block font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors border-b border-light-border dark:border-[#34322D] pb-1.5"
-                                >
-                                  <span>{category.name}</span>
-                                </Link>
-
-                                {subs.length > 0 ? (
-                                  <ul className="space-y-1 pl-1">
-                                    {subs.map((sub) => (
-                                      <li key={sub.id}>
-                                        <Link
-                                          href={`/wholesale/category/${category.slug}/${sub.slug}`}
-                                          onClick={() => setIsCategoriesDropdownOpen(false)}
-                                          className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] hover:underline flex items-center gap-1 transition-colors py-0.5"
-                                        >
-                                          <span className="text-[#B89555] dark:text-[#C9A96A]">&bull;</span>
-                                          <span>{sub.name}</span>
-                                        </Link>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] italic pl-1">
-                                    View {category.name.toLowerCase()} wholesale
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Bottom Banner inside Dropdown */}
-                        <div className="mt-3 pt-2.5 border-t border-light-border dark:border-[#34322D] flex items-center justify-between text-[11px] text-charcoal-500 dark:text-[#8E8A80] px-2">
-                          <span>100% Free Nationwide Delivery on 12+ Pieces</span>
-                          <span className="text-emerald-700 dark:text-emerald-400 font-semibold">B2B Master Packs</span>
-                        </div>
+                              {subs.length > 0 ? (
+                                <ul className="space-y-1 pl-1">
+                                  {subs.map((sub) => (
+                                    <li key={sub.id}>
+                                      <Link
+                                        href={`/category/${category.slug}/${sub.slug}`}
+                                        onClick={() => setIsCategoriesDropdownOpen(false)}
+                                        className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] hover:underline flex items-center gap-1 transition-colors py-0.5"
+                                      >
+                                        <span className="text-[#B89555] dark:text-[#C9A96A]">&bull;</span>
+                                        <span>{sub.name}</span>
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] italic pl-1">
+                                  View all {category.name.toLowerCase()} items
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </div>
 
-                  {/* 3. SHOP ALL WHOLESALE */}
-                  <Link
-                    href="/wholesale"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/wholesale'
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    Shop
-                  </Link>
-
-                  {/* 4. ABOUT */}
-                  <Link
-                    href="/about"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/about'
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    About
-                  </Link>
-
-                  {/* 5. CONTACT */}
-                  <Link
-                    href="/contact"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/contact'
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    Contact
-                  </Link>
-
-                  {/* 6. BACK TO RETAIL */}
-                  <Link
-                    href="/"
-                    className="px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E] border border-transparent hover:border-light-border dark:hover:border-[#34322D]"
-                  >
-                    Back to Retail
-                  </Link>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1 lg:space-x-1.5">
-                  {/* 1. HOME */}
-                  <Link
-                    href="/"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/'
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    Home
-                  </Link>
-
-                  {/* 2. DYNAMIC CATEGORIES ▾ DROPDOWN / MEGA MENU */}
-                  <div
-                    className="relative"
-                    onMouseEnter={handleMouseEnterCategories}
-                    onMouseLeave={handleMouseLeaveCategories}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setIsCategoriesDropdownOpen(!isCategoriesDropdownOpen)}
-                      className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg flex items-center gap-1.5 ${
-                        isCategoryActive || isCategoriesDropdownOpen
-                          ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                          : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                      }`}
-                      aria-expanded={isCategoriesDropdownOpen}
-                    >
-                      <span>Categories</span>
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 text-charcoal-400 dark:text-[#8E8A80] transition-transform duration-200 ${
-                          isCategoriesDropdownOpen ? 'rotate-180 text-[#B89555] dark:text-[#C9A96A]' : ''
-                        }`}
-                      />
-                    </button>
-
-                    {/* Desktop Dropdown Container */}
-                    {isCategoriesDropdownOpen && (
-                      <div
-                        className={`absolute top-full left-0 mt-1 bg-white dark:bg-[#191917] rounded-2xl shadow-elevation border border-light-border dark:border-[#34322D] p-4 z-50 animate-in fade-in slide-in-from-top-1 duration-150 max-h-[75vh] overflow-y-auto ${
-                          activeCategories.length > 3
-                            ? 'w-[560px] lg:w-[640px]'
-                            : activeCategories.length > 1
-                            ? 'w-[420px]'
-                            : 'w-[290px]'
-                        }`}
-                      >
-                        <div className="px-3 py-2 border-b border-light-border dark:border-[#34322D] mb-3 flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider flex items-center gap-1.5">
-                            <Layers className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
-                            <span>Garment Collections ({activeCategories.length})</span>
-                          </span>
-                          <Link
-                            href="/shop"
-                            onClick={() => setIsCategoriesDropdownOpen(false)}
-                            className="text-[11px] font-semibold text-[#B89555] dark:text-[#C9A96A] hover:underline transition-colors"
-                          >
-                            View All Products &rarr;
-                          </Link>
-                        </div>
-
-                        {/* Adaptive Grid for Categories */}
-                        <div
-                          className={`grid gap-4 ${
-                            activeCategories.length > 3
-                              ? 'grid-cols-3'
-                              : activeCategories.length > 1
-                              ? 'grid-cols-2'
-                              : 'grid-cols-1'
-                          }`}
-                        >
-                          {activeCategories.map((category) => {
-                            const subs = getActiveSubcategoriesForCat(category.id, category.subcategories);
-
-                            return (
-                              <div key={category.id} className="space-y-2 p-2 rounded-xl hover:bg-light-hover dark:hover:bg-[#22211E] transition-colors">
-                                <Link
-                                  href={`/category/${category.slug}`}
-                                  onClick={() => setIsCategoriesDropdownOpen(false)}
-                                  className="block font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors border-b border-light-border dark:border-[#34322D] pb-1.5"
-                                >
-                                  <span>{category.name}</span>
-                                </Link>
-
-                                {subs.length > 0 ? (
-                                  <ul className="space-y-1 pl-1">
-                                    {subs.map((sub) => (
-                                      <li key={sub.id}>
-                                        <Link
-                                          href={`/category/${category.slug}/${sub.slug}`}
-                                          onClick={() => setIsCategoriesDropdownOpen(false)}
-                                          className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] hover:underline flex items-center gap-1 transition-colors py-0.5"
-                                        >
-                                          <span className="text-[#B89555] dark:text-[#C9A96A]">&bull;</span>
-                                          <span>{sub.name}</span>
-                                        </Link>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] italic pl-1">
-                                    View all {category.name.toLowerCase()} items
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Bottom Banner inside Dropdown */}
-                        <div className="mt-3 pt-2.5 border-t border-light-border dark:border-[#34322D] flex items-center justify-between text-[11px] text-charcoal-500 dark:text-[#8E8A80] px-2">
-                          <span>Free Delivery Across Pakistan on 3+ Pieces</span>
-                          <span className="text-emerald-700 dark:text-emerald-400 font-semibold">100% Combed Cotton</span>
-                        </div>
+                      {/* Bottom Banner inside Dropdown */}
+                      <div className="mt-3 pt-2.5 border-t border-light-border dark:border-[#34322D] flex items-center justify-between text-[11px] text-charcoal-500 dark:text-[#8E8A80] px-2">
+                        <span>Free Delivery Across Pakistan on 3+ Pieces</span>
+                        <span className="text-emerald-700 dark:text-emerald-400 font-semibold">100% Combed Cotton</span>
                       </div>
-                    )}
-                  </div>
-
-                  {/* 3. SHOP */}
-                  <Link
-                    href="/shop"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/shop'
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    Shop
-                  </Link>
-
-                  {/* 4. WHOLESALE (Clean Standard Link without Promotional Pills) */}
-                  <Link
-                    href="/wholesale"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      isWholesaleActive
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    Wholesale
-                  </Link>
-
-                  {/* 5. ABOUT */}
-                  <Link
-                    href="/about"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/about'
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    About
-                  </Link>
-
-                  {/* 6. CONTACT */}
-                  <Link
-                    href="/contact"
-                    className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
-                      pathname === '/contact'
-                        ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
-                        : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                    }`}
-                  >
-                    Contact
-                  </Link>
-
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {/* 3. SHOP */}
+                <Link
+                  href="/shop"
+                  className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
+                    pathname === '/shop'
+                      ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
+                      : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
+                  }`}
+                >
+                  Shop
+                </Link>
+
+                {/* 4. ABOUT */}
+                <Link
+                  href="/about"
+                  className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
+                    pathname === '/about'
+                      ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
+                      : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
+                  }`}
+                >
+                  About
+                </Link>
+
+                {/* 5. CONTACT */}
+                <Link
+                  href="/contact"
+                  className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg ${
+                    pathname === '/contact'
+                      ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
+                      : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
+                  }`}
+                >
+                  Contact
+                </Link>
+              </div>
 
               {/* Desktop Right Actions: Theme Toggle, Search, Customer Account, Cart */}
               <div className="flex items-center gap-1.5 lg:gap-2">
@@ -641,11 +455,7 @@ export const Navbar: React.FC = () => {
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}
-                  placeholder={
-                    isWholesaleActive
-                      ? "Search wholesale vests, styles, categories..."
-                      : "Search products by name, category, or style..."
-                  }
+                  placeholder="Search products by name, category, or style..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-24 py-2.5 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] rounded-xl text-xs focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A] shadow-xs"
@@ -683,112 +493,6 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
 
-            {isWholesaleActive ? (
-              <>
-                {/* 1. Wholesale Home */}
-                <Link
-                  href="/wholesale"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`block px-3 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
-                    pathname === '/wholesale'
-                      ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] font-bold'
-                      : 'text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
-                  }`}
-                >
-                  Wholesale Home
-                </Link>
-
-                {/* 2. Dynamic Wholesale Categories Accordion */}
-                <div className="border-t border-light-border dark:border-[#34322D] pt-2 space-y-1.5">
-                  <div
-                    onClick={() => setMobileCategoriesOpen(!mobileCategoriesOpen)}
-                    className="flex items-center justify-between px-3 py-2.5 text-sm font-bold text-charcoal-800 dark:text-[#F4F1E9] hover:bg-light-hover dark:hover:bg-[#22211E] rounded-xl cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-                      <span>Wholesale Categories ({activeCategories.length})</span>
-                    </div>
-                    <ChevronDown
-                      className={`w-4 h-4 text-charcoal-400 dark:text-[#8E8A80] transition-transform duration-200 ${
-                        mobileCategoriesOpen ? 'rotate-180 text-[#B89555] dark:text-[#C9A96A]' : ''
-                      }`}
-                    />
-                  </div>
-
-                  {mobileCategoriesOpen && (
-                    <div className="space-y-2 pl-2 pr-1 pt-1">
-                      {activeCategories.map((cat) => {
-                        const subs = getActiveSubcategoriesForCat(cat.id, cat.subcategories);
-                        const isExpanded = expandedMobileCategory === cat.id;
-
-                        return (
-                          <div key={cat.id} className="bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] overflow-hidden">
-                            <div className="flex items-center justify-between min-h-[44px]">
-                              <Link
-                                href={`/wholesale/category/${cat.slug}`}
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex-1 py-3 px-3.5 font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] flex items-center justify-between gap-1"
-                              >
-                                <span>{cat.name}</span>
-                                <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] font-normal">&rarr;</span>
-                              </Link>
-
-                              {subs.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedMobileCategory(isExpanded ? null : cat.id)}
-                                  className="w-11 h-11 flex items-center justify-center text-charcoal-400 dark:text-[#8E8A80] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#2A2925] border-l border-light-border dark:border-[#34322D]"
-                                  aria-label={`Toggle ${cat.name} subcategories`}
-                                >
-                                  <ChevronDown
-                                    className={`w-4 h-4 transition-transform duration-200 ${
-                                      isExpanded ? 'rotate-180 text-[#B89555] dark:text-[#C9A96A]' : ''
-                                    }`}
-                                  />
-                                </button>
-                              )}
-                            </div>
-
-                            {subs.length > 0 && isExpanded && (
-                              <div className="px-3.5 pb-3 pt-1 border-t border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917]/60 space-y-1 animate-in fade-in">
-                                {subs.map((sub) => (
-                                  <Link
-                                    key={sub.id}
-                                    href={`/wholesale/category/${cat.slug}/${sub.slug}`}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="block py-2 px-2 text-xs text-charcoal-600 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E] rounded-lg transition-colors"
-                                  >
-                                    &bull; {sub.name}
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Wholesale Shop All */}
-                <Link
-                  href="/wholesale"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 text-sm font-semibold text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E] rounded-xl"
-                >
-                  Wholesale Shop All
-                </Link>
-
-                {/* 4. Switch to Retail Storefront */}
-                <Link
-                  href="/"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 text-sm font-bold text-[#B89555] dark:text-[#C9A96A] bg-champagne-500/10 border border-[#B89555]/30 rounded-xl"
-                >
-                  ← Return to Retail Storefront
-                </Link>
-              </>
-            ) : (
               <>
                 {/* 1. Home */}
                 <Link
@@ -879,17 +583,7 @@ export const Navbar: React.FC = () => {
                 >
                   Shop All Products
                 </Link>
-
-                {/* 4. Wholesale */}
-                <Link
-                  href="/wholesale"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 text-sm font-semibold text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E] rounded-xl"
-                >
-                  Wholesale Storefront
-                </Link>
               </>
-            )}
 
             {/* 5. About / Contact */}
             <div className="pt-2 border-t border-light-border dark:border-[#34322D] space-y-1">

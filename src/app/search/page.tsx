@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
 import { ProductCard } from '@/components/product/ProductCard';
-import { Search, ChevronRight, ShoppingBag, PackageCheck, Tag } from 'lucide-react';
+import { Search, ChevronRight, ShoppingBag, Tag } from 'lucide-react';
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -13,7 +13,6 @@ function SearchContent() {
 
   // URL parameters drive active search results
   const activeQuery = searchParams.get('q') || '';
-  const isWholesale = searchParams.get('wholesale') === 'true' || searchParams.get('mode') === 'wholesale';
 
   // Input field local state (does not trigger search per keystroke)
   const [inputValue, setInputValue] = useState(activeQuery);
@@ -33,7 +32,6 @@ function SearchContent() {
 
     return products.filter((prod) => {
       if (!prod.isPublished) return false;
-      if (isWholesale && prod.isWholesaleEnabled === false) return false;
 
       const nameMatch = prod.name.toLowerCase().includes(q);
       const subtitleMatch = prod.subtitle?.toLowerCase().includes(q);
@@ -49,7 +47,7 @@ function SearchContent() {
 
       return nameMatch || subtitleMatch || descMatch || catMatch || subcatMatch || skuMatch;
     });
-  }, [products, categories, subcategories, activeQuery, isWholesale]);
+  }, [products, categories, subcategories, activeQuery]);
 
   // Shared search submit handler (for both Enter press and Search button tap)
   const executeSearch = (queryToSubmit: string) => {
@@ -68,13 +66,8 @@ function SearchContent() {
       document.activeElement.blur();
     }
 
-    // 2. Preserve Wholesale storefront context if active
-    const targetUrl = isWholesale
-      ? `/search?q=${encodeURIComponent(trimmed)}&mode=wholesale`
-      : `/search?q=${encodeURIComponent(trimmed)}`;
-
-    // 3. Client-side navigation without page reload
-    router.push(targetUrl);
+    // 2. Client-side navigation without page reload
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -82,21 +75,19 @@ function SearchContent() {
     executeSearch(inputValue);
   };
 
-  const popularSuggestions = isWholesale
-    ? ['Vest', 'Cotton Vest', 'A-Shirt', 'Super Quality', 'RRN-01']
-    : ['Vest', 'Cotton', 'Underwear', 'White Vest', 'Sleeveless'];
+  const popularSuggestions = ['Vest', 'Cotton', 'Underwear', 'White Vest', 'Sleeveless', 'High Quality', 'Standard Quality'];
 
   return (
     <div className="min-h-[85vh] py-8 sm:py-12 bg-light-bg dark:bg-[#11110F] text-charcoal-900 dark:text-[#F4F1E9] transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-[#8E8A80] mb-6 flex-wrap">
-          <Link href={isWholesale ? "/wholesale" : "/"} className="hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors">
-            {isWholesale ? "Wholesale" : "Home"}
+          <Link href="/" className="hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors">
+            Home
           </Link>
           <ChevronRight className="w-3 h-3 text-charcoal-400 dark:text-[#6E6A62]" />
           <span className="font-semibold text-charcoal-900 dark:text-[#F4F1E9]">
-            {isWholesale ? "Search Wholesale Catalog" : "Search Products"}
+            Search Products
           </span>
         </div>
 
@@ -104,13 +95,8 @@ function SearchContent() {
         <div className="border-b border-light-border dark:border-[#34322D] pb-6 mb-8 max-w-2xl">
           <div className="flex items-center gap-2 mb-3">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900 dark:text-[#F4F1E9] tracking-tight">
-              {isWholesale ? "Search Wholesale Catalog" : "Search Catalog"}
+              Search Catalog
             </h1>
-            {isWholesale && (
-              <span className="text-[10px] font-extrabold bg-champagne-500 text-charcoal-950 px-2 py-0.5 rounded shadow-xs uppercase tracking-wider">
-                Wholesale Mode
-              </span>
-            )}
           </div>
 
           <form onSubmit={handleFormSubmit} className="flex flex-col sm:flex-row gap-2.5">
@@ -122,7 +108,7 @@ function SearchContent() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                placeholder={isWholesale ? "Search wholesale vests, styles, sizes..." : "Search by product name, category, or style..."}
+                placeholder="Search by product name, category, or style..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A] shadow-xs"
@@ -183,23 +169,23 @@ function SearchContent() {
             </p>
             <div className="pt-2">
               <Link
-                href={isWholesale ? "/wholesale" : "/shop"}
+                href="/shop"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 rounded-xl text-xs font-bold shadow-xs transition-colors"
               >
-                {isWholesale ? <PackageCheck className="w-4 h-4 stroke-[2.2]" /> : <ShoppingBag className="w-4 h-4 stroke-[2.2]" />}
-                <span>{isWholesale ? "Explore Wholesale Store" : "Browse All Products"}</span>
+                <ShoppingBag className="w-4 h-4 stroke-[2.2]" />
+                <span>Browse All Products</span>
               </Link>
             </div>
           </div>
         ) : (
           <div>
             <p className="text-xs font-medium text-charcoal-500 dark:text-[#8E8A80] mb-6">
-              Found {matchingProducts.length} {isWholesale ? "wholesale " : ""}product{matchingProducts.length > 1 ? 's' : ''}
+              Found {matchingProducts.length} product{matchingProducts.length > 1 ? 's' : ''}
               {activeQuery && ` matching "${activeQuery}"`}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {matchingProducts.map((prod) => (
-                <ProductCard key={prod.id} product={prod} isWholesaleView={isWholesale} />
+                <ProductCard key={prod.id} product={prod} />
               ))}
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { VariantSelector } from '@/components/product/VariantSelector';
@@ -13,8 +13,6 @@ import { DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
-  const isWholesale = searchParams.get('wholesale') === 'true' || searchParams.get('mode') === 'wholesale';
 
   const slug = params?.slug as string;
   const { products, categories, subcategories, settings, isLoading } = useStore();
@@ -83,14 +81,6 @@ export default function ProductDetailPage() {
           <Link href="/shop" className="hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors">
             Shop
           </Link>
-          {isWholesale && (
-            <>
-              <ChevronRight className="w-3 h-3 text-charcoal-400 dark:text-[#6E6A62]" />
-              <Link href="/wholesale" className="hover:text-[#B89555] text-[#96763D] dark:text-[#C9A96A] font-bold transition-colors">
-                Wholesale Store
-              </Link>
-            </>
-          )}
           {category && (
             <>
               <ChevronRight className="w-3 h-3 text-charcoal-400 dark:text-[#6E6A62]" />
@@ -133,11 +123,6 @@ export default function ProductDetailPage() {
                 <span className="text-[10px] font-bold text-[#96763D] dark:text-[#C9A96A] uppercase tracking-widest block">
                   {category ? category.name : 'Men'} &gt; {subcategory ? subcategory.name : 'Vests'}
                 </span>
-                {isWholesale && (
-                  <span className="text-[10px] font-bold bg-champagne-100 dark:bg-[#22211E] text-[#96763D] dark:text-[#C9A96A] border border-[#B89555]/30 px-2 py-0.5 rounded uppercase tracking-wider">
-                    Wholesale
-                  </span>
-                )}
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900 dark:text-[#F4F1E9] mt-1 tracking-tight leading-tight">
@@ -188,7 +173,6 @@ export default function ProductDetailPage() {
               setSelectedSleeve={setSelectedSleeve}
               selectedSize={selectedSize}
               setSelectedSize={setSelectedSize}
-              lockRetailMode={true}
             />
 
             {/* Clean Accordion Sections */}
@@ -241,17 +225,17 @@ export default function ProductDetailPage() {
                   onClick={() => toggleSection('shipping')}
                   className="w-full flex items-center justify-between font-bold text-charcoal-800 dark:text-[#F4F1E9] text-left py-1 hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors"
                 >
-                  <span>Nationwide Pakistan Shipping &amp; Wholesale Logistics</span>
+                  <span>Nationwide Pakistan Shipping &amp; Delivery</span>
                   {openSections.shipping ? <ChevronUp className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openSections.shipping && (
                   <div className="pt-2 text-charcoal-600 dark:text-[#B8B3A8] space-y-1.5 font-normal leading-relaxed">
                     <p>{product.shippingInfo}</p>
                     <p className="font-semibold text-charcoal-900 dark:text-[#F4F1E9]">
-                      • Retail Minimum: {settings.shipping.minOrderQty} pieces | Wholesale Minimum: {product.wholesaleMinQty || 12} pieces
+                      • 1 piece is a valid order (Minimum order quantity is 1 piece).
                     </p>
                     <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                      • 100% FREE DELIVERY on 3+ pieces retail &amp; all wholesale orders across Pakistan.
+                      • 100% FREE DELIVERY on 3+ pieces across Pakistan (Standard Rs. {settings.shipping?.baseDeliveryCharge ?? 200} delivery fee for 1 or 2 pieces).
                     </p>
                     <p>• Cash on Delivery (COD) and Direct Bank Transfer available.</p>
                   </div>

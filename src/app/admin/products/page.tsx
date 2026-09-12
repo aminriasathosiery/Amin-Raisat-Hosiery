@@ -83,8 +83,6 @@ function AdminProductsContent() {
   const [prodCategoryId, setProdCategoryId] = useState('');
   const [prodSubcategoryId, setProdSubcategoryId] = useState('');
   const [prodIsPublished, setProdIsPublished] = useState(true);
-  const [prodIsWholesaleEnabled, setProdIsWholesaleEnabled] = useState(true);
-  const [prodWholesaleMinQty, setProdWholesaleMinQty] = useState(12);
   const [prodFeaturesText, setProdFeaturesText] = useState('');
   const [prodCareText, setProdCareText] = useState('');
   const [prodShippingText, setProdShippingText] = useState('');
@@ -104,12 +102,8 @@ function AdminProductsContent() {
 
   // Matrix Generator Settings
   const [genDefaultPrice, setGenDefaultPrice] = useState(480);
-  const [genDefaultWholesalePrice, setGenDefaultWholesalePrice] = useState(394);
   const [genDefaultComparePrice, setGenDefaultComparePrice] = useState<number | undefined>(undefined);
   const [genDefaultStock, setGenDefaultStock] = useState(50);
-
-  // Custom Bulk Discount percentage helper
-  const [bulkDiscountInput, setBulkDiscountInput] = useState(18);
 
   // Individual Variant Add State
   const [isAddSingleVarOpen, setIsAddSingleVarOpen] = useState(false);
@@ -117,7 +111,6 @@ function AdminProductsContent() {
   const [singleVarStyle, setSingleVarStyle] = useState('');
   const [singleVarSize, setSingleVarSize] = useState('');
   const [singleVarPrice, setSingleVarPrice] = useState(480);
-  const [singleVarWholesalePrice, setSingleVarWholesalePrice] = useState(394);
   const [singleVarSalePrice, setSingleVarSalePrice] = useState<number | undefined>(undefined);
   const [singleVarStock, setSingleVarStock] = useState(50);
   const [singleVarSku, setSingleVarSku] = useState('');
@@ -141,7 +134,7 @@ function AdminProductsContent() {
   const [catalogSearch, setCatalogSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Handle URL query parameters (e.g. from Wholesale dashboard ?edit=prod-123&tab=variants)
+  // Handle URL query parameters (e.g. ?edit=prod-123&tab=variants)
   useEffect(() => {
     const editId = searchParams.get('edit');
     const tabParam = searchParams.get('tab');
@@ -197,8 +190,6 @@ function AdminProductsContent() {
     const defaultSub = subcategories.find((s) => s.categoryId === defaultCat)?.id || '';
     setProdSubcategoryId(defaultSub);
     setProdIsPublished(true);
-    setProdIsWholesaleEnabled(true);
-    setProdWholesaleMinQty(12);
     setProdFeaturesText('100% Pure Combed Cotton\nAnti-Sag Double Top-Stitched Neck\nBreathable 1x1 Rib Knit Weave\nPre-Shrunk Colorfast Fabric');
     setProdCareText('Machine wash cold\nDo not bleach\nTumble dry low\nWarm iron if needed');
     setProdShippingText('Nationwide Cash on Delivery (COD) across Pakistan. Free delivery on 3+ pieces.');
@@ -219,7 +210,6 @@ function AdminProductsContent() {
         sleeve: 'Sleeveless',
         size: 'L',
         price: 480,
-        wholesalePrice: 394,
         stock: 50,
         sku: 'ARH-HQ-SL-L',
         isAvailable: true,
@@ -244,8 +234,6 @@ function AdminProductsContent() {
     setProdCategoryId(prod.categoryId);
     setProdSubcategoryId(prod.subcategoryId || '');
     setProdIsPublished(prod.isPublished);
-    setProdIsWholesaleEnabled(prod.isWholesaleEnabled !== false);
-    setProdWholesaleMinQty(prod.wholesaleMinQty ? Number(prod.wholesaleMinQty) : 12);
     setProdFeaturesText(prod.features ? prod.features.join('\n') : '');
     setProdCareText(prod.careInstructions ? prod.careInstructions.join('\n') : '');
     setProdShippingText(prod.shippingInfo || '');
@@ -264,13 +252,7 @@ function AdminProductsContent() {
     setCustomStyles(stylesFromVars.length > 0 ? stylesFromVars : ['Sleeveless', 'Full Sleeve']);
     setCustomSizes(sizesFromVars.length > 0 ? sizesFromVars : ['S', 'M', 'L', 'XL', 'XXL']);
 
-    // Ensure all variants have proper wholesale prices
-    const preparedVariants = (prod.variants || []).map((v) => ({
-      ...v,
-      wholesalePrice: v.wholesalePrice ? Number(v.wholesalePrice) : Math.round((Number(v.price) || 480) * 0.82),
-    }));
-
-    setVariantsList(preparedVariants);
+    setVariantsList(prod.variants || []);
     setMediaList(prod.media || []);
     setEditorTab('basic');
     setViewMode('editor');
@@ -342,7 +324,6 @@ function AdminProductsContent() {
 
     const cleanVariants: ProductVariant[] = variantsList.map((v, i) => {
       const retailPrice = Number(v.price) || 0;
-      const wholesalePrice = v.wholesalePrice ? Number(v.wholesalePrice) : Math.round(retailPrice * 0.82);
 
       return {
         ...v,
@@ -350,7 +331,6 @@ function AdminProductsContent() {
         productId: currentId,
         quality: v.quality || prodQualityGrade || 'High Quality',
         price: retailPrice,
-        wholesalePrice: wholesalePrice,
         stock: Number(v.stock) || 0,
       };
     });
@@ -424,8 +404,6 @@ function AdminProductsContent() {
       shippingInfo: prodShippingText.trim(),
       returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
       isPublished: prodIsPublished,
-      isWholesaleEnabled: prodIsWholesaleEnabled,
-      wholesaleMinQty: Number(prodWholesaleMinQty) || 12,
       createdAt: editingProductId
         ? products.find((p) => p.id === editingProductId)?.createdAt || new Date().toISOString()
         : new Date().toISOString(),
@@ -542,9 +520,6 @@ function AdminProductsContent() {
           );
 
           const retail = existing ? existing.price : genDefaultPrice;
-          const wholesale = existing?.wholesalePrice
-            ? existing.wholesalePrice
-            : genDefaultWholesalePrice || Math.round(retail * 0.82);
 
           generated.push({
             id: existing ? existing.id : `var-gen-${Date.now()}-${count++}`,
@@ -553,7 +528,6 @@ function AdminProductsContent() {
             sleeve: st,
             size: sz,
             price: retail,
-            wholesalePrice: wholesale,
             salePrice: existing ? existing.salePrice : genDefaultComparePrice,
             stock: existing ? existing.stock : genDefaultStock,
             sku: existing?.sku || skuCode,
@@ -565,26 +539,6 @@ function AdminProductsContent() {
 
     setVariantsList(generated);
     showNotice(`Generated matrix with ${generated.length} variant combinations!`);
-  };
-
-  // ------------------ BULK DISCOUNT APPLICATOR ------------------
-  const handleBulkApplyDiscount = (discountPercent: number) => {
-    if (variantsList.length === 0) {
-      showNotice('No variants to update. Generate variants first.', 'error');
-      return;
-    }
-
-    const updated = variantsList.map((v) => {
-      const retail = Number(v.price) || 0;
-      const wholesale = Math.round(retail * (1 - discountPercent / 100));
-      return {
-        ...v,
-        wholesalePrice: wholesale,
-      };
-    });
-
-    setVariantsList(updated);
-    showNotice(`Applied ${discountPercent}% wholesale discount across all ${updated.length} variants!`);
   };
 
   // ------------------ ADD SINGLE CUSTOM VARIANT ------------------
@@ -604,7 +558,6 @@ function AdminProductsContent() {
     const autoSku = singleVarSku.trim() || `${prodPrefix}-${qShort}-${stShort}-${sz}`;
 
     const retail = Number(singleVarPrice) || 480;
-    const wholesale = singleVarWholesalePrice ? Number(singleVarWholesalePrice) : Math.round(retail * 0.82);
 
     const newVariant: ProductVariant = {
       id: `var-custom-${Date.now()}`,
@@ -613,7 +566,6 @@ function AdminProductsContent() {
       sleeve: st,
       size: sz,
       price: retail,
-      wholesalePrice: wholesale,
       salePrice: singleVarSalePrice ? Number(singleVarSalePrice) : undefined,
       stock: Number(singleVarStock) || 50,
       sku: autoSku,
@@ -804,7 +756,7 @@ function AdminProductsContent() {
                 </span>
               </div>
               <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8] mt-1">
-                Configure products with unified Retail and Wholesale pricing per variant, stock management, and photography.
+                Configure catalog garments, variant sizes, pricing, and live inventory.
               </p>
             </div>
             <button
@@ -862,10 +814,8 @@ function AdminProductsContent() {
               {filteredProducts.map((prod) => {
                 const totalStock = prod.variants.reduce((acc, v) => acc + (v.stock || 0), 0);
                 const prices = prod.variants.map((v) => v.price).filter((p) => p > 0);
-                const wholesalePrices = prod.variants.map((v) => v.wholesalePrice || Math.round(v.price * 0.82));
                 const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
                 const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-                const minWholesale = wholesalePrices.length > 0 ? Math.min(...wholesalePrices) : Math.round(minPrice * 0.82);
                 const firstImage = prod.media?.find((m) => m.type === 'photo')?.url || '/images/hero/product 1.png';
 
                 const uniqueQualities = Array.from(new Set(prod.variants.map((v) => v.quality).filter(Boolean)));
@@ -903,11 +853,6 @@ function AdminProductsContent() {
                               Draft
                             </span>
                           )}
-                          {prod.isWholesaleEnabled !== false && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-champagne-100 dark:bg-[#22211E] text-[#96763D] dark:text-[#C9A96A] border border-[#B89555]/30">
-                              Wholesale Enabled (Min {prod.wholesaleMinQty || 12} pcs)
-                            </span>
-                          )}
                         </div>
 
                         <h3 className="font-bold text-base sm:text-lg text-charcoal-900 dark:text-[#F4F1E9] leading-tight">
@@ -920,13 +865,6 @@ function AdminProductsContent() {
                             <strong className="text-charcoal-900 dark:text-[#F4F1E9]">Retail:</strong>{' '}
                             <span className="text-[#B89555] dark:text-[#C9A96A] font-bold">
                               {minPrice === maxPrice ? `Rs. ${minPrice}` : `Rs. ${minPrice} – Rs. ${maxPrice}`}
-                            </span>
-                          </span>
-                          <span>•</span>
-                          <span>
-                            <strong className="text-charcoal-900 dark:text-[#F4F1E9]">Wholesale from:</strong>{' '}
-                            <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                              Rs. {minWholesale}
                             </span>
                           </span>
                           <span>•</span>
@@ -1010,7 +948,7 @@ function AdminProductsContent() {
                   {editingProductId ? `Edit Garment: ${prodName || 'Product'}` : 'Create New Garment Listing'}
                 </h1>
                 <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">
-                  Set basic details, tax, and configure unified Retail + Wholesale pricing for each variant combination.
+                  Set basic details and configure retail pricing for each variant combination.
                 </p>
               </div>
             </div>
@@ -1203,49 +1141,6 @@ function AdminProductsContent() {
                 </div>
               </div>
 
-              {/* Wholesale Product-Level Settings Block */}
-              <div className="p-4 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-                    <h3 className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] uppercase tracking-wider">
-                      Wholesale Availability &amp; Minimum Rules
-                    </h3>
-                  </div>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={prodIsWholesaleEnabled}
-                      onChange={(e) => setProdIsWholesaleEnabled(e.target.checked)}
-                      className="w-4 h-4 accent-[#B89555] rounded"
-                    />
-                    <span className="text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]">
-                      Available for Wholesale
-                    </span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
-                      Minimum Wholesale Quantity (Pieces)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={prodWholesaleMinQty}
-                      onChange={(e) => setProdWholesaleMinQty(Number(e.target.value))}
-                      className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
-                    />
-                    <span className="text-[10px] text-charcoal-500 dark:text-[#B8B3A8]">Default standard: 12 pcs (1 Dozen)</span>
-                  </div>
-
-                  <div className="flex items-center p-2.5 bg-champagne-50 dark:bg-[#191917] rounded-xl border border-[#B89555]/20 text-[11px] text-charcoal-700 dark:text-[#B8B3A8]">
-                    When checked, this garment will be featured in the public Wholesale catalog and unlock bulk tier rates when cart reaches {prodWholesaleMinQty} pieces.
-                  </div>
-                </div>
-              </div>
-
               <div>
                 <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
                   Tagline / Subtitle
@@ -1314,7 +1209,7 @@ function AdminProductsContent() {
           )}
 
           {/* ========================================================================= */}
-          {/* TAB 2: STYLES, VARIANTS & RETAIL + WHOLESALE PRICING MATRIX */}
+          {/* TAB 2: STYLES, VARIANTS & RETAIL PRICING MATRIX */}
           {/* ========================================================================= */}
           {editorTab === 'variants' && (
             <div className="space-y-6 animate-in fade-in">
@@ -1493,7 +1388,7 @@ function AdminProductsContent() {
                 </div>
 
                 {/* Generator Default Preset Inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <div>
                     <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
                       Default Retail Price (Rs.)
@@ -1501,24 +1396,8 @@ function AdminProductsContent() {
                     <input
                       type="number"
                       value={genDefaultPrice}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        setGenDefaultPrice(val);
-                        setGenDefaultWholesalePrice(Math.round(val * 0.82));
-                      }}
+                      onChange={(e) => setGenDefaultPrice(Number(e.target.value))}
                       className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
-                      Default Wholesale Price (Rs.)
-                    </label>
-                    <input
-                      type="number"
-                      value={genDefaultWholesalePrice}
-                      onChange={(e) => setGenDefaultWholesalePrice(Number(e.target.value))}
-                      className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-400 focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
                     />
                   </div>
 
@@ -1558,7 +1437,7 @@ function AdminProductsContent() {
                     <h4 className="font-bold text-xs text-[#B89555] dark:text-[#C9A96A] uppercase">
                       Add Specific Variant Combination
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Quality</label>
                         <input
@@ -1604,22 +1483,8 @@ function AdminProductsContent() {
                         <input
                           type="number"
                           value={singleVarPrice}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
-                            setSingleVarPrice(val);
-                            setSingleVarWholesalePrice(Math.round(val * 0.82));
-                          }}
+                          onChange={(e) => setSingleVarPrice(Number(e.target.value))}
                           className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Wholesale (Rs.)</label>
-                        <input
-                          type="number"
-                          value={singleVarWholesalePrice}
-                          onChange={(e) => setSingleVarWholesalePrice(Number(e.target.value))}
-                          className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-400"
                         />
                       </div>
                     </div>
@@ -1644,7 +1509,7 @@ function AdminProductsContent() {
                 )}
               </div>
 
-              {/* STEP 4: Full Variant Matrix Table & Wholesale Editor */}
+              {/* STEP 4: Full Variant Matrix Table */}
               <div className="bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card overflow-hidden">
                 <div className="p-4 sm:p-5 border-b border-light-border dark:border-[#34322D] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   <div>
@@ -1652,32 +1517,12 @@ function AdminProductsContent() {
                       <span>Active Variant Matrix ({variantsList.length} combinations)</span>
                     </h3>
                     <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">
-                      Configure exact Retail and Wholesale price per variant. Dynamic savings and profit margins are calculated automatically.
+                      Configure exact retail price and inventory stock per variant size.
                     </p>
                   </div>
 
                   {variantsList.length > 0 && (
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1 bg-light-elevated dark:bg-[#22211E] p-1 rounded-xl border border-light-border dark:border-[#34322D]">
-                        <span className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8] pl-2">Apply:</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={70}
-                          value={bulkDiscountInput}
-                          onChange={(e) => setBulkDiscountInput(Number(e.target.value))}
-                          className="w-12 px-1.5 py-0.5 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded text-center text-xs font-bold text-[#B89555] dark:text-[#C9A96A]"
-                        />
-                        <span className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">%</span>
-                        <button
-                          type="button"
-                          onClick={() => handleBulkApplyDiscount(bulkDiscountInput)}
-                          className="px-2.5 py-1 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-[11px] font-bold rounded-lg transition-colors"
-                        >
-                          Apply to All
-                        </button>
-                      </div>
-
                       <button
                         type="button"
                         onClick={() => setIsClearMatrixModalOpen(true)}
@@ -1699,7 +1544,7 @@ function AdminProductsContent() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-left min-w-[760px]">
+                    <table className="w-full text-xs text-left min-w-[620px]">
                       <thead className="bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] uppercase font-bold text-[11px] border-b border-light-border dark:border-[#34322D]">
                         <tr>
                           <th className="p-3">Quality</th>
@@ -1707,8 +1552,6 @@ function AdminProductsContent() {
                           <th className="p-3 text-center">Size</th>
                           <th className="p-3">SKU</th>
                           <th className="p-3">Retail Price (PKR)</th>
-                          <th className="p-3">Wholesale Unit (PKR)</th>
-                          <th className="p-3">Wholesale Savings</th>
                           <th className="p-3">Stock Units</th>
                           <th className="p-3 text-center">Action</th>
                         </tr>
@@ -1716,9 +1559,6 @@ function AdminProductsContent() {
                       <tbody className="divide-y divide-light-border dark:divide-[#282723] font-medium text-charcoal-900 dark:text-[#F4F1E9]">
                         {variantsList.map((v) => {
                           const retailPrice = Number(v.price) || 0;
-                          const wholesalePrice = v.wholesalePrice ? Number(v.wholesalePrice) : Math.round(retailPrice * 0.82);
-                          const saving = retailPrice - wholesalePrice;
-                          const discountPercent = retailPrice > 0 && saving > 0 ? Math.round((saving / retailPrice) * 1000) / 10 : 0;
 
                           return (
                             <tr key={v.id} className="hover:bg-light-hover/60 dark:hover:bg-[#22211E]/60 transition-colors">
@@ -1754,24 +1594,6 @@ function AdminProductsContent() {
                                     className="w-20 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
                                   />
                                 </div>
-                              </td>
-                              <td className="p-3">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-charcoal-400 text-xs">Rs.</span>
-                                  <input
-                                    type="number"
-                                    value={wholesalePrice}
-                                    onChange={(e) =>
-                                      handleUpdateVariantField(v.id, 'wholesalePrice', Number(e.target.value))
-                                    }
-                                    className="w-20 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-emerald-700 dark:text-emerald-400 focus:border-emerald-500 focus:outline-none"
-                                  />
-                                </div>
-                              </td>
-                              <td className="p-3">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                  Save Rs. {saving} ({discountPercent}%)
-                                </span>
                               </td>
                               <td className="p-3">
                                 <input

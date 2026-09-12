@@ -31,8 +31,6 @@ export default function AdminDashboardPage() {
 
   // Real-time calculations from Supabase data
   const totalOrders = orders.length;
-  const wholesaleOrders = orders.filter((o) => o.isWholesale);
-  const retailOrders = orders.filter((o) => !o.isWholesale);
 
   const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
   const processingOrders = orders.filter(
@@ -44,10 +42,9 @@ export default function AdminDashboardPage() {
     (sum, o) => sum + (o.status !== 'Cancelled' && o.status !== 'Returned' ? o.totalAmount : 0),
     0
   );
-  const wholesaleSales = wholesaleOrders.reduce(
-    (sum, o) => sum + (o.status !== 'Cancelled' && o.status !== 'Returned' ? o.totalAmount : 0),
-    0
-  );
+  const deliveredSales = orders
+    .filter((o) => o.status === 'Delivered')
+    .reduce((sum, o) => sum + o.totalAmount, 0);
 
   const allVariants = products.flatMap((p) => p.variants || []);
   const totalStockUnits = allVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
@@ -94,18 +91,11 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <p className="text-xs text-charcoal-500 dark:text-[#85888E] mt-1">
-            Real-time business performance, wholesale vs retail revenue, order fulfillment, and live inventory.
+            Real-time business performance, sales revenue, order fulfillment, and live inventory.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
-          <Link
-            href="/admin/wholesale"
-            className="inline-flex items-center gap-1.5 bg-white dark:bg-[#191917] hover:bg-light-hover dark:hover:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] text-xs font-bold py-2.5 px-4 rounded-xl transition-colors shadow-2xs"
-          >
-            <Package className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-            <span>Wholesale Pricing</span>
-          </Link>
           <Link
             href="/admin/products"
             className="inline-flex items-center gap-1.5 bg-champagne-500 hover:bg-champagne-400 text-black text-xs font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.99]"
@@ -133,7 +123,7 @@ export default function AdminDashboardPage() {
               Rs. {totalSales.toLocaleString()}
             </div>
             <span className="text-[11px] text-charcoal-400 dark:text-[#85888E] mt-1 block">
-              Wholesale: Rs. {wholesaleSales.toLocaleString()}
+              Delivered: Rs. {deliveredSales.toLocaleString()}
             </span>
           </div>
           <div className="p-3 bg-light-elevated dark:bg-[#1D2025] border border-light-border dark:border-[#30343A] text-emerald-600 dark:text-[#3FB982] rounded-xl">
@@ -147,7 +137,7 @@ export default function AdminDashboardPage() {
             <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#85888E] uppercase tracking-wider">Total Customer Orders</span>
             <div className="text-2xl font-bold text-charcoal-900 dark:text-[#F1F0EC] mt-1">{totalOrders}</div>
             <div className="flex items-center gap-2 text-[11px] text-charcoal-500 dark:text-[#85888E] mt-1">
-              <span className="text-[#A07D38] dark:text-[#C9A96A] font-semibold">{wholesaleOrders.length} wholesale</span>
+              <span className="text-amber-600 dark:text-[#D6A84F] font-semibold">{pendingOrders} pending</span>
               <span>•</span>
               <span className="text-emerald-700 dark:text-[#3FB982]">{deliveredOrders} delivered</span>
             </div>
@@ -272,14 +262,7 @@ export default function AdminDashboardPage() {
                   {recentOrders.map((ord) => (
                     <tr key={ord.id} className="hover:bg-light-hover dark:hover:bg-[#1D2025]/60 transition-colors">
                       <td className="p-3 font-mono font-bold text-[#A07D38] dark:text-[#C9A96A]">
-                        <div className="flex items-center gap-1">
-                          <span>#{ord.orderNumber}</span>
-                          {ord.isWholesale && (
-                            <span className="text-[8px] font-extrabold bg-[#C9A96A] text-black px-1 py-0.2 rounded uppercase">
-                              Bulk
-                            </span>
-                          )}
-                        </div>
+                        <span>#{ord.orderNumber}</span>
                       </td>
                       <td className="p-3">
                         <div className="font-bold text-charcoal-900 dark:text-[#F1F0EC]">{ord.customerName}</div>

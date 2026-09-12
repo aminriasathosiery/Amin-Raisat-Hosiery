@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
 import { ProductCard } from '@/components/product/ProductCard';
-import { ArrowLeft, Package, ShoppingBag, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, ChevronRight, Package } from 'lucide-react';
 
 export default function CategoryPage() {
   const params = useParams();
@@ -77,7 +77,7 @@ export default function CategoryPage() {
         </div>
 
         {/* Category Header Banner */}
-        <div className="bg-white dark:bg-[#17191D] rounded-2xl p-6 sm:p-10 border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white dark:bg-[#17191D] rounded-2xl p-6 sm:p-10 border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card mb-8">
           <div className="max-w-2xl">
             <span className="text-[10px] font-bold text-[#B89555] dark:text-[#C9A96A] uppercase tracking-widest block mb-1">
               Category Collection
@@ -90,14 +90,6 @@ export default function CategoryPage() {
                 `Browse our collection of breathable cotton essentials for ${categoryName.toLowerCase()}.`}
             </p>
           </div>
-
-          <Link
-            href="/wholesale"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-[#191917] hover:bg-light-hover dark:hover:bg-[#22211E] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] text-xs font-semibold transition-colors self-start sm:self-auto shadow-2xs"
-          >
-            <Package className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-            <span>Wholesale Store</span>
-          </Link>
         </div>
 
         {/* Subcategories Filter Pills */}

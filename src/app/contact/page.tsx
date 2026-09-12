@@ -53,7 +53,7 @@ export default function ContactPage() {
             Get in Touch
           </h1>
           <p className="text-xs sm:text-sm text-charcoal-600 dark:text-[#B8B3A8] mt-2 leading-relaxed">
-            Have a question about fabric sizing, bulk wholesale orders, or tracking your delivery? We are available to help.
+            Have a question about fabric sizing, order placement, or tracking your delivery? We are available to help.
           </p>
         </div>
 
@@ -73,7 +73,7 @@ export default function ContactPage() {
                 </div>
               </div>
               <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] leading-relaxed font-normal">
-                Direct chat with owner Muhammad Amin for immediate order assistance, sizing recommendations, or custom wholesale quotes.
+                Direct chat with owner Muhammad Amin for immediate order assistance, sizing recommendations, or delivery support.
               </p>
               <a
                 href={getWhatsAppUrl(settings?.whatsapp || DISPLAY_WHATSAPP_NUMBER)}
@@ -86,25 +86,25 @@ export default function ContactPage() {
               </a>
             </div>
 
-            {/* Wholesale Support Card */}
+            {/* Retail Support Card */}
             <div className="p-6 bg-light-elevated dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-champagne-500 text-charcoal-950 flex items-center justify-center font-bold">
                   <Package className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">Wholesale Desk</h3>
-                  <p className="text-xs text-[#B89555] dark:text-[#C9A96A] font-bold">Min 12 Pieces</p>
+                  <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">Order Desk</h3>
+                  <p className="text-xs text-[#B89555] dark:text-[#C9A96A] font-bold">1 Piece Valid Order</p>
                 </div>
               </div>
               <p className="text-xs text-charcoal-600 dark:text-[#B8B3A8] leading-relaxed">
-                For large quantity carton rates and institutional garment supplies, explore our online wholesale store.
+                Enjoy hassle-free retail shopping with Free Nationwide Delivery on 3+ pieces across Pakistan.
               </p>
               <Link
-                href="/wholesale"
+                href="/shop"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-[#B89555] dark:text-[#C9A96A] hover:underline"
               >
-                <span>Visit Wholesale Store &rarr;</span>
+                <span>Browse Store Catalog &rarr;</span>
               </Link>
             </div>
 
@@ -192,7 +192,7 @@ export default function ContactPage() {
                 <textarea
                   required
                   rows={5}
-                  placeholder="Ask about bulk wholesale quantity, custom sizing, or delivery..."
+                  placeholder="Ask about order tracking, custom sizing, or delivery..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl text-xs focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A] resize-none"

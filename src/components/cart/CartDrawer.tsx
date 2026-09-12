@@ -4,14 +4,16 @@ import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { X, Trash2, Plus, Minus, ShoppingBag, Truck, ArrowRight, AlertCircle, Package } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, Truck, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { createCartWhatsAppMessage, DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
-import { CartItem } from '@/types';
+import { CartItem, ProductSize } from '@/types';
 
-// Guarantee authentic thumbnail resolution
+const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
+
+// Authentic thumbnail resolution
 function getCartItemImage(item: CartItem): string {
   if (item.image && item.image.trim() !== '') return item.image;
   if (item.quality === 'High Quality') {
@@ -25,30 +27,19 @@ export const CartDrawer: React.FC = () => {
   const pathname = usePathname();
   const {
     items,
-    cartMode,
     isDrawerOpen,
     closeDrawer,
     updateQuantity,
+    updateItemSize,
     removeItem,
-    modeConflict,
-    switchCartModeAndAdd,
-    clearModeConflict,
     totalQuantity,
     subtotal,
-    regularSubtotal,
-    wholesaleSubtotal,
-    totalSavings,
     deliveryFee,
     totalAmount,
     isFreeDeliveryUnlocked,
     piecesNeededForFreeDelivery,
-    hasWholesaleItems,
-    wholesaleQuantity,
-    isWholesaleMinimumMet,
-    wholesalePiecesNeeded,
-    wholesaleMinQty,
   } = useCart();
-  const { settings } = useStore();
+  const { settings, products } = useStore();
 
   // Auto close drawer only when route actually changes
   const prevPathnameRef = useRef(pathname);
@@ -82,9 +73,6 @@ export const CartDrawer: React.FC = () => {
 
   if (!isDrawerOpen) return null;
 
-  const minRetailQty = settings.shipping?.minOrderQty || 1;
-  const isRetailMinMet = totalQuantity >= minRetailQty;
-  const canCheckout = hasWholesaleItems ? isWholesaleMinimumMet : isRetailMinMet;
   const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;
   const whatsappUrl = createCartWhatsAppMessage(items, subtotal, deliveryFee, totalAmount, settings?.whatsapp || DISPLAY_WHATSAPP_NUMBER);
 
@@ -97,13 +85,11 @@ export const CartDrawer: React.FC = () => {
         aria-hidden="true"
       />
 
-      {/* 2. Drawer Panel Positioning */}
+      {/* 2. Drawer Panel */}
       <div className="fixed inset-y-0 right-0 flex max-w-full z-50 pointer-events-auto">
-        <aside className="w-screen max-w-[100vw] sm:max-w-[420px] bg-white dark:bg-[#151513] border-l border-light-border dark:border-[#34322D] shadow-2xl flex flex-col h-full text-charcoal-900 dark:text-[#F4F1E9] animate-in slide-in-from-right duration-300 overflow-hidden">
+        <aside className="w-screen max-w-[100vw] sm:max-w-[440px] bg-white dark:bg-[#151513] border-l border-light-border dark:border-[#34322D] shadow-2xl flex flex-col h-full text-charcoal-900 dark:text-[#F4F1E9] animate-in slide-in-from-right duration-300 overflow-hidden">
           
-          {/* ========================================================================= */}
-          {/* DRAWER HEADER (Fixed Row) */}
-          {/* ========================================================================= */}
+          {/* DRAWER HEADER */}
           <div className="flex-shrink-0 px-4 sm:px-5 py-3.5 sm:py-4 border-b border-light-border dark:border-[#34322D] flex items-center justify-between bg-white dark:bg-[#191917]">
             <div className="flex items-center gap-3 min-w-0 pr-2">
               <div className="w-10 h-10 rounded-xl bg-champagne-500 text-charcoal-950 flex items-center justify-center flex-shrink-0 shadow-xs">
@@ -111,15 +97,14 @@ export const CartDrawer: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <h2 id="cart-drawer-title" className="font-bold text-charcoal-900 dark:text-[#F4F1E9] text-base leading-tight truncate">
-                  Your Cart
+                  Shopping Cart
                 </h2>
                 <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] font-medium truncate">
-                  {totalQuantity} {totalQuantity === 1 ? 'piece' : 'pieces'} {hasWholesaleItems ? '• Wholesale Order' : 'selected'}
+                  {totalQuantity} {totalQuantity === 1 ? 'piece' : 'pieces'} selected
                 </p>
               </div>
             </div>
 
-            {/* Close Button with 44px min touch target */}
             <button
               type="button"
               onClick={closeDrawer}
@@ -130,113 +115,41 @@ export const CartDrawer: React.FC = () => {
             </button>
           </div>
 
-          {/* Mode Switch Conflict Notification */}
-          {modeConflict && (
-            <div className="p-4 bg-amber-500/10 dark:bg-amber-950/40 border-b border-amber-500/30 text-xs animate-in fade-in">
-              <div className="flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1.5 flex-1">
-                  <p className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">
-                    Switch to {modeConflict.targetMode === 'wholesale' ? 'Wholesale' : 'Retail'} Mode?
-                  </p>
-                  <p className="text-charcoal-600 dark:text-[#B8B3A8] text-[11px] leading-relaxed">
-                    Your cart currently has {modeConflict.currentMode} items. Adding this item will start a dedicated {modeConflict.targetMode} order.
-                  </p>
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => switchCartModeAndAdd(modeConflict.incomingItem)}
-                      className="px-3 py-1.5 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 rounded-lg text-xs font-bold shadow-xs transition-colors"
-                    >
-                      Clear &amp; Start {modeConflict.targetMode === 'wholesale' ? 'Wholesale' : 'Retail'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={clearModeConflict}
-                      className="px-3 py-1.5 bg-white dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] rounded-lg text-xs font-semibold border border-light-border dark:border-[#34322D] hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors"
-                    >
-                      Keep Current Cart
-                    </button>
-                  </div>
-                </div>
-              </div>
+          {/* FREE DELIVERY PROGRESS BAR */}
+          <div className="flex-shrink-0 px-4 py-3 bg-light-elevated dark:bg-[#1A1A18] border-b border-light-border dark:border-[#34322D]">
+            <div className="flex items-center justify-between text-xs font-semibold mb-1.5 gap-2">
+              <span className="min-w-0 flex-1 flex items-center gap-1.5 leading-snug">
+                <Truck className="w-3.5 h-3.5 text-[#A07D38] dark:text-[#C9A96A] flex-shrink-0" />
+                {isFreeDeliveryUnlocked ? (
+                  <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                    ✓ Free Delivery Unlocked across Pakistan!
+                  </span>
+                ) : (
+                  <span className="text-charcoal-700 dark:text-[#D7D7D4]">
+                    Add <strong className="text-[#A07D38] dark:text-[#C9A96A]">{piecesNeededForFreeDelivery} more piece{piecesNeededForFreeDelivery > 1 ? 's' : ''}</strong> for Free Delivery
+                  </span>
+                )}
+              </span>
+              <span className="text-[11px] font-bold text-charcoal-600 dark:text-[#A6A29A] flex-shrink-0">
+                {Math.min(totalQuantity, freeThreshold)}/{freeThreshold} pcs
+              </span>
             </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* WHOLESALE STATUS & FREE DELIVERY PROGRESS BAR (Fixed Row) */}
-          {/* ========================================================================= */}
-          <div className="flex-shrink-0">
-            {hasWholesaleItems ? (
-              <div className="px-4 py-3 bg-champagne-50/70 dark:bg-[#1C1B17] border-b border-light-border dark:border-[#34322D]">
-                <div className="flex items-center justify-between text-xs font-semibold mb-1.5 gap-2">
-                  <span className="min-w-0 flex-1 leading-snug">
-                    {isWholesaleMinimumMet ? (
-                      <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1">
-                        <span>✓</span> Wholesale Minimum Met ({wholesaleQuantity} pcs)
-                      </span>
-                    ) : (
-                      <span className="text-[#A07D38] dark:text-[#C9A96A] font-bold">
-                        Add {wholesalePiecesNeeded} more piece{wholesalePiecesNeeded > 1 ? 's' : ''} for Wholesale
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[11px] font-bold text-charcoal-600 dark:text-[#A6A29A] flex-shrink-0">
-                    {wholesaleQuantity}/{wholesaleMinQty} pcs
-                  </span>
-                </div>
-                <div className="w-full bg-light-border dark:bg-[#2A2925] rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 rounded-full ${
-                      isWholesaleMinimumMet ? 'bg-emerald-500' : 'bg-champagne-500'
-                    }`}
-                    style={{ width: `${Math.min(100, (wholesaleQuantity / wholesaleMinQty) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10.5px] text-charcoal-500 dark:text-[#8E8A80] mt-1.5 font-medium">
-                  <span>Minimum {wholesaleMinQty} pcs</span>
-                  <span className="text-[#A07D38] dark:text-[#C9A96A] font-bold">100% Free Nationwide Delivery</span>
-                </div>
-              </div>
-            ) : (
-              <div className="px-4 py-3 bg-light-elevated dark:bg-[#1A1A18] border-b border-light-border dark:border-[#34322D]">
-                <div className="flex items-center justify-between text-xs font-semibold mb-1.5 gap-2">
-                  <span className="min-w-0 flex-1 flex items-center gap-1.5 leading-snug">
-                    <Truck className="w-3.5 h-3.5 text-[#A07D38] dark:text-[#C9A96A] flex-shrink-0" />
-                    {isFreeDeliveryUnlocked ? (
-                      <span className="text-emerald-700 dark:text-emerald-400 font-bold">
-                        ✓ Free Nationwide Delivery Unlocked!
-                      </span>
-                    ) : (
-                      <span className="text-charcoal-700 dark:text-[#D7D7D4]">
-                        Add <strong className="text-[#A07D38] dark:text-[#C9A96A]">{piecesNeededForFreeDelivery} more piece{piecesNeededForFreeDelivery > 1 ? 's' : ''}</strong> for Free Delivery
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[11px] font-bold text-charcoal-600 dark:text-[#A6A29A] flex-shrink-0">
-                    {Math.min(totalQuantity, freeThreshold)}/{freeThreshold} pcs
-                  </span>
-                </div>
-                <div className="w-full bg-light-border dark:bg-[#2A2925] rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 rounded-full ${
-                      isFreeDeliveryUnlocked ? 'bg-emerald-500' : 'bg-champagne-500'
-                    }`}
-                    style={{ width: `${Math.min(100, (totalQuantity / freeThreshold) * 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10.5px] text-charcoal-500 dark:text-[#8E8A80] mt-1.5 font-medium">
-                  <span>Min order: {minRetailQty} pcs</span>
-                  <span className="text-[#A07D38] dark:text-[#C9A96A] font-semibold">{freeThreshold}+ pcs: Free Delivery</span>
-                </div>
-              </div>
-            )}
+            <div className="w-full bg-light-border dark:bg-[#2A2925] rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${
+                  isFreeDeliveryUnlocked ? 'bg-emerald-500' : 'bg-champagne-500'
+                }`}
+                style={{ width: `${Math.min(100, (totalQuantity / freeThreshold) * 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10.5px] text-charcoal-500 dark:text-[#8E8A80] mt-1.5 font-medium">
+              <span>1 pc is a valid order</span>
+              <span className="text-[#A07D38] dark:text-[#C9A96A] font-semibold">{freeThreshold}+ pcs: Free Delivery</span>
+            </div>
           </div>
 
-          {/* ========================================================================= */}
-          {/* SCROLLABLE CART ITEMS LIST */}
-          {/* ========================================================================= */}
-          <div className="flex-1 overflow-y-auto min-h-0 p-3.5 sm:p-4 space-y-3 divide-y divide-light-border dark:divide-[#2A2925] overscroll-contain">
+          {/* SCROLLABLE CART ITEMS LIST WITH IN-PLACE EDITING */}
+          <div className="flex-1 overflow-y-auto min-h-0 p-3.5 sm:p-4 space-y-3.5 divide-y divide-light-border dark:divide-[#2A2925] overscroll-contain">
             {items.length === 0 ? (
               <div className="text-center py-14 px-4 space-y-4">
                 <div className="w-14 h-14 bg-light-elevated dark:bg-[#1F1E1B] rounded-2xl flex items-center justify-center mx-auto text-charcoal-400 dark:text-[#8E8A80] border border-light-border dark:border-[#34322D]">
@@ -245,36 +158,30 @@ export const CartDrawer: React.FC = () => {
                 <div className="space-y-1">
                   <h3 className="font-bold text-charcoal-900 dark:text-[#F4F1E9] text-base">Your Cart is Empty</h3>
                   <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] max-w-xs mx-auto">
-                    Browse our combed cotton hosiery essentials and add your sizes.
+                    Browse our premium combed cotton hosiery essentials and select your sizes.
                   </p>
                 </div>
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+                <div className="pt-2">
                   <Link
                     href="/shop"
                     onClick={closeDrawer}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 font-bold text-xs py-3 px-5 rounded-xl shadow-xs transition-colors"
+                    className="inline-flex items-center justify-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition-colors"
                   >
-                    Shop Retail
-                  </Link>
-                  <Link
-                    href="/wholesale"
-                    onClick={closeDrawer}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] font-bold text-xs py-3 px-5 rounded-xl transition-colors"
-                  >
-                    Wholesale Store
+                    Start Shopping
                   </Link>
                 </div>
               </div>
             ) : (
               items.map((item) => {
                 const itemImg = getCartItemImage(item);
-                const isWholesale = Boolean(item.isWholesale);
-                const regPrice = item.regularPrice || item.unitPrice;
-                const unitSaving = isWholesale && regPrice > item.unitPrice ? regPrice - item.unitPrice : 0;
+                const matchingProd = products.find((p) => p.id === item.productId);
+                const availableItemSizes = matchingProd
+                  ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
+                  : SIZES;
 
                 return (
                   <div key={item.id} className="pt-3.5 first:pt-0 flex gap-3 sm:gap-3.5 items-start">
-                    {/* Fixed Responsive Thumbnail */}
+                    {/* Responsive Thumbnail */}
                     <div className="w-16 h-16 xs:w-18 xs:h-18 bg-light-elevated dark:bg-[#1A1A18] rounded-xl overflow-hidden relative flex-shrink-0 border border-light-border dark:border-[#34322D] p-1">
                       <Image
                         src={itemImg}
@@ -304,28 +211,41 @@ export const CartDrawer: React.FC = () => {
                           </button>
                         </div>
 
-                        {/* Badges / Variants */}
+                        {/* Variant Badges */}
                         <div className="flex flex-wrap items-center gap-1 mt-1">
-                          {isWholesale && (
-                            <span className="text-[9.5px] font-extrabold bg-[#C9A96A]/20 text-[#A07D38] dark:text-[#C9A96A] border border-[#C9A96A]/40 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                              Wholesale
-                            </span>
-                          )}
                           <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#D7D7D4] px-1.5 py-0.5 rounded">
                             {item.quality}
                           </span>
                           <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#D7D7D4] px-1.5 py-0.5 rounded">
                             {item.sleeve}
                           </span>
-                          <span className="text-[10px] font-bold bg-champagne-500 text-charcoal-950 px-1.5 py-0.5 rounded">
-                            Size {item.size}
-                          </span>
+                        </div>
+
+                        {/* In-Place Size Selector Pills */}
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold text-charcoal-500 dark:text-[#8E8A80]">Size:</span>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {(availableItemSizes.length > 0 ? availableItemSizes : SIZES).map((sz) => (
+                              <button
+                                key={sz}
+                                type="button"
+                                onClick={() => updateItemSize(item.id, sz)}
+                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
+                                  item.size === sz
+                                    ? 'bg-champagne-500 text-charcoal-950 border-champagne-500 shadow-2xs'
+                                    : 'bg-white dark:bg-[#1E1D1A] text-charcoal-700 dark:text-[#B8B3A8] border-light-border dark:border-[#34322D] hover:border-[#B89555]/50'
+                                }`}
+                              >
+                                {sz}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Quantity Selector & Pricing */}
-                      <div className="flex items-center justify-between mt-2.5 pt-0.5 gap-2">
-                        {/* Quantity Stepper (touch-friendly targets) */}
+                      {/* Quantity Stepper & Pricing */}
+                      <div className="flex items-center justify-between mt-3 pt-0.5 gap-2">
+                        {/* Quantity Stepper (min 1, bounds protected) */}
                         <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-lg bg-light-elevated dark:bg-[#1A1A18] overflow-hidden flex-shrink-0 shadow-2xs">
                           <button
                             type="button"
@@ -353,19 +273,9 @@ export const CartDrawer: React.FC = () => {
                           <div className="text-xs sm:text-sm font-extrabold text-[#A07D38] dark:text-[#C9A96A] truncate">
                             Rs. {(item.unitPrice * item.quantity).toLocaleString()}
                           </div>
-                          <div className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] flex items-center justify-end gap-1 truncate">
-                            {isWholesale && regPrice > item.unitPrice && (
-                              <span className="line-through text-charcoal-400 dark:text-[#7A776F]">
-                                Rs. {regPrice}
-                              </span>
-                            )}
-                            <span>(Rs. {item.unitPrice}/pc)</span>
+                          <div className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] truncate">
+                            Rs. {item.unitPrice} / piece
                           </div>
-                          {unitSaving > 0 && (
-                            <div className="text-[9.5px] text-emerald-600 dark:text-emerald-400 font-bold truncate">
-                              Saved Rs. {(unitSaving * item.quantity).toLocaleString()}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -375,44 +285,13 @@ export const CartDrawer: React.FC = () => {
             )}
           </div>
 
-          {/* ========================================================================= */}
-          {/* STICKY BOTTOM DRAWER SUMMARY & CHECKOUT ACTIONS */}
-          {/* ========================================================================= */}
+          {/* STICKY BOTTOM SUMMARY & CHECKOUT ACTIONS */}
           {items.length > 0 && (
             <div className="flex-shrink-0 px-4 sm:px-5 py-3.5 sm:py-4 bg-light-elevated dark:bg-[#191917] border-t border-light-border dark:border-[#34322D] space-y-2.5 shadow-elevation pb-[max(1rem,env(safe-area-inset-bottom))]">
-              
-              {/* Wholesale Minimum Warning */}
-              {hasWholesaleItems && !isWholesaleMinimumMet && (
-                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 rounded-xl text-[11px] leading-snug flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                  <div>
-                    <strong>Wholesale Minimum:</strong> Minimum {wholesaleMinQty} pieces required for wholesale pricing. Please add {wholesalePiecesNeeded} more piece{wholesalePiecesNeeded > 1 ? 's' : ''} to checkout.
-                  </div>
-                </div>
-              )}
-
-              {/* Retail Minimum Warning */}
-              {!hasWholesaleItems && !isRetailMinMet && (
-                <div className="p-2.5 bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 rounded-xl text-[11px] leading-snug flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                  <div>
-                    <strong>Minimum Order:</strong> Minimum order is {minRetailQty} pieces. Please add {minRetailQty - totalQuantity} more piece{minRetailQty - totalQuantity > 1 ? 's' : ''} to checkout.
-                  </div>
-                </div>
-              )}
-
-              {/* Wholesale Savings Highlight */}
-              {totalSavings > 0 && (
-                <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 font-bold">
-                  <span>Wholesale Discount Applied</span>
-                  <span>- Rs. {totalSavings.toLocaleString()}</span>
-                </div>
-              )}
-
               {/* Cost Calculation Rows */}
               <div className="space-y-1.5 text-xs text-charcoal-600 dark:text-[#B8B3A8]">
                 <div className="flex justify-between items-center">
-                  <span>Subtotal ({totalQuantity} pcs)</span>
+                  <span>Subtotal ({totalQuantity} {totalQuantity === 1 ? 'piece' : 'pieces'})</span>
                   <span className="font-semibold text-charcoal-900 dark:text-[#F4F1E9]">Rs. {subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -436,13 +315,9 @@ export const CartDrawer: React.FC = () => {
                 <Link
                   href="/checkout"
                   onClick={closeDrawer}
-                  className={`w-full min-h-[44px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-extrabold text-xs tracking-wide uppercase transition-all duration-200 shadow-sm ${
-                    canCheckout
-                      ? 'bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 active:scale-[0.99]'
-                      : 'bg-light-hover dark:bg-[#22211E] text-charcoal-400 dark:text-[#7A776F] border border-light-border dark:border-[#34322D] cursor-not-allowed pointer-events-none'
-                  }`}
+                  className="w-full min-h-[44px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-extrabold text-xs tracking-wide uppercase transition-all duration-200 shadow-sm bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 active:scale-[0.99]"
                 >
-                  <span>Proceed to {hasWholesaleItems ? 'Wholesale ' : ''}Checkout</span>
+                  <span>Proceed to Checkout</span>
                   <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </Link>
 

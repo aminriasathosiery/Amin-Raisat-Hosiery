@@ -239,20 +239,20 @@ export default function AdminSettingsPage() {
                 min={1}
                 max={500}
                 required
-                value={formState.shipping?.minOrderQty ?? 3}
+                value={formState.shipping?.minOrderQty ?? 1}
                 onChange={(e) =>
                   setFormState({
                     ...formState,
                     shipping: {
                       ...formState.shipping,
-                      minOrderQty: Number(e.target.value),
+                      minOrderQty: Math.max(1, Number(e.target.value)),
                     },
                   })
                 }
                 className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
               />
               <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] mt-1 block">
-                Enforced in cart &amp; checkout (e.g. 1 to 50+)
+                Store policy: 1 piece is a valid order (MOQ = 1)
               </span>
             </div>
 

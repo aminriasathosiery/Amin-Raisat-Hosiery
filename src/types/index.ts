@@ -35,16 +35,6 @@ export interface Category {
 
 export type ThemeMode = 'dark' | 'light';
 
-export interface WholesaleTier {
-  id?: string;
-  minQty: number;
-  maxQty?: number;
-  price: number;
-  discountPercent?: number;
-  label?: string;
-  isActive?: boolean;
-}
-
 export interface ProductVariant {
   id: string;
   productId?: string;
@@ -53,8 +43,6 @@ export interface ProductVariant {
   size: ProductSize;
   price: number;
   salePrice?: number;
-  wholesalePrice?: number;
-  wholesaleTiers?: WholesaleTier[];
   stock: number;
   sku?: string;
   isAvailable: boolean;
@@ -107,8 +95,6 @@ export interface Product {
   rating?: number;
   reviewsCount?: number;
   isPublished: boolean;
-  isWholesaleEnabled?: boolean;
-  wholesaleMinQty?: number;
   createdAt: string;
   variants: ProductVariant[];
   media: ProductMedia[];
@@ -118,15 +104,13 @@ export interface Product {
 export interface CartItem {
   id: string;
   productId: string;
+  variantId?: string;
   productName: string;
   productSlug: string;
   quality: QualityType;
   sleeve: SleeveType;
   size: ProductSize;
   unitPrice: number;
-  regularPrice?: number;
-  wholesalePrice?: number;
-  isWholesale?: boolean;
   quantity: number;
   image: string;
 }
@@ -159,9 +143,6 @@ export interface OrderItem {
   sleeve: SleeveType;
   size: ProductSize;
   unitPrice: number;
-  regularPrice?: number;
-  wholesalePrice?: number;
-  isWholesale?: boolean;
   quantity: number;
   totalPrice: number;
   image?: string;
@@ -191,8 +172,6 @@ export interface Order {
   paymentVerifiedBy?: string;
   paymentRejectionReason?: string;
   status: OrderStatus;
-  isWholesale?: boolean;
-  wholesaleDiscount?: number;
   items: OrderItem[];
   createdAt: string;
 }
@@ -242,18 +221,6 @@ export interface AnnouncementStrip {
   icon?: string;
 }
 
-export interface WholesaleSettings {
-  isEnabled: boolean;
-  defaultMinQty: number;
-  minQuantity?: number;
-  defaultDiscountPercent: number;
-  freeDeliveryForWholesale?: boolean;
-  inquiryWhatsApp?: string;
-  termsAndNotes?: string;
-  announcementText?: string;
-  policyNotes?: string;
-}
-
 export interface SiteSettings {
   brandName: string;
   ownerName: string;
@@ -268,7 +235,6 @@ export interface SiteSettings {
   bankDetails: BankAccountDetails;
   paymentMethods?: PaymentMethodsSettings;
   announcementStrips?: AnnouncementStrip[];
-  wholesale?: WholesaleSettings;
   isStoreOpen: boolean;
   isCodEnabled: boolean;
   isBankTransferEnabled: boolean;

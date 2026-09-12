@@ -515,8 +515,6 @@ export class DataStore {
               INITIAL_PRODUCTS.find((ip) => ip.slug === p.slug || p.slug?.startsWith(ip.slug))?.sizeGuideUrl ||
               'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/product-media/products/f0000000-0000-0000-0000-000000000001/size-guide/arh_mens_vest_size_chart.webp',
             isPublished: p.is_published ?? true,
-            isWholesaleEnabled: p.is_wholesale_enabled ?? true,
-            wholesaleMinQty: p.wholesale_min_qty ? Number(p.wholesale_min_qty) : 12,
             createdAt: p.created_at,
             variants: Array.isArray(p.product_variants)
               ? p.product_variants.map((v: any) => ({
@@ -527,10 +525,6 @@ export class DataStore {
                   size: v.size,
                   price: Number(v.price) || 0,
                   salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-                  wholesalePrice: v.wholesale_price !== undefined && v.wholesale_price !== null && !isNaN(Number(v.wholesale_price))
-                    ? Number(v.wholesale_price)
-                    : Math.round((Number(v.price) || 480) * 0.82),
-                  wholesaleTiers: Array.isArray(v.wholesale_tiers) ? v.wholesale_tiers : undefined,
                   stock: Number(v.stock) || 0,
                   sku: v.sku || '',
                   isAvailable: v.is_available ?? true,
@@ -651,8 +645,6 @@ export class DataStore {
         care_instructions: product.careInstructions || [],
         shipping_info: product.shippingInfo || '',
         is_published: product.isPublished,
-        is_wholesale_enabled: product.isWholesaleEnabled ?? true,
-        wholesale_min_qty: product.wholesaleMinQty || 12,
         updated_at: new Date().toISOString(),
       };
       if (isUuid) {
@@ -784,8 +776,6 @@ export class DataStore {
             payment_method: orderData.paymentMethod || 'cod',
             payment_reference: orderData.paymentReference || null,
             status: 'Pending',
-            is_wholesale: orderData.isWholesale ?? false,
-            wholesale_discount: orderData.wholesaleDiscount || 0,
           })
           .select()
           .single();
@@ -811,8 +801,6 @@ export class DataStore {
               quantity: it.quantity,
               total_price: it.totalPrice,
               image_url: it.image,
-              is_wholesale: it.isWholesale ?? false,
-              wholesale_price: it.wholesalePrice || null,
             }));
             const adminDb = supabaseBrowser;
             await adminDb.from('order_items').insert(itemsPayload);
@@ -1137,7 +1125,7 @@ export class DataStore {
             market: siteData?.market || INITIAL_SITE_SETTINGS.market,
             currency: siteData?.currency || INITIAL_SITE_SETTINGS.currency,
             shipping: {
-              minOrderQty: shipData?.min_order_qty ?? INITIAL_SITE_SETTINGS.shipping.minOrderQty,
+              minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Math.min(1, Number(shipData.min_order_qty)) : 1,
               maxOrderQty: shipData?.max_order_qty ?? INITIAL_SITE_SETTINGS.shipping.maxOrderQty,
               baseDeliveryCharge: shipData ? Number(shipData.base_delivery_charge) : INITIAL_SITE_SETTINGS.shipping.baseDeliveryCharge,
               freeDeliveryThreshold: shipData?.free_delivery_threshold ?? INITIAL_SITE_SETTINGS.shipping.freeDeliveryThreshold,
@@ -1152,12 +1140,6 @@ export class DataStore {
             announcementStrips: siteData?.announcement_strips || INITIAL_SITE_SETTINGS.announcementStrips,
             isStoreOpen: siteData?.is_store_open ?? true,
             announcementText: siteData?.announcement_text || INITIAL_SITE_SETTINGS.announcementText,
-            wholesale: siteData?.wholesale || {
-              ...INITIAL_SITE_SETTINGS.wholesale,
-              isEnabled: siteData?.wholesale_enabled ?? true,
-              defaultMinQty: siteData?.wholesale_min_qty ? Number(siteData.wholesale_min_qty) : 12,
-              minQuantity: siteData?.wholesale_min_qty ? Number(siteData.wholesale_min_qty) : 12,
-            },
           };
         }
       } catch (err) {
@@ -1230,11 +1212,6 @@ export class DataStore {
         }
         if (settings.paymentMethods) {
           siteUpdatePayload.payment_methods = settings.paymentMethods;
-        }
-        if (settings.wholesale) {
-          siteUpdatePayload.wholesale = settings.wholesale;
-          siteUpdatePayload.wholesale_enabled = settings.wholesale.isEnabled ?? true;
-          siteUpdatePayload.wholesale_min_qty = Number(settings.wholesale.defaultMinQty || settings.wholesale.minQuantity) || 12;
         }
         await adminDb
           .from('site_settings')

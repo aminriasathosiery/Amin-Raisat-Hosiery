@@ -49,7 +49,7 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* 2. Shop Collections & Wholesale */}
+          {/* 2. Shop Collections */}
           <div className="space-y-3 text-left">
             <h4 className="text-xs font-bold text-[#B89555] dark:text-[#C9A96A] uppercase tracking-wider text-left">
               Collections
@@ -71,14 +71,6 @@ export const Footer: React.FC = () => {
                   className="text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors font-semibold block py-0.5"
                 >
                   All Products
-                </Link>
-              </li>
-              <li className="text-left">
-                <Link
-                  href="/wholesale"
-                  className="text-charcoal-600 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors block py-0.5"
-                >
-                  Wholesale
                 </Link>
               </li>
             </ul>

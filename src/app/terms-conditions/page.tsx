@@ -38,7 +38,7 @@ export default function TermsConditionsPage() {
           <section className="space-y-2">
             <h2 className="text-base font-bold text-charcoal-900 dark:text-[#F4F1E9]">1. Ordering &amp; Quantities</h2>
             <p>
-              By placing an order on our website, you agree to our minimum retail order requirement of 3 pieces. Retail orders containing 3 or more pieces are entitled to <strong className="text-emerald-700 dark:text-emerald-400">100% Free Delivery</strong> across Pakistan. For bulk and commercial quantities, our wholesale minimum is 12 pieces (1 dozen).
+              1 piece is a valid order (minimum order quantity is 1 piece). Customer orders containing 3 or more pieces are entitled to <strong className="text-emerald-700 dark:text-emerald-400">100% Free Delivery</strong> across Pakistan. Orders containing 1 or 2 pieces incur a standard delivery fee of Rs. {settings.shipping?.baseDeliveryCharge ?? 200}.
             </p>
           </section>
 

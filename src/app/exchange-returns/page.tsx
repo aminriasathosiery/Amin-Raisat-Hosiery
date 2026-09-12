@@ -31,7 +31,7 @@ export default function ExchangeReturnsPage() {
             Exchange &amp; Returns Policy
           </h1>
           <p className="text-xs sm:text-sm text-charcoal-600 dark:text-[#B8B3A8] mt-2 leading-relaxed">
-            Hassle-free 7-day exchange process for our retail and wholesale customers across Pakistan.
+            Hassle-free 7-day exchange process for our customers across Pakistan.
           </p>
         </div>
 

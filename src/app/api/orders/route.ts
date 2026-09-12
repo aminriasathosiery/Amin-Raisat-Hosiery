@@ -19,7 +19,6 @@ export async function POST(req: Request) {
       paymentReference,
       paymentScreenshotUrl,
       items,
-      isWholesale: clientIsWholesale,
     } = body;
 
     const cleanName = customerName?.trim();
@@ -43,11 +42,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Fetch live settings from Supabase if configured
-    let minOrderQty = INITIAL_SHIPPING_SETTINGS.minOrderQty;
+    // 1. Fetch live shipping settings from Supabase if configured
+    let minOrderQty = 1;
     let baseDeliveryCharge = INITIAL_SHIPPING_SETTINGS.baseDeliveryCharge;
     let freeDeliveryThreshold = INITIAL_SHIPPING_SETTINGS.freeDeliveryThreshold;
-    let wholesaleMinQty = 12;
 
     if (isSupabaseConfigured()) {
       try {
@@ -58,18 +56,8 @@ export async function POST(req: Request) {
           .single();
 
         if (shipData) {
-          minOrderQty = Number(shipData.min_order_qty) || minOrderQty;
           baseDeliveryCharge = Number(shipData.base_delivery_charge) || baseDeliveryCharge;
           freeDeliveryThreshold = Number(shipData.free_delivery_threshold) || freeDeliveryThreshold;
-        }
-
-        const { data: siteData } = await supabaseServer
-          .from('site_settings')
-          .select('wholesale_min_qty')
-          .limit(1)
-          .single();
-        if (siteData?.wholesale_min_qty) {
-          wholesaleMinQty = Number(siteData.wholesale_min_qty) || wholesaleMinQty;
         }
       } catch (err) {
         console.warn('Could not fetch server shipping settings, using fallback', err);
@@ -106,13 +94,15 @@ export async function POST(req: Request) {
       (sum: number, it: any) => sum + Math.max(1, Number(it.quantity) || 1),
       0
     );
-    const hasWholesale =
-      Boolean(clientIsWholesale) ||
-      items.some((it: any) => Boolean(it.isWholesale)) ||
-      totalItemCount >= wholesaleMinQty;
+
+    if (totalItemCount < 1) {
+      return NextResponse.json(
+        { error: 'Please add at least 1 item to place an order.' },
+        { status: 400 }
+      );
+    }
 
     let subtotal = 0;
-    let totalSavings = 0;
 
     const verifiedItems = items.map((clientItem: any) => {
       const qty = Math.max(1, Number(clientItem.quantity) || 1);
@@ -128,18 +118,10 @@ export async function POST(req: Request) {
       );
 
       let unitPrice = 0;
-      let retailPrice = 0;
-      let wholesalePrice = 0;
       let productName = clientItem.productName || 'Hosiery Product';
 
       if (variant) {
-        retailPrice = Number(variant.sale_price) || Number(variant.price) || 480;
-        wholesalePrice =
-          variant.wholesale_price !== undefined &&
-          variant.wholesale_price !== null &&
-          !isNaN(Number(variant.wholesale_price))
-            ? Number(variant.wholesale_price)
-            : Math.round(retailPrice * 0.82);
+        unitPrice = Number(variant.sale_price) || Number(variant.price) || 480;
       } else {
         const initialVar =
           initialVariantsMap.get(clientItem.variantId) ||
@@ -147,35 +129,15 @@ export async function POST(req: Request) {
             `${clientItem.productId}_${clientItem.quality}_${clientItem.sleeve}_${clientItem.size}`
           );
         if (initialVar) {
-          retailPrice = Number(initialVar.salePrice) || Number(initialVar.price) || 480;
-          wholesalePrice =
-            initialVar.wholesalePrice !== undefined &&
-            initialVar.wholesalePrice !== null &&
-            !isNaN(Number(initialVar.wholesalePrice))
-              ? Number(initialVar.wholesalePrice)
-              : Math.round(retailPrice * 0.82);
+          unitPrice = Number(initialVar.salePrice) || Number(initialVar.price) || 480;
           productName = initialVar.productName || productName;
         } else {
-          retailPrice = Number(clientItem.regularPrice || clientItem.unitPrice) || 480;
-          wholesalePrice =
-            clientItem.wholesalePrice !== undefined &&
-            clientItem.wholesalePrice !== null &&
-            !isNaN(Number(clientItem.wholesalePrice))
-              ? Number(clientItem.wholesalePrice)
-              : Math.round(retailPrice * 0.82);
+          unitPrice = Number(clientItem.regularPrice || clientItem.unitPrice || clientItem.price) || 480;
         }
       }
 
-      // Check wholesale criteria for this item
-      const isItemWholesale = Boolean(clientItem.isWholesale) || hasWholesale;
-      unitPrice = isItemWholesale ? wholesalePrice : retailPrice;
-
       const itemTotal = unitPrice * qty;
-      const normalTotal = retailPrice * qty;
       subtotal += itemTotal;
-      if (normalTotal > itemTotal) {
-        totalSavings += normalTotal - itemTotal;
-      }
 
       return {
         productId: clientItem.productId || null,
@@ -185,40 +147,14 @@ export async function POST(req: Request) {
         sleeve: clientItem.sleeve || variant?.sleeve || 'Sleeveless',
         size: clientItem.size || variant?.size || 'L',
         unitPrice,
-        regularPrice: retailPrice,
-        wholesalePrice,
-        isWholesale: isItemWholesale,
         quantity: qty,
         totalPrice: itemTotal,
         image: clientItem.image || null,
       };
     });
 
-    // Enforce MOQ check
-    if (hasWholesale && totalItemCount < wholesaleMinQty) {
-      return NextResponse.json(
-        {
-          error: `Wholesale order quantity requirement not met. Minimum ${wholesaleMinQty} pieces required for wholesale pricing.`,
-        },
-        { status: 400 }
-      );
-    }
-
-    if (!hasWholesale && totalItemCount < 1) {
-      return NextResponse.json(
-        {
-          error: 'Please add at least 1 item to place an order.',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Determine final delivery fee
-    let deliveryFee = baseDeliveryCharge;
-    if (totalItemCount >= freeDeliveryThreshold || hasWholesale) {
-      deliveryFee = 0;
-    }
-
+    // Determine final delivery fee: Free delivery if total pieces >= freeDeliveryThreshold (default 3)
+    const deliveryFee = totalItemCount >= freeDeliveryThreshold ? 0 : baseDeliveryCharge;
     const totalAmount = subtotal + deliveryFee;
     const orderNumber = `ARH-${Date.now().toString().slice(-6)}`;
     let orderId = `ord-${Date.now()}`;
@@ -256,8 +192,6 @@ export async function POST(req: Request) {
           payment_screenshot_url: paymentScreenshotUrl || null,
           payment_status: defaultPaymentStatus,
           status: 'Pending',
-          is_wholesale: hasWholesale,
-          wholesale_discount: totalSavings,
         };
 
         let { data: insertedOrder, error: ordErr } = await dbClient
@@ -366,8 +300,6 @@ export async function POST(req: Request) {
       paymentScreenshotUrl: paymentScreenshotUrl || undefined,
       paymentStatus: defaultPaymentStatus,
       status: 'Pending',
-      isWholesale: hasWholesale,
-      wholesaleDiscount: totalSavings > 0 ? totalSavings : undefined,
       items: verifiedItems,
       createdAt: new Date().toISOString(),
     };
@@ -480,8 +412,6 @@ export async function GET(req: Request) {
       paymentVerifiedBy: o.payment_verified_by || undefined,
       paymentRejectionReason: o.payment_rejection_reason || undefined,
       status: o.status || 'Pending',
-      isWholesale: o.is_wholesale ?? false,
-      wholesaleDiscount: o.wholesale_discount ? Number(o.wholesale_discount) : undefined,
       createdAt: o.created_at,
       items: Array.isArray(o.order_items)
         ? o.order_items.map((it: any) => ({
@@ -494,9 +424,6 @@ export async function GET(req: Request) {
             sleeve: it.sleeve,
             size: it.size,
             unitPrice: Number(it.unit_price) || 0,
-            regularPrice: it.regular_price ? Number(it.regular_price) : undefined,
-            wholesalePrice: it.wholesale_price ? Number(it.wholesale_price) : undefined,
-            isWholesale: it.is_wholesale ?? false,
             quantity: Number(it.quantity) || 1,
             totalPrice: Number(it.total_price) || 0,
             image: it.image_url,

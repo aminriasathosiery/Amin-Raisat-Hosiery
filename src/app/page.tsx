@@ -28,27 +28,27 @@ export default function HomePage() {
       {/* 3. Main Categories Grid */}
       <CategoryGrid />
 
-      {/* 4. Wholesale Callout Section */}
+      {/* 4. Retail Delivery Guarantee Section */}
       <section className="py-10 bg-light-elevated dark:bg-[#191917] border-y border-light-border dark:border-[#34322D]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-1 text-center sm:text-left">
             <span className="text-[11px] font-bold text-[#B89555] dark:text-[#C9A96A] uppercase tracking-wider block">
-              Wholesale Orders
+              Direct to Doorstep • 1 Piece Valid Order
             </span>
             <h3 className="text-xl sm:text-2xl font-extrabold text-charcoal-900 dark:text-[#F4F1E9]">
-              Special factory pricing starting from 12 pieces.
+              Free Nationwide Delivery on 3+ Pieces Across Pakistan.
             </h3>
             <p className="text-xs sm:text-sm text-charcoal-600 dark:text-[#B8B3A8]">
-              100% Free Nationwide Delivery across Pakistan for retailers and bulk commercial buyers.
+              Order 1 or 2 pieces with standard Rs. 200 delivery, or get 100% Free Delivery on any 3 or more garments.
             </p>
           </div>
 
           <Link
-            href="/wholesale"
+            href="/shop"
             className="flex-shrink-0 inline-flex items-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 font-bold text-xs py-3.5 px-6 rounded-xl shadow-xs transition-all active:scale-[0.99]"
           >
             <PackageCheck className="w-4 h-4" />
-            <span>View Wholesale Collection</span>
+            <span>Shop Premium Collection</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

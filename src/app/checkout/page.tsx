@@ -1,23 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
-import { PaymentMethodType } from '@/types';
+import { PaymentMethodType, ProductSize } from '@/types';
 import {
   ArrowLeft,
   Lock,
   Building2,
   Banknote,
-  AlertCircle,
   CheckCircle2,
   Upload,
   Smartphone,
-  Copy,
+  Minus,
+  Plus,
+  Truck,
+  Trash2,
 } from 'lucide-react';
+
+const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
 const PAKISTAN_PROVINCES = [
   'Punjab',
@@ -63,33 +66,28 @@ export default function CheckoutPage() {
     subtotal: cartSubtotal,
     deliveryFee: cartDeliveryFee,
     totalAmount: cartTotalAmount,
+    updateQuantity,
+    updateItemSize,
+    removeItem,
     clearCart,
-    hasWholesaleItems: cartHasWholesale,
-    isWholesaleMinimumMet: cartIsWholesaleMinMet,
-    wholesalePiecesNeeded: cartWholesalePiecesNeeded,
-    wholesaleMinQty,
-    totalSavings: cartTotalSavings,
     buyNowItem,
+    updateBuyNowItem,
     clearBuyNow,
   } = useCart();
-  const { settings, createOrder, uploadMediaFile } = useStore();
+  const { settings, products, createOrder, uploadMediaFile } = useStore();
 
   const isBuyNow = isBuyNowParam && Boolean(buyNowItem);
   const items = isBuyNow && buyNowItem ? [buyNowItem] : cartItems;
 
   const totalQuantity = isBuyNow && buyNowItem ? buyNowItem.quantity : cartTotalQuantity;
   const subtotal = isBuyNow && buyNowItem ? buyNowItem.unitPrice * buyNowItem.quantity : cartSubtotal;
-  const regularSubtotal = isBuyNow && buyNowItem ? (buyNowItem.regularPrice || buyNowItem.unitPrice) * buyNowItem.quantity : subtotal;
-  const totalSavings = isBuyNow && buyNowItem ? Math.max(0, regularSubtotal - subtotal) : cartTotalSavings;
-
-  const hasWholesaleItems = isBuyNow && buyNowItem ? Boolean(buyNowItem.isWholesale) : cartHasWholesale;
-  const isWholesaleMinimumMet = isBuyNow && buyNowItem ? (!buyNowItem.isWholesale || buyNowItem.quantity >= wholesaleMinQty) : cartIsWholesaleMinMet;
-  const wholesalePiecesNeeded = isBuyNow && buyNowItem ? Math.max(0, wholesaleMinQty - buyNowItem.quantity) : cartWholesalePiecesNeeded;
 
   const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
-  const isFreeDeliveryUnlocked = totalQuantity >= freeDeliveryThreshold || hasWholesaleItems;
-  const deliveryFee = totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : (settings.shipping?.baseDeliveryCharge ?? 200);
+  const baseDeliveryCharge = settings.shipping?.baseDeliveryCharge ?? 200;
+  const isFreeDeliveryUnlocked = totalQuantity >= freeDeliveryThreshold;
+  const deliveryFee = totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : baseDeliveryCharge;
   const totalAmount = subtotal + deliveryFee;
+  const piecesNeededForFree = Math.max(0, freeDeliveryThreshold - totalQuantity);
 
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState('');
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
@@ -131,46 +129,6 @@ export default function CheckoutPage() {
           className="inline-flex items-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold py-3 px-6 rounded-xl shadow-xs"
         >
           <ArrowLeft className="w-4 h-4" /> Explore Shop
-        </Link>
-      </div>
-    );
-  }
-
-  // Wholesale Minimum Check
-  if (hasWholesaleItems && !isWholesaleMinimumMet) {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-24 text-center space-y-4 bg-light-bg dark:bg-[#11110F] text-charcoal-900 dark:text-[#F4F1E9] min-h-[70vh] flex flex-col items-center justify-center">
-        <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400 mx-auto">
-          <AlertCircle className="w-6 h-6" />
-        </div>
-        <h1 className="text-2xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">Wholesale Minimum Not Met</h1>
-        <p className="text-xs text-charcoal-600 dark:text-[#8E8A80]">
-          Wholesale orders require a minimum of {wholesaleMinQty} pieces. You currently have {totalQuantity} piece{totalQuantity > 1 ? 's' : ''}.
-        </p>
-        <Link
-          href="/wholesale"
-          className="inline-flex items-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold py-3 px-6 rounded-xl shadow-xs"
-        >
-          Add {wholesalePiecesNeeded} More Pieces to Cart
-        </Link>
-      </div>
-    );
-  }
-
-  // Retail Minimum Order Check
-  const minRetailQty = settings.shipping.minOrderQty || 1;
-  if (!hasWholesaleItems && totalQuantity < minRetailQty) {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-24 text-center space-y-4 bg-light-bg dark:bg-[#11110F] text-charcoal-900 dark:text-[#F4F1E9] min-h-[70vh] flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">Minimum Order Required</h1>
-        <p className="text-xs text-charcoal-600 dark:text-[#8E8A80]">
-          The minimum order quantity is {minRetailQty} pieces. You currently have {totalQuantity} piece{totalQuantity > 1 ? 's' : ''}.
-        </p>
-        <Link
-          href="/shop"
-          className="inline-flex items-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold py-3 px-6 rounded-xl shadow-xs"
-        >
-          Add More Pieces ({minRetailQty - totalQuantity} needed)
         </Link>
       </div>
     );
@@ -228,23 +186,19 @@ export default function CheckoutPage() {
         paymentMethod: formData.paymentMethod,
         paymentReference: formData.paymentReference.trim() || undefined,
         paymentScreenshotUrl: paymentScreenshotUrl || undefined,
-        isWholesale: hasWholesaleItems,
-        wholesaleDiscount: totalSavings,
         items: items.map((it) => ({
           id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
           orderId: '',
           productId: it.productId,
-          variantId: it.id,
+          variantId: it.variantId || it.id,
           productName: it.productName,
           quality: it.quality,
           sleeve: it.sleeve,
           size: it.size,
           unitPrice: it.unitPrice,
-          regularPrice: it.regularPrice || it.unitPrice,
-          wholesalePrice: it.wholesalePrice,
-          isWholesale: it.isWholesale,
           quantity: it.quantity,
           totalPrice: it.unitPrice * it.quantity,
+          image: it.image,
         })),
       };
 
@@ -277,16 +231,9 @@ export default function CheckoutPage() {
         <div className="border-b border-light-border dark:border-[#34322D] pb-4 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900 dark:text-[#F4F1E9] tracking-tight">
-                  Checkout &amp; Delivery Details
-                </h1>
-                {hasWholesaleItems && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-champagne-100 dark:bg-[#22211E] text-[#96763D] dark:text-[#C9A96A] border border-[#B89555]/30 text-xs font-bold">
-                    Wholesale Order
-                  </span>
-                )}
-              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900 dark:text-[#F4F1E9] tracking-tight">
+                Checkout &amp; Delivery Details
+              </h1>
               <p className="text-xs text-charcoal-600 dark:text-[#8E8A80] mt-1">
                 Fast and secure delivery across Pakistan. Enter your recipient and delivery details below.
               </p>
@@ -299,75 +246,56 @@ export default function CheckoutPage() {
             {/* Left: Customer & Delivery Info Form */}
             <div className="lg:col-span-7 space-y-6">
               {errorMsg && (
-                <div className="p-4 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-2xl text-xs flex items-center gap-2.5">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                  <span>{errorMsg}</span>
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 rounded-xl text-xs font-semibold">
+                  {errorMsg}
                 </div>
               )}
 
-              {/* 1. Contact & Name */}
+              {/* 1. Recipient Information */}
               <div className="bg-white dark:bg-[#191917] rounded-2xl p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-4">
-                <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9] flex items-center gap-2 border-b border-light-border dark:border-[#34322D] pb-3">
-                  <span className="w-5 h-5 rounded-full bg-champagne-500 text-charcoal-950 text-xs flex items-center justify-center font-bold">
-                    1
-                  </span>
-                  Customer Information
+                <h2 className="text-sm font-bold uppercase tracking-wider text-charcoal-900 dark:text-[#F4F1E9] border-b border-light-border dark:border-[#34322D] pb-3">
+                  1. Recipient Details
                 </h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
                       Full Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Muhammad Usman"
+                      placeholder="e.g. Muhammad Zubair"
                       value={formData.fullName}
                       onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
+                      className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                      Phone Number (For Courier Call) <span className="text-rose-500">*</span>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
+                      Phone Number (for Courier Calls) <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="tel"
                       required
-                      placeholder="03001234567"
+                      placeholder="03088666075"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                      WhatsApp Number (Optional)
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="03088666075"
-                      value={formData.whatsappNumber}
-                      onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
+                      className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                      Email Address <span className="text-charcoal-400 font-normal">(Optional for tracking)</span>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
+                      Email Address (Optional)
                     </label>
                     <input
                       type="email"
+                      placeholder="name@example.com"
                       value={formData.email}
-                      placeholder="your.email@example.com"
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
+                      className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
                     />
                   </div>
                 </div>
@@ -375,140 +303,134 @@ export default function CheckoutPage() {
 
               {/* 2. Shipping Address */}
               <div className="bg-white dark:bg-[#191917] rounded-2xl p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-4">
-                <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9] flex items-center gap-2 border-b border-light-border dark:border-[#34322D] pb-3">
-                  <span className="w-5 h-5 rounded-full bg-champagne-500 text-charcoal-950 text-xs flex items-center justify-center font-bold">
-                    2
-                  </span>
-                  Delivery Address (Pakistan)
+                <h2 className="text-sm font-bold uppercase tracking-wider text-charcoal-900 dark:text-[#F4F1E9] border-b border-light-border dark:border-[#34322D] pb-3">
+                  2. Shipping Address
                 </h2>
 
-                <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                    Complete Street Address / House / Flat / Plaza <span className="text-rose-500">*</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    required
-                    placeholder="House #, Street #, Sector / Colony, Landmark"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                      City <span className="text-rose-500">*</span>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
+                      Complete Street Address <span className="text-rose-500">*</span>
                     </label>
-                    <select
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
-                    >
-                      {POPULAR_CITIES.map((c) => (
-                        <option key={c} value={c} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
-                          {c}
-                        </option>
-                      ))}
-                      <option value="Other" className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">Other City (Specify below)</option>
-                    </select>
+                    <textarea
+                      required
+                      rows={2}
+                      placeholder="House / Shop #, Street, Mohallah, Sector, Landmark..."
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
+                    />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                      Province <span className="text-rose-500">*</span>
-                    </label>
-                    <select
-                      value={formData.province}
-                      onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
-                    >
-                      {PAKISTAN_PROVINCES.map((prov) => (
-                        <option key={prov} value={prov} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
-                          {prov}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
+                        City <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
+                      >
+                        {POPULAR_CITIES.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                        <option value="Other">Other City...</option>
+                      </select>
+                    </div>
 
-                {formData.city === 'Other' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                      Enter Your City Name <span className="text-rose-500">*</span>
+                    {formData.city === 'Other' ? (
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
+                          Enter City Name <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter your city name"
+                          value={formData.customCity}
+                          onChange={(e) => setFormData({ ...formData, customCity: e.target.value })}
+                          className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
+                          Province
+                        </label>
+                        <select
+                          value={formData.province}
+                          onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                          className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
+                        >
+                          {PAKISTAN_PROVINCES.map((p) => (
+                            <option key={p} value={p}>
+                              {p}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-charcoal-700 dark:text-[#D7D7D4]">
+                      Order Notes (Optional)
                     </label>
                     <input
                       type="text"
-                      required
-                      placeholder="e.g. Abbottabad"
-                      value={formData.customCity}
-                      onChange={(e) => setFormData({ ...formData, customCity: e.target.value })}
-                      className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
+                      placeholder="e.g. Call before delivery, leave with neighbor..."
+                      value={formData.orderNotes}
+                      onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs focus:outline-none focus:border-[#B89555]"
                     />
                   </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
-                    Order Notes (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Call before delivery or leave with security"
-                    value={formData.orderNotes}
-                    onChange={(e) => setFormData({ ...formData, orderNotes: e.target.value })}
-                    className="w-full px-3.5 py-2.5 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A]"
-                  />
                 </div>
               </div>
 
               {/* 3. Payment Method */}
               <div className="bg-white dark:bg-[#191917] rounded-2xl p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-4">
-                <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9] flex items-center gap-2 border-b border-light-border dark:border-[#34322D] pb-3">
-                  <span className="w-5 h-5 rounded-full bg-champagne-500 text-charcoal-950 text-xs flex items-center justify-center font-bold">
-                    3
-                  </span>
-                  Select Payment Method
+                <h2 className="text-sm font-bold uppercase tracking-wider text-charcoal-900 dark:text-[#F4F1E9] border-b border-light-border dark:border-[#34322D] pb-3">
+                  3. Payment Method
                 </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* 1. COD */}
-                  {(settings.paymentMethods?.cod?.enabled ?? settings.isCodEnabled ?? true) && (
-                    <label
-                      className={`cursor-pointer p-4 rounded-xl border-2 flex items-start gap-3 transition-all ${
-                        formData.paymentMethod === 'cod'
-                          ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-50/70 dark:bg-[#22211E] shadow-xs'
-                          : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] hover:border-light-border'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="cod"
-                        checked={formData.paymentMethod === 'cod'}
-                        onChange={() => setFormData({ ...formData, paymentMethod: 'cod' })}
-                        className="mt-1 accent-[#B89555]"
-                      />
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <Banknote className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9]">Cash on Delivery</span>
-                        </div>
-                        <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] mt-0.5">
-                          Pay cash to rider upon delivery.
-                        </p>
+                <div className="space-y-3">
+                  {/* Cash on Delivery */}
+                  <label
+                    className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      formData.paymentMethod === 'cod'
+                        ? 'border-[#B89555] bg-champagne-50/50 dark:bg-[#22211E]'
+                        : 'border-light-border dark:border-[#34322D] hover:bg-light-hover dark:hover:bg-[#1E1D1A]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="cod"
+                      checked={formData.paymentMethod === 'cod'}
+                      onChange={() => setFormData({ ...formData, paymentMethod: 'cod' })}
+                      className="mt-1 accent-[#B89555]"
+                    />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <Banknote className="w-4 h-4 text-[#B89555]" />
+                        <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9]">Cash on Delivery (COD)</span>
                       </div>
-                    </label>
-                  )}
+                      <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] mt-0.5">
+                        Pay cash safely upon receiving your parcel at your doorstep.
+                      </p>
+                    </div>
+                  </label>
 
-                  {/* 2. Direct Bank Transfer */}
-                  {(settings.paymentMethods?.bank_transfer?.enabled ?? settings.isBankTransferEnabled ?? true) && (
+                  {/* Bank Transfer */}
+                  {settings.paymentMethods?.bank_transfer?.enabled !== false && (
                     <label
-                      className={`cursor-pointer p-4 rounded-xl border-2 flex items-start gap-3 transition-all ${
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                         formData.paymentMethod === 'bank_transfer'
-                          ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-50/70 dark:bg-[#22211E] shadow-xs'
-                          : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] hover:border-light-border'
+                          ? 'border-[#B89555] bg-champagne-50/50 dark:bg-[#22211E]'
+                          : 'border-light-border dark:border-[#34322D] hover:bg-light-hover dark:hover:bg-[#1E1D1A]'
                       }`}
                     >
                       <input
@@ -521,23 +443,23 @@ export default function CheckoutPage() {
                       />
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                          <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9]">Bank Transfer</span>
+                          <Building2 className="w-4 h-4 text-[#B89555]" />
+                          <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9]">Direct Bank Transfer</span>
                         </div>
                         <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] mt-0.5">
-                          Bank Al Habib / Raast online.
+                          Transfer to our official Meezan / Al Habib account and attach payment receipt.
                         </p>
                       </div>
                     </label>
                   )}
 
-                  {/* 3. JazzCash */}
-                  {(settings.paymentMethods?.jazzcash?.enabled ?? true) && (
+                  {/* JazzCash */}
+                  {settings.paymentMethods?.jazzcash?.enabled !== false && (
                     <label
-                      className={`cursor-pointer p-4 rounded-xl border-2 flex items-start gap-3 transition-all ${
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                         formData.paymentMethod === 'jazzcash'
-                          ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-50/70 dark:bg-[#22211E] shadow-xs'
-                          : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] hover:border-light-border'
+                          ? 'border-[#B89555] bg-champagne-50/50 dark:bg-[#22211E]'
+                          : 'border-light-border dark:border-[#34322D] hover:bg-light-hover dark:hover:bg-[#1E1D1A]'
                       }`}
                     >
                       <input
@@ -554,19 +476,19 @@ export default function CheckoutPage() {
                           <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9]">JazzCash</span>
                         </div>
                         <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] mt-0.5">
-                          Instant mobile account transfer.
+                          Pay directly from your JazzCash app or mobile account.
                         </p>
                       </div>
                     </label>
                   )}
 
-                  {/* 4. EasyPaisa */}
-                  {(settings.paymentMethods?.easypaisa?.enabled ?? true) && (
+                  {/* EasyPaisa */}
+                  {settings.paymentMethods?.easypaisa?.enabled !== false && (
                     <label
-                      className={`cursor-pointer p-4 rounded-xl border-2 flex items-start gap-3 transition-all ${
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                         formData.paymentMethod === 'easypaisa'
-                          ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-50/70 dark:bg-[#22211E] shadow-xs'
-                          : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] hover:border-light-border'
+                          ? 'border-[#B89555] bg-champagne-50/50 dark:bg-[#22211E]'
+                          : 'border-light-border dark:border-[#34322D] hover:bg-light-hover dark:hover:bg-[#1E1D1A]'
                       }`}
                     >
                       <input
@@ -583,19 +505,19 @@ export default function CheckoutPage() {
                           <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9]">EasyPaisa</span>
                         </div>
                         <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] mt-0.5">
-                          Instant mobile account transfer.
+                          Instant EasyPaisa wallet transfer.
                         </p>
                       </div>
                     </label>
                   )}
 
-                  {/* 5. SadaPay */}
-                  {(settings.paymentMethods?.sadapay?.enabled ?? true) && (
+                  {/* SadaPay */}
+                  {settings.paymentMethods?.sadapay?.enabled !== false && (
                     <label
-                      className={`cursor-pointer p-4 rounded-xl border-2 flex items-start gap-3 transition-all sm:col-span-2 ${
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                         formData.paymentMethod === 'sadapay'
-                          ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-50/70 dark:bg-[#22211E] shadow-xs'
-                          : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] hover:border-light-border'
+                          ? 'border-[#B89555] bg-champagne-50/50 dark:bg-[#22211E]'
+                          : 'border-light-border dark:border-[#34322D] hover:bg-light-hover dark:hover:bg-[#1E1D1A]'
                       }`}
                     >
                       <input
@@ -619,33 +541,32 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
-                {/* Digital Payment Details & Mandatory Screenshot Upload Box */}
+                {/* Digital Payment Details & Screenshot Upload Box */}
                 {formData.paymentMethod !== 'cod' && (
                   <div className="p-4 sm:p-5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs space-y-4 animate-in fade-in">
-                    {/* Method specific account info */}
                     <div>
                       {formData.paymentMethod === 'bank_transfer' && (
                         <div className="space-y-1.5">
                           <p className="font-bold text-[#B89555] dark:text-[#C9A96A]">
-                            {settings.paymentMethods?.bank_transfer?.bankName || settings.bankDetails?.bankName || 'Bank Al Habib'} Account Details:
+                            {settings.paymentMethods?.bank_transfer?.bankName || settings.bankDetails?.bankName || 'Meezan Bank Ltd.'} Account Details:
                           </p>
                           <div className="space-y-1 font-mono text-[11px] text-charcoal-700 dark:text-[#B8B3A8]">
-                            <p>• Account Title: <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{settings.paymentMethods?.bank_transfer?.accountTitle || settings.bankDetails?.accountTitle || 'AMIN RAISAT HOSIERY'}</strong></p>
+                            <p>• Account Title: <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{settings.paymentMethods?.bank_transfer?.accountTitle || settings.bankDetails?.accountTitle || 'Muhammad Amin'}</strong></p>
                             <div className="flex items-center gap-2">
-                              <span>• Account #: <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{settings.paymentMethods?.bank_transfer?.accountNumber || settings.bankDetails?.accountNumber || '1088-0081-0062-8101'}</strong></span>
+                              <span>• Account #: <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{settings.paymentMethods?.bank_transfer?.accountNumber || settings.bankDetails?.accountNumber || '01010101010101'}</strong></span>
                               <button
                                 type="button"
-                                onClick={() => copyToClipboard(settings.paymentMethods?.bank_transfer?.accountNumber || settings.bankDetails?.accountNumber || '1088008100628101', 'bt-acc')}
+                                onClick={() => copyToClipboard(settings.paymentMethods?.bank_transfer?.accountNumber || settings.bankDetails?.accountNumber || '01010101010101', 'bt-acc')}
                                 className="text-[#B89555] hover:underline"
                               >
                                 {copiedKey === 'bt-acc' ? 'Copied!' : 'Copy'}
                               </button>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span>• IBAN: <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{settings.paymentMethods?.bank_transfer?.iban || settings.bankDetails?.iban || 'PK09BBAH0010880081006281'}</strong></span>
+                              <span>• IBAN: <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{settings.paymentMethods?.bank_transfer?.iban || settings.bankDetails?.iban || 'PK00MEZN0000000000000000'}</strong></span>
                               <button
                                 type="button"
-                                onClick={() => copyToClipboard(settings.paymentMethods?.bank_transfer?.iban || settings.bankDetails?.iban || 'PK09BBAH0010880081006281', 'bt-iban')}
+                                onClick={() => copyToClipboard(settings.paymentMethods?.bank_transfer?.iban || settings.bankDetails?.iban || 'PK00MEZN0000000000000000', 'bt-iban')}
                                 className="text-[#B89555] hover:underline"
                               >
                                 {copiedKey === 'bt-iban' ? 'Copied!' : 'Copy'}
@@ -713,7 +634,7 @@ export default function CheckoutPage() {
                       )}
 
                       <div className="mt-2 text-[11px] text-charcoal-600 dark:text-[#B8B3A8]">
-                        Exact Transfer Amount: <strong className="text-[#B89555] dark:text-[#C9A96A] text-xs font-bold">Rs. {totalAmount}</strong>
+                        Exact Transfer Amount: <strong className="text-[#B89555] dark:text-[#C9A96A] text-xs font-bold">Rs. {totalAmount.toLocaleString()}</strong>
                       </div>
                     </div>
 
@@ -798,49 +719,130 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Right: Order Summary & Place Order Button */}
+            {/* Right: Order Summary & In-Place Size/Qty Editing */}
             <div className="lg:col-span-5 space-y-6">
               <div className="bg-white dark:bg-[#191917] rounded-2xl p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-4 sticky top-24">
-                <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9] border-b border-light-border dark:border-[#34322D] pb-3">
-                  Order Summary
-                </h2>
+                <div className="flex items-center justify-between border-b border-light-border dark:border-[#34322D] pb-3">
+                  <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                    Order Summary
+                  </h2>
+                  <span className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+                    {totalQuantity} {totalQuantity === 1 ? 'piece' : 'pieces'}
+                  </span>
+                </div>
 
-                {/* Items preview */}
-                <div className="space-y-3 divide-y divide-light-border dark:divide-[#34322D] max-h-72 overflow-y-auto">
-                  {items.map((item) => (
-                    <div key={item.id} className="pt-3 first:pt-0 flex items-center justify-between text-xs">
-                      <div>
-                        <p className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{item.productName}</p>
-                        <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
-                          {item.isWholesale && (
-                            <span className="font-bold text-[#B89555] dark:text-[#C9A96A] mr-1">[Wholesale]</span>
-                          )}
-                          {item.quality} • {item.sleeve} • Size: {item.size}
-                        </p>
-                        <p className="text-[11px] text-charcoal-600 dark:text-[#B8B3A8] font-medium">
-                          Qty: {item.quantity} x Rs. {item.unitPrice}
-                        </p>
+                {/* Items List with In-Place Size & Quantity Editing */}
+                <div className="space-y-4 divide-y divide-light-border dark:divide-[#34322D] max-h-96 overflow-y-auto pr-1">
+                  {items.map((item) => {
+                    const matchingProd = products.find((p) => p.id === item.productId);
+                    const availableSizes = matchingProd
+                      ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
+                      : SIZES;
+
+                    return (
+                      <div key={item.id} className="pt-4 first:pt-0 space-y-2 text-xs">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{item.productName}</p>
+                            <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
+                              {item.quality} • {item.sleeve}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <span className="font-bold text-[#B89555] dark:text-[#C9A96A] text-sm">
+                              Rs. {(item.unitPrice * item.quantity).toLocaleString()}
+                            </span>
+                            <p className="text-[10px] text-charcoal-400 dark:text-[#8E8A80]">
+                              Rs. {item.unitPrice} / pc
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Interactive In-Place Controls: Size Pills + Quantity Stepper */}
+                        <div className="flex items-center justify-between gap-2 pt-1">
+                          {/* Size Pills */}
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] font-medium mr-1">Size:</span>
+                            {(availableSizes.length > 0 ? availableSizes : SIZES).map((sz) => (
+                              <button
+                                key={sz}
+                                type="button"
+                                onClick={() => {
+                                  if (isBuyNow) {
+                                    updateBuyNowItem({ size: sz });
+                                  } else {
+                                    updateItemSize(item.id, sz);
+                                  }
+                                }}
+                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
+                                  item.size === sz
+                                    ? 'bg-champagne-500 text-charcoal-950 border-champagne-500 shadow-2xs'
+                                    : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border-light-border dark:border-[#34322D] hover:border-[#B89555]/50'
+                                }`}
+                              >
+                                {sz}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Quantity Stepper */}
+                          <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-lg bg-light-elevated dark:bg-[#1A1A18] overflow-hidden flex-shrink-0 shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isBuyNow) {
+                                  updateBuyNowItem({ quantity: Math.max(1, item.quantity - 1) });
+                                } else {
+                                  updateQuantity(item.id, item.quantity - 1);
+                                }
+                              }}
+                              className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="w-7 text-center text-xs font-extrabold text-charcoal-900 dark:text-[#F4F1E9]">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isBuyNow) {
+                                  updateBuyNowItem({ quantity: item.quantity + 1 });
+                                } else {
+                                  updateQuantity(item.id, item.quantity + 1);
+                                }
+                              }}
+                              className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="font-bold text-[#B89555] dark:text-[#C9A96A]">
-                        Rs. {item.unitPrice * item.quantity}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+
+                {/* Free Delivery Bar in Order Summary */}
+                <div className="p-3 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] text-xs">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold">
+                    <Truck className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      {isFreeDeliveryUnlocked
+                        ? '✓ Free Nationwide Delivery Unlocked!'
+                        : `Add ${piecesNeededForFree} more piece${piecesNeededForFree > 1 ? 's' : ''} for FREE delivery`}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Pricing totals */}
                 <div className="border-t border-light-border dark:border-[#34322D] pt-3 space-y-2 text-xs text-charcoal-600 dark:text-[#B8B3A8]">
                   <div className="flex justify-between">
-                    <span>Subtotal ({totalQuantity} pieces)</span>
-                    <span className="font-semibold text-charcoal-900 dark:text-[#F4F1E9]">Rs. {subtotal}</span>
+                    <span>Subtotal ({totalQuantity} {totalQuantity === 1 ? 'piece' : 'pieces'})</span>
+                    <span className="font-semibold text-charcoal-900 dark:text-[#F4F1E9]">Rs. {subtotal.toLocaleString()}</span>
                   </div>
-
-                  {totalSavings > 0 && (
-                    <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-semibold">
-                      <span>Wholesale Savings</span>
-                      <span>- Rs. {totalSavings}</span>
-                    </div>
-                  )}
 
                   <div className="flex justify-between items-center">
                     <span>Delivery Fee</span>
@@ -854,7 +856,7 @@ export default function CheckoutPage() {
                   </div>
                   <div className="border-t border-light-border dark:border-[#34322D] pt-3 flex justify-between text-base font-bold text-[#B89555] dark:text-[#C9A96A]">
                     <span>Total Amount</span>
-                    <span>Rs. {totalAmount}</span>
+                    <span>Rs. {totalAmount.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -865,7 +867,7 @@ export default function CheckoutPage() {
                   className="w-full py-3.5 px-6 rounded-xl bg-champagne-500 hover:bg-champagne-400 disabled:opacity-50 text-charcoal-950 font-extrabold text-xs transition-all flex items-center justify-center gap-2 shadow-xs active:scale-[0.99]"
                 >
                   <Lock className="w-4 h-4 stroke-[2.2]" />
-                  <span>{isSubmitting ? 'Placing Order...' : `Confirm & Place Order • Rs. ${totalAmount}`}</span>
+                  <span>{isSubmitting ? 'Placing Order...' : `Confirm & Place Order • Rs. ${totalAmount.toLocaleString()}`}</span>
                 </button>
 
                 <div className="text-[11px] text-center text-charcoal-500 dark:text-[#8E8A80] pt-1">

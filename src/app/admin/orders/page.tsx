@@ -37,7 +37,6 @@ export default function AdminOrdersPage() {
   }, []);
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [wholesaleFilter, setWholesaleFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -77,8 +76,6 @@ export default function AdminOrdersPage() {
   const filteredOrders = useMemo(() => {
     return orders.filter((ord) => {
       if (statusFilter !== 'all' && ord.status !== statusFilter) return false;
-      if (wholesaleFilter === 'wholesale' && !ord.isWholesale) return false;
-      if (wholesaleFilter === 'retail' && ord.isWholesale) return false;
       if (paymentFilter !== 'all') {
         const pStatus = ord.paymentStatus || (ord.paymentMethod === 'cod' ? 'COD_PENDING' : 'PENDING_VERIFICATION');
         if (pStatus !== paymentFilter) return false;
@@ -94,12 +91,11 @@ export default function AdminOrdersPage() {
       }
       return true;
     });
-  }, [orders, statusFilter, wholesaleFilter, paymentFilter, searchQuery]);
+  }, [orders, statusFilter, paymentFilter, searchQuery]);
 
   const stats = useMemo(() => {
     return {
       total: orders.length,
-      wholesale: orders.filter((o) => o.isWholesale).length,
       pendingVerification: orders.filter(
         (o) => o.paymentStatus === 'PENDING_VERIFICATION' || (o.paymentMethod !== 'cod' && o.status === 'Pending' && !o.paymentVerifiedAt)
       ).length,
@@ -320,15 +316,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3.5">
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
-            Wholesale Orders
-          </span>
-          <div className="text-xl font-bold text-[#B89555] dark:text-[#C9A96A] mt-1">{stats.wholesale}</div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">B2B Bulk Orders</span>
-        </div>
-
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
         <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
           <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
             Pending Receipt
@@ -395,17 +383,6 @@ export default function AdminOrdersPage() {
             <option value="VERIFIED">Payment Verified</option>
             <option value="REJECTED">Payment Rejected</option>
             <option value="COD_PENDING">COD Orders</option>
-          </select>
-
-          {/* Wholesale Filter */}
-          <select
-            value={wholesaleFilter}
-            onChange={(e) => setWholesaleFilter(e.target.value)}
-            className="px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
-          >
-            <option value="all">All Types</option>
-            <option value="wholesale">Wholesale Only</option>
-            <option value="retail">Retail Only</option>
           </select>
 
           {/* Status Filter */}
@@ -504,13 +481,8 @@ export default function AdminOrdersPage() {
                         </td>
                         <td className="p-4 font-mono font-bold text-[#B89555] dark:text-[#C9A96A] whitespace-nowrap">
                           <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1">
+                            <div>
                               <span>#{ord.orderNumber}</span>
-                              {ord.isWholesale && (
-                                <span className="text-[9px] font-extrabold bg-[#B89555]/20 text-[#B89555] dark:text-[#C9A96A] border border-[#B89555]/40 px-1 py-0.5 rounded uppercase">
-                                  Wholesale
-                                </span>
-                              )}
                             </div>
                             <div>
                               {ord.customerType === 'GUEST' ? (
@@ -677,11 +649,6 @@ export default function AdminOrdersPage() {
                         ) : (
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
                             REG
-                          </span>
-                        )}
-                        {ord.isWholesale && (
-                          <span className="text-[9px] font-extrabold bg-[#B89555]/20 text-[#B89555] dark:text-[#C9A96A] border border-[#B89555]/40 px-1 py-0.5 rounded uppercase">
-                            Wholesale
                           </span>
                         )}
                       </div>
@@ -940,11 +907,6 @@ export default function AdminOrdersPage() {
                       Registered Customer
                     </span>
                   )}
-                  {selectedOrder.isWholesale && (
-                    <span className="text-[10px] font-extrabold bg-champagne-500 text-charcoal-950 px-2 py-0.5 rounded uppercase">
-                      Wholesale B2B Order
-                    </span>
-                  )}
                 </div>
                 <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
                   Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
@@ -1036,12 +998,6 @@ export default function AdminOrdersPage() {
                 <span>Subtotal</span>
                 <span className="text-charcoal-900 dark:text-[#F4F1E9] font-semibold">Rs. {selectedOrder.subtotal}</span>
               </div>
-              {selectedOrder.wholesaleDiscount && selectedOrder.wholesaleDiscount > 0 && (
-                <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold">
-                  <span>Wholesale Savings Applied</span>
-                  <span>- Rs. {selectedOrder.wholesaleDiscount}</span>
-                </div>
-              )}
               <div className="flex justify-between">
                 <span>Delivery Fee</span>
                 <span>{selectedOrder.deliveryFee === 0 ? 'FREE DELIVERY' : `Rs. ${selectedOrder.deliveryFee}`}</span>

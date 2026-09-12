@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     'Full Sleeve Vest',
     'Combed Cotton Innerwear',
     'Faisalabad Hosiery',
-    'Wholesale Hosiery Pakistan',
+    'Premium Cotton Hosiery Pakistan',
   ],
   authors: [{ name: 'Muhammad Amin' }],
   openGraph: {

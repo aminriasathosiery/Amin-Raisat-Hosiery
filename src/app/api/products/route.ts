@@ -39,8 +39,6 @@ export async function GET() {
               INITIAL_PRODUCTS.find((ip) => ip.slug === p.slug || p.slug?.startsWith(ip.slug))?.sizeGuideUrl ||
               'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/product-media/products/f0000000-0000-0000-0000-000000000001/size-guide/arh_mens_vest_size_chart.webp',
             isPublished: p.is_published ?? true,
-            isWholesaleEnabled: p.is_wholesale_enabled ?? true,
-            wholesaleMinQty: p.wholesale_min_qty !== undefined && p.wholesale_min_qty !== null ? Number(p.wholesale_min_qty) : 12,
             createdAt: p.created_at,
             variants: Array.isArray(p.product_variants)
               ? p.product_variants.map((v: any) => ({
@@ -51,10 +49,6 @@ export async function GET() {
                   size: v.size,
                   price: Number(v.price) || 0,
                   salePrice: v.sale_price !== undefined && v.sale_price !== null ? Number(v.sale_price) : undefined,
-                  wholesalePrice: v.wholesale_price !== undefined && v.wholesale_price !== null && !isNaN(Number(v.wholesale_price))
-                    ? Number(v.wholesale_price)
-                    : Math.round((Number(v.price) || 480) * 0.82),
-                  wholesaleTiers: Array.isArray(v.wholesale_tiers) ? v.wholesale_tiers : undefined,
                   stock: Number(v.stock) || 0,
                   sku: v.sku || '',
                   isAvailable: v.is_available ?? true,

@@ -150,15 +150,8 @@ export default function ShopPage() {
             </p>
           </div>
 
-          {/* Wholesale banner link & Sort selector */}
+          {/* Filter & Sort selector */}
           <div className="flex items-center gap-3 flex-wrap">
-            <Link
-              href="/wholesale"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white dark:bg-[#191917] hover:bg-light-hover dark:hover:bg-[#22211E] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] text-xs font-semibold transition-colors shadow-2xs"
-            >
-              <Package className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-              <span>Wholesale Store</span>
-            </Link>
 
             <button
               onClick={() => setMobileFilterOpen(true)}

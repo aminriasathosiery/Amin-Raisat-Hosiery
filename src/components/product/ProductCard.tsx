@@ -11,12 +11,11 @@ import { ShoppingBag, Zap, Check, Play, Star } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
-  isWholesaleView?: boolean;
 }
 
 const AVAILABLE_SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleView = false }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const { addItem, openDrawer, setBuyNowItem } = useCart();
   const { categories } = useStore();
@@ -58,19 +57,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
     );
   }, [product.variants, selectedSleeve, selectedSize]);
 
-  // Compute reactive price & stock based on view mode (Retail vs Wholesale)
-  const retailPrice = currentVariant?.salePrice || currentVariant?.price || 480;
-  const baseWholesalePrice =
-    currentVariant?.wholesalePrice !== undefined &&
-    currentVariant?.wholesalePrice !== null &&
-    !isNaN(Number(currentVariant?.wholesalePrice))
-      ? Number(currentVariant.wholesalePrice)
-      : Math.round(retailPrice * 0.82);
-
-  const price = isWholesaleView ? baseWholesalePrice : retailPrice;
-  const wholesalePrice = baseWholesalePrice;
-  const unitSavings = retailPrice - wholesalePrice;
-  const comparePrice = isWholesaleView ? retailPrice : (currentVariant?.salePrice ? currentVariant.price + 120 : undefined);
+  const price = currentVariant?.salePrice || currentVariant?.price || 480;
+  const comparePrice = currentVariant?.salePrice ? currentVariant.price : undefined;
   const isAvailable = currentVariant ? currentVariant.isAvailable && currentVariant.stock > 0 : false;
 
   const photoMedia = useMemo(() => {
@@ -90,20 +78,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
     e.stopPropagation();
     if (!isAvailable) return;
 
-    const qty = isWholesaleView ? (product.wholesaleMinQty || 12) : 1;
-
     setBuyNowItem({
       productId: product.id,
+      variantId: currentVariant?.id,
       productName: product.name,
       productSlug: product.slug,
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
       unitPrice: price,
-      regularPrice: retailPrice,
-      wholesalePrice: wholesalePrice,
-      isWholesale: isWholesaleView,
-      quantity: qty,
+      quantity: 1,
       image: currentPhoto,
     });
     router.push('/checkout?buyNow=1');
@@ -114,47 +98,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
     e.stopPropagation();
     if (!isAvailable) return;
 
-    const qty = isWholesaleView ? (product.wholesaleMinQty || 12) : 1;
-
     addItem({
       productId: product.id,
+      variantId: currentVariant?.id,
       productName: product.name,
       productSlug: product.slug,
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
       unitPrice: price,
-      regularPrice: retailPrice,
-      wholesalePrice: wholesalePrice,
-      isWholesale: isWholesaleView,
-      quantity: qty,
+      quantity: 1,
       image: currentPhoto,
     });
     setJustAdded(true);
     setTimeout(() => {
       setJustAdded(false);
       openDrawer();
-    }, 600);
+    }, 400);
   };
 
-  const detailUrl = isWholesaleView ? `/wholesale/product/${product.slug}` : `/product/${product.slug}`;
+  const detailUrl = `/product/${product.slug}`;
 
   return (
     <div className="group bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] overflow-hidden flex flex-col justify-between shadow-sm hover:border-[#B89555]/60 dark:hover:border-[#C9A96A]/60 hover:shadow-md transition-all duration-300 relative w-full h-full text-charcoal-900 dark:text-[#F4F1E9]">
       <div className="flex-1 flex flex-col">
         {/* 1. Product Image Area */}
         <div className="relative w-full aspect-square bg-light-elevated dark:bg-[#22211E] overflow-hidden border-b border-light-border dark:border-[#34322D]">
-          {/* Badges */}
+          {/* Badge */}
           <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
-            {isWholesaleView ? (
-              <span className="bg-champagne-500 text-charcoal-950 text-[10px] font-extrabold px-2.5 py-0.5 rounded-md shadow-xs uppercase tracking-wider whitespace-nowrap">
-                Wholesale (Min {product.wholesaleMinQty || 12} pcs)
-              </span>
-            ) : (
-              <span className="bg-white/90 dark:bg-[#191917]/90 backdrop-blur-xs text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D] text-[10px] font-semibold px-2.5 py-0.5 rounded-md shadow-2xs uppercase tracking-wider whitespace-nowrap">
-                100% Combed Cotton
-              </span>
-            )}
+            <span className="bg-white/90 dark:bg-[#191917]/90 backdrop-blur-xs text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D] text-[10px] font-semibold px-2.5 py-0.5 rounded-md shadow-2xs uppercase tracking-wider whitespace-nowrap">
+              100% Combed Cotton
+            </span>
           </div>
 
           <Link
@@ -195,7 +169,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
               <Link href={detailUrl}>{product.name}</Link>
             </h3>
 
-            {/* Real Rating Stars & Reviews Count */}
+            {/* Rating Stars & Reviews Count */}
             <div className="flex items-center gap-1.5 mt-1">
               <div className="flex text-[#B89555] dark:text-[#C9A96A]">
                 {[1, 2, 3, 4, 5].map((s) => (
@@ -289,15 +263,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
               </span>
             )}
           </div>
-          {isWholesaleView ? (
-            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded-md whitespace-nowrap">
-              Save Rs. {unitSavings}/pc
-            </span>
-          ) : (
-            <span className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md whitespace-nowrap">
-              Free Delivery 3+ pcs
-            </span>
-          )}
+          <span className="text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md whitespace-nowrap">
+            Free Delivery 3+ pcs
+          </span>
         </div>
 
         {/* Action Row */}
@@ -308,7 +276,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
             onClick={handleQuickAdd}
             disabled={!isAvailable}
             className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-xl bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#262521] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] transition-colors shadow-2xs active:scale-95 disabled:opacity-50"
-            title={isWholesaleView ? `Add ${product.wholesaleMinQty || 12} pcs wholesale pack to Cart` : "Add 3 pcs to Cart"}
+            title="Add 1 piece to Cart"
             aria-label="Add to cart"
           >
             {justAdded ? (
@@ -318,7 +286,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
             )}
           </button>
 
-          {/* Primary BUY NOW / ORDER WHOLESALE Button */}
+          {/* Primary BUY NOW Button */}
           <button
             type="button"
             onClick={handleBuyNow}
@@ -331,11 +299,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, isWholesaleVi
           >
             <Zap className="w-4 h-4 fill-current flex-shrink-0" />
             <span className="truncate">
-              {isAvailable
-                ? isWholesaleView
-                  ? `BUY PACK (${product.wholesaleMinQty || 12} PCS)`
-                  : 'BUY NOW'
-                : 'Sold Out'}
+              {isAvailable ? 'BUY NOW' : 'Sold Out'}
             </span>
           </button>
         </div>

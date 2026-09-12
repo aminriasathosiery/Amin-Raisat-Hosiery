@@ -29,7 +29,7 @@ export default function ShippingPolicyPage() {
             Shipping &amp; Delivery Policy
           </h1>
           <p className="text-xs sm:text-sm text-charcoal-600 dark:text-[#B8B3A8] mt-2 leading-relaxed">
-            Transparent, honest delivery terms for all retail and wholesale orders across Pakistan.
+            Transparent, honest delivery terms for all customer orders across Pakistan.
           </p>
         </div>
 
@@ -44,31 +44,25 @@ export default function ShippingPolicyPage() {
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Retail Minimum Order:</strong> {settings.shipping.minOrderQty} pieces per order.
+                  <strong>1 Piece is a Valid Order:</strong> No minimum order quantity restrictions (minimum 1 piece).
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Retail Maximum Order Quantity:</strong> Up to {settings.shipping.maxOrderQty || 100} pieces per order online (for larger consignments, choose Wholesale).
+                  <strong>Standard Delivery Fee:</strong> Flat Rs. {settings.shipping.baseDeliveryCharge || 200} across Pakistan for orders of 1 or 2 pieces.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Standard Delivery Fee:</strong> Flat Rs. {settings.shipping.baseDeliveryCharge || 200} across Pakistan for orders under {settings.shipping.freeDeliveryThreshold} pieces.
+                  <strong>Free Delivery on {settings.shipping.freeDeliveryThreshold || 3}+ Pieces:</strong> Orders containing {settings.shipping.freeDeliveryThreshold || 3} or more pieces automatically qualify for <strong className="text-emerald-700 dark:text-emerald-400">100% Free Delivery</strong>.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Free Delivery on {settings.shipping.freeDeliveryThreshold}+ Pieces:</strong> Orders containing {settings.shipping.freeDeliveryThreshold} or more pieces automatically qualify for <strong className="text-emerald-700 dark:text-emerald-400">100% Free Delivery</strong>.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong>Wholesale Bulk Logistics:</strong> Minimum 12 pieces (1 dozen) with factory wholesale rates and nationwide cargo/courier dispatch.
+                  <strong>Maximum Order Quantity:</strong> Up to {settings.shipping.maxOrderQty || 100} pieces per order online.
                 </span>
               </li>
             </ul>

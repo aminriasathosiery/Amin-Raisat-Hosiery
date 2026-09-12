@@ -67,20 +67,20 @@ export default function AboutPage() {
               <div className="space-y-1">
                 <h4 className="font-bold text-charcoal-900 dark:text-[#F4F1E9] text-xs flex items-center gap-1.5">
                   <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  Free Delivery Nationwide
+                  Free Delivery on 3+ Pieces
                 </h4>
                 <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
-                  100% Free Nationwide Delivery on 3+ pieces retail and all wholesale orders across all Pakistan cities.
+                  100% Free Nationwide Delivery on 3+ pieces across all Pakistan cities. 1 piece is a valid order with standard Rs. 200 delivery.
                 </p>
               </div>
 
               <div className="space-y-1">
                 <h4 className="font-bold text-charcoal-900 dark:text-[#F4F1E9] text-xs flex items-center gap-1.5">
                   <Package className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-                  Factory Wholesale Program
+                  1 Piece Valid Order
                 </h4>
                 <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
-                  Retail master packaging and bulk wholesale rates starting from minimum 12 pieces (1 dozen).
+                  Order individually or stock up. Every single customer order is packed with retail master craftsmanship.
                 </p>
               </div>
             </div>
@@ -91,7 +91,7 @@ export default function AboutPage() {
               Direct Contact &amp; Inquiries
             </h2>
             <p>
-              For wholesale bulk requirements, merchant retail packaging, or sizing questions, reach out directly:
+              For customer support, order tracking assistance, or garment sizing questions, reach out directly:
             </p>
             <div className="pt-2 flex flex-wrap gap-3">
               <a
@@ -105,11 +105,11 @@ export default function AboutPage() {
                 <span>WhatsApp ({settings?.whatsapp || DISPLAY_WHATSAPP_NUMBER})</span>
               </a>
               <Link
-                href="/wholesale"
+                href="/shop"
                 className="inline-flex items-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.99]"
               >
                 <Package className="w-4 h-4" />
-                <span>Wholesale Catalog</span>
+                <span>Shop Collection</span>
               </Link>
               <a
                 href={EMAIL_URL}

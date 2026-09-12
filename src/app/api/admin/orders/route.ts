@@ -60,8 +60,6 @@ export async function GET(req: Request) {
       paymentVerifiedBy: o.payment_verified_by || undefined,
       paymentRejectionReason: o.payment_rejection_reason || undefined,
       status: o.status || 'Pending',
-      isWholesale: o.is_wholesale ?? false,
-      wholesaleDiscount: o.wholesale_discount ? Number(o.wholesale_discount) : undefined,
       createdAt: o.created_at,
       items: Array.isArray(o.order_items)
         ? o.order_items.map((it: any) => ({
@@ -74,9 +72,6 @@ export async function GET(req: Request) {
             sleeve: it.sleeve,
             size: it.size,
             unitPrice: Number(it.unit_price) || 0,
-            regularPrice: it.regular_price ? Number(it.regular_price) : undefined,
-            wholesalePrice: it.wholesale_price ? Number(it.wholesale_price) : undefined,
-            isWholesale: it.is_wholesale ?? false,
             quantity: Number(it.quantity) || 1,
             totalPrice: Number(it.total_price) || 0,
             image: it.image_url,

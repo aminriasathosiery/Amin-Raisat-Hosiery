@@ -11,6 +11,45 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/wholesale/product/:slug',
+        destination: '/product/:slug',
+        permanent: true,
+      },
+      {
+        source: '/wholesale/category/:slug/:subslug',
+        destination: '/category/:slug/:subslug',
+        permanent: true,
+      },
+      {
+        source: '/wholesale/category/:slug',
+        destination: '/category/:slug',
+        permanent: true,
+      },
+      {
+        source: '/wholesale',
+        destination: '/shop',
+        permanent: true,
+      },
+      {
+        source: '/wholesale/:path*',
+        destination: '/shop',
+        permanent: true,
+      },
+      {
+        source: '/admin/wholesale',
+        destination: '/admin',
+        permanent: true,
+      },
+      {
+        source: '/admin/wholesale/:path*',
+        destination: '/admin',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

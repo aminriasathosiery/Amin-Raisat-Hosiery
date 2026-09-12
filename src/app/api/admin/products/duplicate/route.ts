@@ -105,12 +105,6 @@ export async function POST(req: Request) {
     if (original.size_guide_url !== undefined) {
       duplicatePayload.size_guide_url = original.size_guide_url;
     }
-    if (original.is_wholesale_enabled !== undefined) {
-      duplicatePayload.is_wholesale_enabled = original.is_wholesale_enabled;
-    }
-    if (original.wholesale_min_qty !== undefined) {
-      duplicatePayload.wholesale_min_qty = original.wholesale_min_qty;
-    }
 
     let { data: insertedProduct, error: prodErr } = await db
       .from('products')
@@ -123,8 +117,6 @@ export async function POST(req: Request) {
       delete duplicatePayload.short_description;
       delete duplicatePayload.video_url;
       delete duplicatePayload.size_guide_url;
-      delete duplicatePayload.is_wholesale_enabled;
-      delete duplicatePayload.wholesale_min_qty;
 
       const retryRes = await db
         .from('products')
@@ -150,8 +142,6 @@ export async function POST(req: Request) {
       size: v.size,
       price: v.price,
       sale_price: v.sale_price,
-      wholesale_price: v.wholesale_price,
-      wholesale_tiers: v.wholesale_tiers,
       stock: v.stock,
       sku: v.sku ? `${v.sku}-COPY` : null,
       is_available: v.is_available ?? true,
@@ -220,8 +210,6 @@ export async function POST(req: Request) {
       videoUrl: insertedProduct.video_url || original.video_url || undefined,
       sizeGuideUrl: insertedProduct.size_guide_url || original.size_guide_url || undefined,
       isPublished: true,
-      isWholesaleEnabled: insertedProduct.is_wholesale_enabled ?? true,
-      wholesaleMinQty: Number(insertedProduct.wholesale_min_qty) || 12,
       createdAt: insertedProduct.created_at,
       variants: insertedVariants.map((v: any) => ({
         id: v.id,
@@ -231,8 +219,6 @@ export async function POST(req: Request) {
         size: v.size,
         price: Number(v.price) || 0,
         salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-        wholesalePrice: v.wholesale_price ? Number(v.wholesale_price) : Math.round((Number(v.price) || 480) * 0.82),
-        wholesaleTiers: Array.isArray(v.wholesale_tiers) ? v.wholesale_tiers : undefined,
         stock: Number(v.stock) || 0,
         sku: v.sku || '',
         isAvailable: v.is_available ?? true,

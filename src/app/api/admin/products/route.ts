@@ -90,8 +90,6 @@ export async function GET(req: Request) {
           INITIAL_PRODUCTS.find((ip) => ip.slug === p.slug || p.slug?.startsWith(ip.slug))?.sizeGuideUrl ||
           'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/product-media/products/f0000000-0000-0000-0000-000000000001/size-guide/arh_mens_vest_size_chart.webp',
         isPublished: p.is_published ?? true,
-        isWholesaleEnabled: p.is_wholesale_enabled ?? true,
-        wholesaleMinQty: p.wholesale_min_qty ? Number(p.wholesale_min_qty) : 12,
         createdAt: p.created_at,
         variants: Array.isArray(p.product_variants)
           ? p.product_variants.map((v: any) => ({
@@ -102,10 +100,6 @@ export async function GET(req: Request) {
               size: v.size,
               price: Number(v.price) || 0,
               salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-              wholesalePrice: v.wholesale_price !== undefined && v.wholesale_price !== null && !isNaN(Number(v.wholesale_price))
-                ? Number(v.wholesale_price)
-                : Math.round((Number(v.price) || 480) * 0.82),
-              wholesaleTiers: Array.isArray(v.wholesale_tiers) ? v.wholesale_tiers : undefined,
               stock: Number(v.stock) || 0,
               sku: v.sku || '',
               isAvailable: v.is_available ?? true,
@@ -244,12 +238,6 @@ export async function POST(req: Request) {
     if (body.sizeGuideUrl !== undefined) {
       productPayload.size_guide_url = body.sizeGuideUrl.trim();
     }
-    if (body.isWholesaleEnabled !== undefined) {
-      productPayload.is_wholesale_enabled = body.isWholesaleEnabled;
-    }
-    if (body.wholesaleMinQty !== undefined) {
-      productPayload.wholesale_min_qty = Number(body.wholesaleMinQty) || 12;
-    }
 
     let savedProd: any = null;
     let prodErr: any = null;
@@ -264,9 +252,6 @@ export async function POST(req: Request) {
     prodErr = res1.error;
 
     if (prodErr && (prodErr.code === 'PGRST204' || prodErr.code === '42703' || prodErr.message?.includes('does not exist'))) {
-      // Omit optional wholesale & new columns if schema migration hasn't added them yet
-      delete productPayload.is_wholesale_enabled;
-      delete productPayload.wholesale_min_qty;
       delete productPayload.short_description;
       delete productPayload.video_url;
       delete productPayload.size_guide_url;
@@ -300,50 +285,24 @@ export async function POST(req: Request) {
 
     let savedVariants: any[] = [];
     if (body.variants && body.variants.length > 0) {
-      const buildVariantsPayload = (includeWholesale: boolean) =>
-        body.variants.map((v) => {
-          const item: any = {
-            id: isUuid(v.id) ? v.id : crypto.randomUUID(),
-            product_id: confirmedProdId,
-            quality: v.quality || 'High Quality',
-            sleeve: v.sleeve || 'Sleeveless',
-            size: v.size || 'L',
-            price: Number(v.price) || 0,
-            sale_price: v.salePrice ? Number(v.salePrice) : null,
-            stock: Number(v.stock) || 0,
-            sku: v.sku || '',
-            is_available: v.isAvailable ?? true,
-            updated_at: new Date().toISOString(),
-          };
-          if (includeWholesale) {
-            const rawV = v as any;
-            if (rawV.wholesalePrice !== undefined && rawV.wholesalePrice !== null) {
-              item.wholesale_price = Number(rawV.wholesalePrice);
-            } else if (rawV.wholesale_price !== undefined && rawV.wholesale_price !== null) {
-              item.wholesale_price = Number(rawV.wholesale_price);
-            }
-            if (rawV.wholesaleTiers !== undefined) {
-              item.wholesale_tiers = rawV.wholesaleTiers;
-            } else if (rawV.wholesale_tiers !== undefined) {
-              item.wholesale_tiers = rawV.wholesale_tiers;
-            }
-          }
-          return item;
-        });
+      const variantsPayload = body.variants.map((v) => ({
+        id: isUuid(v.id) ? v.id : crypto.randomUUID(),
+        product_id: confirmedProdId,
+        quality: v.quality || 'High Quality',
+        sleeve: v.sleeve || 'Sleeveless',
+        size: v.size || 'L',
+        price: Number(v.price) || 0,
+        sale_price: v.salePrice ? Number(v.salePrice) : null,
+        stock: Number(v.stock) || 0,
+        sku: v.sku || '',
+        is_available: v.isAvailable ?? true,
+        updated_at: new Date().toISOString(),
+      }));
 
       let { data: insertedVars, error: varErr } = await adminDb
         .from('product_variants')
-        .insert(buildVariantsPayload(true))
+        .insert(variantsPayload)
         .select();
-
-      if (varErr && varErr.code === 'PGRST204') {
-        const retryRes = await adminDb
-          .from('product_variants')
-          .insert(buildVariantsPayload(false))
-          .select();
-        insertedVars = retryRes.data;
-        varErr = retryRes.error;
-      }
 
       if (varErr) {
         console.error('FULL SUPABASE VARIANT INSERT ERROR:', varErr);
@@ -446,8 +405,6 @@ export async function POST(req: Request) {
       videoUrl: savedProd.video_url || body.videoUrl || undefined,
       sizeGuideUrl: savedProd.size_guide_url || body.sizeGuideUrl || undefined,
       isPublished: savedProd.is_published,
-      isWholesaleEnabled: savedProd.is_wholesale_enabled,
-      wholesaleMinQty: savedProd.wholesale_min_qty,
       createdAt: savedProd.created_at,
       variants: savedVariants.map((v: any) => ({
         id: v.id,
@@ -457,10 +414,6 @@ export async function POST(req: Request) {
         size: v.size,
         price: Number(v.price) || 0,
         salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-        wholesalePrice: v.wholesale_price !== undefined && v.wholesale_price !== null && !isNaN(Number(v.wholesale_price))
-          ? Number(v.wholesale_price)
-          : Math.round((Number(v.price) || 480) * 0.82),
-        wholesaleTiers: v.wholesale_tiers || undefined,
         stock: Number(v.stock) || 0,
         sku: v.sku || '',
         isAvailable: v.is_available,

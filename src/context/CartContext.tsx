@@ -4,44 +4,26 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { CartItem } from '@/types';
 import { useStore } from './StoreContext';
 
-export type CartMode = 'retail' | 'wholesale' | 'empty';
-
-interface ModeConflictInfo {
-  incomingItem: Omit<CartItem, 'id'>;
-  currentMode: 'retail' | 'wholesale';
-  targetMode: 'retail' | 'wholesale';
-}
-
 interface CartContextType {
   items: CartItem[];
-  cartMode: CartMode;
   isDrawerOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
-  addItem: (item: Omit<CartItem, 'id'>) => boolean; // returns false if mode conflict
-  switchCartModeAndAdd: (item: Omit<CartItem, 'id'>) => void;
-  modeConflict: ModeConflictInfo | null;
-  clearModeConflict: () => void;
+  addItem: (item: Omit<CartItem, 'id'>) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  updateItemSize: (id: string, newSize: string) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   totalQuantity: number;
   subtotal: number;
-  regularSubtotal: number;
-  wholesaleSubtotal: number;
-  totalSavings: number;
   deliveryFee: number;
   totalAmount: number;
   isFreeDeliveryUnlocked: boolean;
   piecesNeededForFreeDelivery: number;
-  hasWholesaleItems: boolean;
-  wholesaleQuantity: number;
-  isWholesaleMinimumMet: boolean;
-  wholesalePiecesNeeded: number;
-  wholesaleMinQty: number;
   buyNowItem: CartItem | null;
   setBuyNowItem: (item: Omit<CartItem, 'id'> | null) => void;
+  updateBuyNowItem: (updates: { size?: string; quantity?: number }) => void;
   clearBuyNow: () => void;
 }
 
@@ -50,11 +32,10 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = 'arh_cart_items_v3';
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { settings } = useStore();
+  const { settings, products } = useStore();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [modeConflict, setModeConflict] = useState<ModeConflictInfo | null>(null);
 
   // Isolated Buy Now State (Never pollutes or overwrites general cart items)
   const [buyNowItem, setBuyNowItemState] = useState<CartItem | null>(() => {
@@ -77,9 +58,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return;
     }
-    const isWholesale = Boolean(item.isWholesale);
-    const id = `buynow_${item.productId}_${item.quality}_${item.sleeve}_${item.size}${isWholesale ? '_wholesale' : ''}`;
-    const fullItem: CartItem = { ...item, id, isWholesale };
+    const id = `buynow_${item.productId}_${item.quality}_${item.sleeve}_${item.size}`;
+    const fullItem: CartItem = { ...item, id };
     setBuyNowItemState(fullItem);
     if (typeof window !== 'undefined') {
       try {
@@ -88,11 +68,49 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateBuyNowItem = (updates: { size?: string; quantity?: number }) => {
+    if (!buyNowItem) return;
+
+    let updated = { ...buyNowItem };
+
+    if (updates.quantity !== undefined) {
+      const maxQty = settings.shipping?.maxOrderQty || 100;
+      updated.quantity = Math.max(1, Math.min(maxQty, updates.quantity));
+    }
+
+    if (updates.size && updates.size !== buyNowItem.size) {
+      const prod = products.find((p) => p.id === buyNowItem.productId);
+      const variant = prod?.variants?.find(
+        (v) =>
+          v.size === updates.size &&
+          v.quality === buyNowItem.quality &&
+          v.sleeve === buyNowItem.sleeve
+      );
+
+      const newUnitPrice = variant
+        ? (variant.salePrice || variant.price)
+        : buyNowItem.unitPrice;
+
+      updated = {
+        ...updated,
+        size: updates.size,
+        variantId: variant?.id || updated.variantId,
+        unitPrice: newUnitPrice,
+        id: `buynow_${buyNowItem.productId}_${buyNowItem.quality}_${buyNowItem.sleeve}_${updates.size}`,
+      };
+    }
+
+    setBuyNowItemState(updated);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('arh_buynow_item_v1', JSON.stringify(updated));
+      } catch {}
+    }
+  };
+
   const clearBuyNow = () => {
     setBuyNowItem(null);
   };
-
-  const wholesaleMinQty = settings.wholesale?.defaultMinQty || 12;
 
   // Load from local storage
   useEffect(() => {
@@ -118,80 +136,29 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const openDrawer = useCallback(() => setIsDrawerOpen(true), []);
   const closeDrawer = useCallback(() => {
     setIsDrawerOpen(false);
-    setModeConflict(null);
   }, []);
   const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
-  const clearModeConflict = useCallback(() => setModeConflict(null), []);
 
-  // Compute active cart mode
-  const hasWholesaleItems = items.some((item) => item.isWholesale);
-  const cartMode: CartMode = items.length === 0 ? 'empty' : hasWholesaleItems ? 'wholesale' : 'retail';
-
-  const addItemInternal = (newItem: Omit<CartItem, 'id'>) => {
-    const isWholesale = Boolean(newItem.isWholesale);
-    const id = `${newItem.productId}_${newItem.quality}_${newItem.sleeve}_${newItem.size}${isWholesale ? '_wholesale' : ''}`;
-    
-    // For wholesale items, permit higher order volume (up to 5,000)
-    const maxQty = isWholesale ? 5000 : (settings.shipping.maxOrderQty || 12);
+  const addItem = (newItem: Omit<CartItem, 'id'>) => {
+    const id = `${newItem.productId}_${newItem.quality}_${newItem.sleeve}_${newItem.size}`;
+    const maxQty = settings.shipping?.maxOrderQty || 100;
 
     setItems((prevItems) => {
       const existingIndex = prevItems.findIndex((item) => item.id === id);
       if (existingIndex > -1) {
         const updated = [...prevItems];
-        const newQty = Math.min(maxQty, updated[existingIndex].quantity + newItem.quantity);
+        const newQty = Math.min(maxQty, updated[existingIndex].quantity + (newItem.quantity || 1));
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: newQty,
           unitPrice: newItem.unitPrice,
-          regularPrice: newItem.regularPrice || updated[existingIndex].regularPrice,
-          wholesalePrice: newItem.wholesalePrice || updated[existingIndex].wholesalePrice,
-          isWholesale,
+          variantId: newItem.variantId || updated[existingIndex].variantId,
         };
         return updated;
       } else {
-        return [...prevItems, { ...newItem, id, isWholesale }];
+        return [...prevItems, { ...newItem, id, quantity: Math.min(maxQty, Math.max(1, newItem.quantity || 1)) }];
       }
     });
-    setIsDrawerOpen(true);
-    setModeConflict(null);
-  };
-
-  const addItem = (newItem: Omit<CartItem, 'id'>): boolean => {
-    const isWholesale = Boolean(newItem.isWholesale);
-
-    // Strict Cart Isolation Check
-    if (items.length > 0) {
-      if (!isWholesale && hasWholesaleItems) {
-        // Conflict: adding retail item to wholesale cart
-        setModeConflict({
-          incomingItem: newItem,
-          currentMode: 'wholesale',
-          targetMode: 'retail',
-        });
-        setIsDrawerOpen(true);
-        return false;
-      } else if (isWholesale && !hasWholesaleItems) {
-        // Conflict: adding wholesale item to retail cart
-        setModeConflict({
-          incomingItem: newItem,
-          currentMode: 'retail',
-          targetMode: 'wholesale',
-        });
-        setIsDrawerOpen(true);
-        return false;
-      }
-    }
-
-    addItemInternal(newItem);
-    return true;
-  };
-
-  const switchCartModeAndAdd = (newItem: Omit<CartItem, 'id'>) => {
-    const isWholesale = Boolean(newItem.isWholesale);
-    const id = `${newItem.productId}_${newItem.quality}_${newItem.sleeve}_${newItem.size}${isWholesale ? '_wholesale' : ''}`;
-    // Replace all existing items with the new mode item
-    setItems([{ ...newItem, id, isWholesale }]);
-    setModeConflict(null);
     setIsDrawerOpen(true);
   };
 
@@ -200,13 +167,63 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       removeItem(id);
       return;
     }
-    const item = items.find((it) => it.id === id);
-    const maxQty = item?.isWholesale ? 5000 : (settings.shipping.maxOrderQty || 12);
+    const maxQty = settings.shipping?.maxOrderQty || 100;
     const safeQty = Math.min(maxQty, quantity);
 
     setItems((prevItems) =>
       prevItems.map((it) => (it.id === id ? { ...it, quantity: safeQty } : it))
     );
+  };
+
+  const updateItemSize = (id: string, newSize: string) => {
+    setItems((prevItems) => {
+      const targetIndex = prevItems.findIndex((it) => it.id === id);
+      if (targetIndex === -1) return prevItems;
+
+      const target = prevItems[targetIndex];
+      if (target.size === newSize) return prevItems;
+
+      const prod = products.find((p) => p.id === target.productId);
+      const variant = prod?.variants?.find(
+        (v) =>
+          v.size === newSize &&
+          v.quality === target.quality &&
+          v.sleeve === target.sleeve
+      );
+
+      const newUnitPrice = variant
+        ? (variant.salePrice || variant.price)
+        : target.unitPrice;
+
+      const newId = `${target.productId}_${target.quality}_${target.sleeve}_${newSize}`;
+
+      // Check if another item with newId already exists in cart -> merge quantities
+      const existingIndex = prevItems.findIndex((it) => it.id === newId);
+      if (existingIndex > -1 && existingIndex !== targetIndex) {
+        const maxQty = settings.shipping?.maxOrderQty || 100;
+        const mergedQty = Math.min(maxQty, prevItems[existingIndex].quantity + target.quantity);
+        return prevItems
+          .filter((_, idx) => idx !== targetIndex)
+          .map((it, idx) =>
+            idx === (existingIndex > targetIndex ? existingIndex - 1 : existingIndex)
+              ? { ...it, quantity: mergedQty, unitPrice: newUnitPrice, variantId: variant?.id || it.variantId }
+              : it
+          );
+      }
+
+      // Otherwise, update target in place
+      return prevItems.map((it, idx) =>
+        idx === targetIndex
+          ? {
+              ...it,
+              id: newId,
+              size: newSize,
+              variantId: variant?.id || it.variantId,
+              unitPrice: newUnitPrice,
+            }
+          : it
+      );
+    });
   };
 
   const removeItem = (id: string) => {
@@ -215,33 +232,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setItems([]);
-    setModeConflict(null);
   };
 
   const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  const wholesaleItems = items.filter((item) => item.isWholesale);
-  const wholesaleQuantity = wholesaleItems.reduce((sum, item) => sum + item.quantity, 0);
-  const isWholesaleMinimumMet = !hasWholesaleItems || wholesaleQuantity >= wholesaleMinQty;
-  const wholesalePiecesNeeded = Math.max(0, wholesaleMinQty - wholesaleQuantity);
-
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
-  const regularSubtotal = items.reduce((sum, item) => {
-    const regPrice = item.regularPrice || item.unitPrice;
-    return sum + regPrice * item.quantity;
-  }, 0);
-
-  const wholesaleSubtotal = wholesaleItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-
-  const totalSavings = Math.max(0, regularSubtotal - subtotal);
-
   // Delivery fee rules:
-  // Wholesale orders get 100% Free Delivery
-  // Retail totalQuantity >= 3 -> Free Delivery (Rs. 0)
-  // Retail totalQuantity > 0 & < 3 -> Base Delivery Charge (Rs. 200)
+  // Retail totalQuantity >= freeDeliveryThreshold (default 3) -> Free Delivery (Rs. 0)
+  // Retail totalQuantity > 0 & < freeDeliveryThreshold -> Base Delivery Charge (Rs. 200)
   const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;
-  const isFreeDeliveryUnlocked = totalQuantity >= freeThreshold || hasWholesaleItems;
+  const isFreeDeliveryUnlocked = totalQuantity >= freeThreshold;
   const deliveryFee =
     totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : (settings.shipping?.baseDeliveryCharge ?? 200);
   const totalAmount = subtotal + deliveryFee;
@@ -251,34 +251,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <CartContext.Provider
       value={{
         items,
-        cartMode,
         isDrawerOpen,
         openDrawer,
         closeDrawer,
         toggleDrawer,
         addItem,
-        switchCartModeAndAdd,
-        modeConflict,
-        clearModeConflict,
         updateQuantity,
+        updateItemSize,
         removeItem,
         clearCart,
         totalQuantity,
         subtotal,
-        regularSubtotal,
-        wholesaleSubtotal,
-        totalSavings,
         deliveryFee,
         totalAmount,
         isFreeDeliveryUnlocked,
         piecesNeededForFreeDelivery,
-        hasWholesaleItems,
-        wholesaleQuantity,
-        isWholesaleMinimumMet,
-        wholesalePiecesNeeded,
-        wholesaleMinQty,
         buyNowItem,
         setBuyNowItem,
+        updateBuyNowItem,
         clearBuyNow,
       }}
     >

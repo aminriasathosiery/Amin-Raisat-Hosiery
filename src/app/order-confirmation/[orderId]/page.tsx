@@ -48,17 +48,12 @@ export default function OrderConfirmationPage() {
               <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest bg-emerald-100 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-300 dark:border-emerald-800/60">
                 Order Confirmed
               </span>
-              {order.isWholesale && (
-                <span className="text-[10px] font-bold bg-champagne-100 dark:bg-[#22211E] text-[#96763D] dark:text-[#C9A96A] border border-[#B89555]/30 px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                  Wholesale Order
-                </span>
-              )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900 dark:text-[#F4F1E9] mt-3 tracking-tight">
               Thank You, {order.customerName}!
             </h1>
             <p className="text-xs sm:text-sm text-charcoal-600 dark:text-[#B8B3A8] mt-1 font-normal">
-              Your {order.isWholesale ? 'wholesale ' : ''}order has been recorded. We will contact you at <strong className="text-[#B89555] dark:text-[#C9A96A]">{order.customerPhone}</strong> for dispatch confirmation.
+              Your order has been recorded. We will contact you at <strong className="text-[#B89555] dark:text-[#C9A96A]">{order.customerPhone}</strong> for dispatch confirmation.
             </p>
           </div>
 
@@ -155,12 +150,6 @@ export default function OrderConfirmationPage() {
               <span>Subtotal</span>
               <span className="font-semibold text-charcoal-900 dark:text-[#F4F1E9]">Rs. {order.subtotal.toLocaleString()}</span>
             </div>
-            {order.wholesaleDiscount && order.wholesaleDiscount > 0 && (
-              <div className="flex justify-between text-emerald-700 dark:text-emerald-400 font-bold">
-                <span>Wholesale Savings</span>
-                <span>- Rs. {order.wholesaleDiscount.toLocaleString()}</span>
-              </div>
-            )}
             <div className="flex justify-between">
               <span>Delivery Fee</span>
               <span className="font-semibold">
