@@ -6,6 +6,7 @@ import { BrandHeroSlider } from '@/components/home/BrandHeroSlider';
 import { BenefitsStrip } from '@/components/home/BenefitsStrip';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
 import { FeaturesSection } from '@/components/home/FeaturesSection';
+import { DealsSection } from '@/components/home/DealsSection';
 import { ProductCard } from '@/components/product/ProductCard';
 import { useStore } from '@/context/StoreContext';
 import { ArrowRight, ShoppingBag, PackageCheck } from 'lucide-react';
@@ -54,7 +55,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. Featured Available Products Section (Max 8 Products in 4x2 Grid) */}
+      {/* 5. Special Deals Section */}
+      <DealsSection />
+
+      {/* 6. Featured Available Products Section (Max 8 Products in 4x2 Grid) */}
       <section className="py-16 bg-white dark:bg-[#141412] border-b border-light-border dark:border-[#34322D]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">

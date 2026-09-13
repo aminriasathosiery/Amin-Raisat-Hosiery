@@ -80,6 +80,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
 
   const unitPrice = currentVariant ? (currentVariant.salePrice || currentVariant.price) : 480;
   const regularPrice = currentVariant?.price && currentVariant.salePrice ? currentVariant.price : unitPrice;
+  const discountPercentage = currentVariant?.discountPercentage || 0;
   const stock = currentVariant ? currentVariant.stock : 50;
   const isAvailable = currentVariant ? currentVariant.isAvailable && stock > 0 : true;
 
@@ -103,6 +104,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     if (!isAvailable) return;
 
     setBuyNowItem({
+      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
       productName: product.name,
@@ -111,6 +114,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       sleeve: selectedSleeve,
       size: selectedSize,
       unitPrice,
+      originalPrice: regularPrice || unitPrice,
+      discountPercentage: discountPercentage,
       quantity,
       image: getVariantMediaUrl(),
     });
@@ -122,6 +127,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     if (!isAvailable) return;
 
     addItem({
+      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
       productName: product.name,
@@ -130,6 +137,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       sleeve: selectedSleeve,
       size: selectedSize,
       unitPrice,
+      originalPrice: regularPrice || unitPrice,
+      discountPercentage: discountPercentage,
       quantity,
       image: getVariantMediaUrl(),
     });
@@ -166,6 +175,11 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
               {regularPrice > unitPrice && (
                 <span className="text-sm text-charcoal-400 dark:text-[#8E8A80] line-through font-normal">
                   Rs. {regularPrice}
+                </span>
+              )}
+              {discountPercentage > 0 && (
+                <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 px-2 py-0.5 rounded-md">
+                  {discountPercentage}% OFF
                 </span>
               )}
               <span className="text-xs text-charcoal-500 dark:text-[#B8B3A8] font-normal">/ piece</span>

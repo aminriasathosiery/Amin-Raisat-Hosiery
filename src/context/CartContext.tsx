@@ -1,8 +1,17 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { CartItem } from '@/types';
+import { CartItem, DealCartItem, ProductCartItem } from '@/types';
 import { useStore } from './StoreContext';
+
+// Type guards
+function isDealCartItem(item: CartItem): item is DealCartItem {
+  return item.type === 'deal';
+}
+
+function isProductCartItem(item: CartItem): item is ProductCartItem {
+  return item.type === 'product';
+}
 
 interface CartContextType {
   items: CartItem[];
@@ -10,7 +19,7 @@ interface CartContextType {
   openDrawer: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
-  addItem: (item: Omit<CartItem, 'id'>) => void;
+  addItem: (item: CartItem) => void;
   updateQuantity: (id: string, quantity: number) => void;
   updateItemSize: (id: string, newSize: string) => void;
   removeItem: (id: string) => void;
@@ -22,7 +31,7 @@ interface CartContextType {
   isFreeDeliveryUnlocked: boolean;
   piecesNeededForFreeDelivery: number;
   buyNowItem: CartItem | null;
-  setBuyNowItem: (item: Omit<CartItem, 'id'> | null) => void;
+  setBuyNowItem: (item: CartItem | null) => void;
   updateBuyNowItem: (updates: { size?: string; quantity?: number }) => void;
   clearBuyNow: () => void;
 }
@@ -48,7 +57,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return null;
   });
 
-  const setBuyNowItem = (item: Omit<CartItem, 'id'> | null) => {
+  const setBuyNowItem = (item: CartItem | null) => {
     if (!item) {
       setBuyNowItemState(null);
       if (typeof window !== 'undefined') {
@@ -58,7 +67,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return;
     }
-    const id = `buynow_${item.productId}_${item.quality}_${item.sleeve}_${item.size}`;
+
+    let id: string;
+    if (isDealCartItem(item)) {
+      id = `buynow_deal_${item.dealId}`;
+    } else if (isProductCartItem(item)) {
+      id = `buynow_${item.productId}_${item.quality}_${item.sleeve}_${item.size}`;
+    } else {
+      id = `buynow_${Date.now()}`;
+    }
+
     const fullItem: CartItem = { ...item, id };
     setBuyNowItemState(fullItem);
     if (typeof window !== 'undefined') {
@@ -69,7 +87,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateBuyNowItem = (updates: { size?: string; quantity?: number }) => {
-    if (!buyNowItem) return;
+    if (!buyNowItem || !isProductCartItem(buyNowItem)) return;
 
     let updated = { ...buyNowItem };
 
@@ -139,12 +157,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
   const toggleDrawer = useCallback(() => setIsDrawerOpen((prev) => !prev), []);
 
-  const addItem = (newItem: Omit<CartItem, 'id'>) => {
-    const id = `${newItem.productId}_${newItem.quality}_${newItem.sleeve}_${newItem.size}`;
+  const addItem = (newItem: CartItem) => {
     const maxQty = settings.shipping?.maxOrderQty || 100;
 
     setItems((prevItems) => {
-      const existingIndex = prevItems.findIndex((item) => item.id === id);
+      const existingIndex = prevItems.findIndex((item) => item.id === newItem.id);
       if (existingIndex > -1) {
         const updated = [...prevItems];
         const newQty = Math.min(maxQty, updated[existingIndex].quantity + (newItem.quantity || 1));
@@ -152,11 +169,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...updated[existingIndex],
           quantity: newQty,
           unitPrice: newItem.unitPrice,
-          variantId: newItem.variantId || updated[existingIndex].variantId,
         };
+        // Only update variantId for product items
+        if (isProductCartItem(newItem) && isProductCartItem(updated[existingIndex])) {
+          updated[existingIndex].variantId = newItem.variantId || updated[existingIndex].variantId;
+        }
         return updated;
       } else {
-        return [...prevItems, { ...newItem, id, quantity: Math.min(maxQty, Math.max(1, newItem.quantity || 1)) }];
+        return [...prevItems, { ...newItem, quantity: Math.min(maxQty, Math.max(1, newItem.quantity || 1)) }];
       }
     });
     setIsDrawerOpen(true);
@@ -181,6 +201,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (targetIndex === -1) return prevItems;
 
       const target = prevItems[targetIndex];
+      if (!isProductCartItem(target)) return prevItems; // Only update size for product items
       if (target.size === newSize) return prevItems;
 
       const prod = products.find((p) => p.id === target.productId);
@@ -204,25 +225,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const mergedQty = Math.min(maxQty, prevItems[existingIndex].quantity + target.quantity);
         return prevItems
           .filter((_, idx) => idx !== targetIndex)
-          .map((it, idx) =>
-            idx === (existingIndex > targetIndex ? existingIndex - 1 : existingIndex)
-              ? { ...it, quantity: mergedQty, unitPrice: newUnitPrice, variantId: variant?.id || it.variantId }
-              : it
-          );
+          .map((it, idx) => {
+            if (idx === (existingIndex > targetIndex ? existingIndex - 1 : existingIndex) && isProductCartItem(it)) {
+              return { ...it, quantity: mergedQty, unitPrice: newUnitPrice, variantId: variant?.id || it.variantId };
+            }
+            return it;
+          });
       }
 
       // Otherwise, update target in place
-      return prevItems.map((it, idx) =>
-        idx === targetIndex
-          ? {
-              ...it,
-              id: newId,
-              size: newSize,
-              variantId: variant?.id || it.variantId,
-              unitPrice: newUnitPrice,
-            }
-          : it
-      );
+      return prevItems.map((it, idx) => {
+        if (idx === targetIndex && isProductCartItem(it)) {
+          return {
+            ...it,
+            id: newId,
+            size: newSize,
+            variantId: variant?.id || it.variantId,
+            unitPrice: newUnitPrice,
+          };
+        }
+        return it;
+      });
     });
   };
 
@@ -238,14 +261,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
   // Delivery fee rules:
-  // Retail totalQuantity >= freeDeliveryThreshold (default 3) -> Free Delivery (Rs. 0)
-  // Retail totalQuantity > 0 & < freeDeliveryThreshold -> Base Delivery Charge (Rs. 200)
+  // If any deal has isFreeDelivery = true -> Free Delivery (Rs. 0)
+  // Else if retail totalQuantity >= freeDeliveryThreshold (default 3) -> Free Delivery (Rs. 0)
+  // Else if retail totalQuantity > 0 & < freeDeliveryThreshold -> Base Delivery Charge (Rs. 200)
+  const hasFreeDeliveryDeal = items.some(item => isDealCartItem(item) && item.isFreeDelivery);
   const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;
-  const isFreeDeliveryUnlocked = totalQuantity >= freeThreshold;
+  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalQuantity >= freeThreshold;
   const deliveryFee =
     totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : (settings.shipping?.baseDeliveryCharge ?? 200);
   const totalAmount = subtotal + deliveryFee;
-  const piecesNeededForFreeDelivery = Math.max(0, freeThreshold - totalQuantity);
+  const piecesNeededForFreeDelivery = hasFreeDeliveryDeal ? 0 : Math.max(0, freeThreshold - totalQuantity);
 
   return (
     <CartContext.Provider

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { INITIAL_SHIPPING_SETTINGS, INITIAL_PRODUCTS } from '@/data/initialData';
+import { resolveVariantPricing } from '@/lib/pricing';
 
 export async function POST(req: Request) {
   try {
@@ -66,6 +67,7 @@ export async function POST(req: Request) {
 
     // 2. Fetch all products and variants from DB to calculate authoritative pricing
     let dbVariants: any[] = [];
+    let dbDeals: any[] = [];
     if (isSupabaseConfigured()) {
       try {
         const { data: variantsData } = await supabaseServer
@@ -76,6 +78,18 @@ export async function POST(req: Request) {
         }
       } catch (err) {
         console.warn('Could not fetch variants from Supabase:', err);
+      }
+
+      try {
+        const { data: dealsData } = await supabaseServer
+          .from('deals')
+          .select('*')
+          .eq('is_active', true);
+        if (dealsData && dealsData.length > 0) {
+          dbDeals = dealsData;
+        }
+      } catch (err) {
+        console.warn('Could not fetch deals from Supabase:', err);
       }
     }
 
@@ -107,7 +121,39 @@ export async function POST(req: Request) {
     const verifiedItems = items.map((clientItem: any) => {
       const qty = Math.max(1, Number(clientItem.quantity) || 1);
 
-      // Find variant in DB or in initial data
+      // Check if this is a deal item
+      if (clientItem.dealId) {
+        // Deal item validation: must match an active deal in the database
+        const deal = dbDeals.find((d) => d.id === clientItem.dealId && d.is_active !== false);
+        if (!deal) {
+          throw new Error(`The deal "${clientItem.dealName || clientItem.dealId}" is no longer active or does not exist.`);
+        }
+
+        const originalPrice = Number(deal.original_price) || 0;
+        const discountPercentage = Number(deal.discount_percentage) || 0;
+        const salePrice = Number(deal.sale_price) || originalPrice;
+        const isFreeDelivery = Boolean(deal.is_free_delivery);
+
+        const unitPrice = salePrice;
+        const itemTotal = unitPrice * qty;
+        subtotal += itemTotal;
+
+        return {
+          dealId: deal.id,
+          dealName: deal.name || clientItem.dealName || 'Special Deal',
+          dealSlug: deal.slug || clientItem.dealSlug || '',
+          piecesCount: Number(deal.pieces_count) || Number(clientItem.piecesCount) || 1,
+          originalPrice,
+          discountPercentage,
+          unitPrice,
+          isFreeDelivery,
+          quantity: qty,
+          totalPrice: itemTotal,
+          image: deal.image_url || clientItem.image || null,
+        };
+      }
+
+      // Product item validation
       let variant = dbVariants.find(
         (v) =>
           v.id === clientItem.variantId ||
@@ -117,11 +163,11 @@ export async function POST(req: Request) {
             v.size === clientItem.size)
       );
 
-      let unitPrice = 0;
       let productName = clientItem.productName || 'Hosiery Product';
+      let pricing = { originalPrice: 480, discountPercentage: 0, salePrice: 480, isOnSale: false };
 
       if (variant) {
-        unitPrice = Number(variant.sale_price) || Number(variant.price) || 480;
+        pricing = resolveVariantPricing(variant);
       } else {
         const initialVar =
           initialVariantsMap.get(clientItem.variantId) ||
@@ -129,13 +175,15 @@ export async function POST(req: Request) {
             `${clientItem.productId}_${clientItem.quality}_${clientItem.sleeve}_${clientItem.size}`
           );
         if (initialVar) {
-          unitPrice = Number(initialVar.salePrice) || Number(initialVar.price) || 480;
+          pricing = resolveVariantPricing(initialVar);
           productName = initialVar.productName || productName;
         } else {
-          unitPrice = Number(clientItem.regularPrice || clientItem.unitPrice || clientItem.price) || 480;
+          // Never trust client-tampered price!
+          pricing = { originalPrice: 480, discountPercentage: 0, salePrice: 480, isOnSale: false };
         }
       }
 
+      const unitPrice = pricing.salePrice;
       const itemTotal = unitPrice * qty;
       subtotal += itemTotal;
 
@@ -147,14 +195,18 @@ export async function POST(req: Request) {
         sleeve: clientItem.sleeve || variant?.sleeve || 'Sleeveless',
         size: clientItem.size || variant?.size || 'L',
         unitPrice,
+        originalPrice: pricing.originalPrice,
+        discountPercentage: pricing.discountPercentage,
         quantity: qty,
         totalPrice: itemTotal,
         image: clientItem.image || null,
       };
     });
 
-    // Determine final delivery fee: Free delivery if total pieces >= freeDeliveryThreshold (default 3)
-    const deliveryFee = totalItemCount >= freeDeliveryThreshold ? 0 : baseDeliveryCharge;
+    // Determine final delivery fee: Free delivery if any VERIFIED deal grants free delivery OR total pieces >= freeDeliveryThreshold.
+    // SECURITY: Use verifiedItems (server-validated) NOT raw client items to prevent tampering.
+    const hasFreeDeliveryDeal = verifiedItems.some((it: any) => it.dealId && it.isFreeDelivery);
+    const deliveryFee = hasFreeDeliveryDeal || totalItemCount >= freeDeliveryThreshold ? 0 : baseDeliveryCharge;
     const totalAmount = subtotal + deliveryFee;
     const orderNumber = `ARH-${Date.now().toString().slice(-6)}`;
     let orderId = `ord-${Date.now()}`;
@@ -239,26 +291,58 @@ export async function POST(req: Request) {
             typeof id === 'string' &&
             /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-          const itemsPayload = verifiedItems.map((it: any) => ({
-            order_id: insertedOrder.id,
-            product_id: isUuid(it.productId) ? it.productId : null,
-            variant_id: isUuid(it.variantId) ? it.variantId : null,
-            product_name: it.productName,
-            quality: it.quality,
-            sleeve: it.sleeve,
-            size: it.size,
-            unit_price: it.unitPrice,
-            quantity: it.quantity,
-            total_price: it.totalPrice,
-            image_url: it.image || null,
-          }));
+          const itemsPayload = verifiedItems.map((it: any) => {
+            if (it.dealId) {
+              // Deal item payload aligned with migration v10
+              return {
+                order_id: insertedOrder.id,
+                product_name: it.dealName,
+                is_deal_item: true,
+                deal_id: it.dealId,
+                deal_name: it.dealName,
+                deal_slug: it.dealSlug,
+                deal_pieces_count: it.piecesCount,
+                deal_original_price: it.originalPrice,
+                deal_discount_percentage: it.discountPercentage,
+                deal_is_free_delivery: it.isFreeDelivery,
+                unit_price: it.unitPrice,
+                quantity: it.quantity,
+                total_price: it.totalPrice,
+                image_url: it.image || null,
+              };
+            } else {
+              // Product item payload
+              return {
+                order_id: insertedOrder.id,
+                is_deal_item: false,
+                product_id: isUuid(it.productId) ? it.productId : null,
+                variant_id: isUuid(it.variantId) ? it.variantId : null,
+                product_name: it.productName,
+                quality: it.quality,
+                sleeve: it.sleeve,
+                size: it.size,
+                unit_price: it.unitPrice,
+                original_price: it.originalPrice,
+                discount_percentage: it.discountPercentage,
+                quantity: it.quantity,
+                total_price: it.totalPrice,
+                image_url: it.image || null,
+              };
+            }
+          });
 
-          const { error: itemsErr } = await dbClient.from('order_items').insert(itemsPayload);
+          let { error: itemsErr } = await dbClient.from('order_items').insert(itemsPayload);
+          if (itemsErr && (itemsErr.message?.includes('deal_') || itemsErr.message?.includes('original_price') || itemsErr.message?.includes('is_deal_item') || itemsErr.code === '42703')) {
+            // Fallback: strip optional deal fields that might not exist in schema if migration v10 is pending
+            const fallbackItemsPayload = itemsPayload.map(({ deal_id, deal_name, deal_slug, deal_pieces_count, deal_original_price, deal_discount_percentage, deal_is_free_delivery, is_deal_item, original_price, discount_percentage, ...rest }) => rest);
+            const retryRes = await dbClient.from('order_items').insert(fallbackItemsPayload);
+            itemsErr = retryRes.error;
+          }
           if (itemsErr) {
             console.error('FULL SUPABASE ORDER ITEMS INSERT ERROR:', itemsErr);
           }
 
-          // Decrement stock in product_variants safely
+          // Decrement stock in product_variants safely (only for product items)
           for (const item of verifiedItems) {
             if (item.variantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.variantId)) {
               try {
@@ -307,6 +391,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, order }, { status: 201 });
   } catch (err: any) {
     console.error('Order API error:', err);
+    if (err?.message?.includes('deal') || err?.message?.includes('Deal')) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -360,7 +447,9 @@ export async function GET(req: Request) {
         createdAt: matchedOrder.created_at,
         items: Array.isArray(matchedOrder.order_items)
           ? matchedOrder.order_items.map((it: any) => ({
-              productName: it.product_name,
+              productName: it.deal_name || it.product_name,
+              isDealItem: Boolean(it.deal_id),
+              dealName: it.deal_name || undefined,
               quality: it.quality,
               sleeve: it.sleeve,
               size: it.size,

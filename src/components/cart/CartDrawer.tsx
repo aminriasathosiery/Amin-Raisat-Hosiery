@@ -15,6 +15,9 @@ const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
 // Authentic thumbnail resolution
 function getCartItemImage(item: CartItem): string {
+  if (item.type === 'deal') {
+    return item.dealImage || '/images/products/sleevless high.jpeg';
+  }
   if (item.image && item.image.trim() !== '') return item.image;
   if (item.quality === 'High Quality') {
     if (item.sleeve === 'Full Sleeve') return '/images/products/full sleeve high.jpeg';
@@ -173,6 +176,57 @@ export const CartDrawer: React.FC = () => {
               </div>
             ) : (
               items.map((item) => {
+                if (item.type === 'deal') {
+                  // Deal item display
+                  return (
+                    <div key={item.id} className="pt-3.5 first:pt-0 flex gap-3 sm:gap-3.5 items-start">
+                      <div className="w-16 h-16 xs:w-18 xs:h-18 bg-light-elevated dark:bg-[#1A1A18] rounded-xl overflow-hidden relative flex-shrink-0 border border-light-border dark:border-[#34322D] p-1">
+                        <Image
+                          src={item.dealImage || '/images/products/sleevless high.jpeg'}
+                          alt={item.dealName}
+                          fill
+                          sizes="72px"
+                          className="object-contain object-center"
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-start justify-between gap-1.5">
+                            <h4 className="font-bold text-xs sm:text-sm text-charcoal-900 dark:text-[#F4F1E9] leading-snug break-words line-clamp-2">
+                              {item.dealName}
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(item.id)}
+                              className="w-7 h-7 flex items-center justify-center text-charcoal-400 dark:text-[#8E8A80] hover:text-rose-600 dark:hover:text-rose-400 transition-colors rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 flex-shrink-0 -mr-1"
+                              aria-label={`Remove ${item.dealName}`}
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1 mt-1">
+                            <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#D7D7D4] px-1.5 py-0.5 rounded">
+                              {item.piecesCount} pieces
+                            </span>
+                            <span className="text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 px-1.5 py-0.5 rounded">
+                              {item.discountPercentage}% OFF
+                            </span>
+                            {item.isFreeDelivery && (
+                              <span className="text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded">
+                                Free Delivery
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Product item display
                 const itemImg = getCartItemImage(item);
                 const matchingProd = products.find((p) => p.id === item.productId);
                 const availableItemSizes = matchingProd

@@ -4,14 +4,11 @@ import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/s
 import { verifyAdminSession } from '@/lib/auth/adminAuth';
 
 function getDbClient() {
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      return createAdminClient();
-    } catch {
-      return supabaseServer;
-    }
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey || serviceKey.length < 20 || serviceKey.includes('PASTE_') || serviceKey.startsWith('sb_publishable_')) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for admin order operations. Please configure SUPABASE_SERVICE_ROLE_KEY in your server environment.');
   }
-  return supabaseServer;
+  return createAdminClient();
 }
 
 export async function GET(req: Request) {
@@ -27,7 +24,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, orders: [] });
     }
 
-    const dbClient = getDbClient();
+    let dbClient;
+    try {
+      dbClient = createAdminClient();
+    } catch (err: any) {
+      return NextResponse.json(
+        { error: 'SUPABASE_SERVICE_ROLE_KEY is required to view admin orders. Please configure SUPABASE_SERVICE_ROLE_KEY in your server environment.' },
+        { status: 503 }
+      );
+    }
+
     const { data: orders, error } = await dbClient
       .from('orders')
       .select('*, order_items(*)')
@@ -67,7 +73,12 @@ export async function GET(req: Request) {
             orderId: it.order_id,
             productId: it.product_id,
             variantId: it.variant_id,
-            productName: it.product_name,
+            isDealItem: Boolean(it.deal_id),
+            dealId: it.deal_id || undefined,
+            dealName: it.deal_name || undefined,
+            dealPiecesCount: it.deal_pieces_count ? Number(it.deal_pieces_count) : undefined,
+            dealIsFreeDelivery: it.deal_is_free_delivery ?? undefined,
+            productName: it.deal_name || it.product_name,
             quality: it.quality,
             sleeve: it.sleeve,
             size: it.size,
@@ -81,6 +92,9 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, orders: mappedOrders });
   } catch (err: any) {
+    if (err?.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
     console.error('Admin GET orders error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -258,6 +272,9 @@ export async function DELETE(req: Request) {
       message: `Permanently deleted ${confirmedIds.length} order(s) and dependent data successfully.`,
     });
   } catch (err: any) {
+    if (err?.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
     console.error('API /api/admin/orders DELETE error:', err);
     return NextResponse.json(
       { error: err?.message || 'Internal Server Error during order deletion.' },
@@ -301,6 +318,9 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true, order: updated });
   } catch (err: any) {
+    if (err?.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
     console.error('Admin PATCH order error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

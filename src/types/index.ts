@@ -41,8 +41,9 @@ export interface ProductVariant {
   quality: QualityType;
   sleeve: SleeveType;
   size: ProductSize;
-  price: number;
-  salePrice?: number;
+  price: number; // Original retail reference price
+  discountPercentage?: number; // Discount percentage (e.g. 10 for 10%)
+  salePrice?: number; // Final sale price after discount
   stock: number;
   sku?: string;
   isAvailable: boolean;
@@ -95,14 +96,55 @@ export interface Product {
   rating?: number;
   reviewsCount?: number;
   isPublished: boolean;
+  sortOrder?: number;
   createdAt: string;
   variants: ProductVariant[];
   media: ProductMedia[];
   reviews?: ProductReview[];
 }
 
-export interface CartItem {
+// ============================================================================
+// DEALS / BUNDLES SYSTEM
+// ============================================================================
+
+export interface Deal {
   id: string;
+  name: string;
+  slug: string;
+  subtitle?: string;
+  description?: string;
+  imageUrl?: string;
+  piecesCount: number;          // Physical pieces bundled in 1 deal unit
+  originalPrice: number;        // Original price before discount
+  discountPercentage: number;   // Discount % (0 = no discount)
+  salePrice: number;            // Final price = originalPrice * (1 - discountPercentage/100)
+  isFreeDelivery: boolean;      // If true, delivery is always Rs. 0
+  isActive: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
+  badgeText?: string;           // e.g. "Best Value", "Hot Deal"
+  createdAt: string;
+}
+
+export interface DealCartItem {
+  id: string;               // unique cart item id
+  type: 'deal';
+  dealId: string;
+  dealName: string;
+  dealSlug: string;
+  dealImage?: string;
+  piecesCount: number;
+  originalPrice: number;
+  discountPercentage: number;
+  unitPrice: number;        // = salePrice (per deal unit)
+  quantity: number;         // deal units ordered
+  isFreeDelivery: boolean;
+  size: string; // empty string for deals
+}
+
+export interface ProductCartItem {
+  id: string;
+  type: 'product';
   productId: string;
   variantId?: string;
   productName: string;
@@ -110,10 +152,14 @@ export interface CartItem {
   quality: QualityType;
   sleeve: SleeveType;
   size: ProductSize;
-  unitPrice: number;
+  unitPrice: number; // Authoritative final sale price
+  originalPrice?: number; // Original price before discount
+  discountPercentage?: number; // Discount percentage applied
   quantity: number;
   image: string;
 }
+
+export type CartItem = DealCartItem | ProductCartItem;
 
 export type OrderStatus =
   | 'Pending'
@@ -136,13 +182,23 @@ export type PaymentStatusType =
 export interface OrderItem {
   id: string;
   orderId: string;
-  productId: string;
-  variantId: string;
-  productName: string;
-  quality: QualityType;
-  sleeve: SleeveType;
-  size: ProductSize;
-  unitPrice: number;
+  // Product fields
+  productId?: string;
+  variantId?: string;
+  productName?: string;
+  quality?: QualityType;
+  sleeve?: SleeveType;
+  size?: ProductSize;
+  // Deal fields
+  dealId?: string;
+  dealName?: string;
+  dealSlug?: string;
+  piecesCount?: number;
+  isFreeDelivery?: boolean;
+  // Common fields
+  unitPrice: number; // Final transaction unit price paid
+  originalPrice?: number; // Original reference price at time of order
+  discountPercentage?: number; // Discount percentage at time of order
   quantity: number;
   totalPrice: number;
   image?: string;

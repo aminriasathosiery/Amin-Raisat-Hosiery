@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, isSupabaseConfigured } from '@/lib/supabase';
 import { INITIAL_PRODUCTS, INITIAL_CATEGORIES, INITIAL_SITE_SETTINGS } from '@/data/initialData';
+import { resolveVariantPricing } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,7 +10,7 @@ export async function GET() {
   if (isSupabaseConfigured()) {
     try {
       const [{ data: products }, { data: categories }] = await Promise.all([
-        supabaseServer.from('products').select('*, product_variants(*), product_media(*)').eq('is_published', true),
+        supabaseServer.from('products').select('*, product_variants(*), product_media(*)').eq('is_published', true).order('sort_order', { ascending: true }),
         supabaseServer.from('categories').select('*, subcategories(*)').eq('is_active', true),
       ]);
 
@@ -39,20 +40,25 @@ export async function GET() {
               INITIAL_PRODUCTS.find((ip) => ip.slug === p.slug || p.slug?.startsWith(ip.slug))?.sizeGuideUrl ||
               'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/product-media/products/f0000000-0000-0000-0000-000000000001/size-guide/arh_mens_vest_size_chart.webp',
             isPublished: p.is_published ?? true,
+            sortOrder: Number(p.sort_order) || 9999,
             createdAt: p.created_at,
             variants: Array.isArray(p.product_variants)
-              ? p.product_variants.map((v: any) => ({
-                  id: v.id,
-                  productId: v.product_id,
-                  quality: v.quality,
-                  sleeve: v.sleeve,
-                  size: v.size,
-                  price: Number(v.price) || 0,
-                  salePrice: v.sale_price !== undefined && v.sale_price !== null ? Number(v.sale_price) : undefined,
-                  stock: Number(v.stock) || 0,
-                  sku: v.sku || '',
-                  isAvailable: v.is_available ?? true,
-                }))
+              ? p.product_variants.map((v: any) => {
+                  const pricing = resolveVariantPricing(v);
+                  return {
+                    id: v.id,
+                    productId: v.product_id,
+                    quality: v.quality,
+                    sleeve: v.sleeve,
+                    size: v.size,
+                    price: pricing.originalPrice,
+                    discountPercentage: pricing.discountPercentage,
+                    salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
+                    stock: Number(v.stock) || 0,
+                    sku: v.sku || '',
+                    isAvailable: v.is_available ?? true,
+                  };
+                })
               : [],
             media: mediaList
               .filter((m: any) => m.media_type !== 'size_guide')

@@ -73,6 +73,14 @@ export const Footer: React.FC = () => {
                   All Products
                 </Link>
               </li>
+              <li className="text-left">
+                <Link
+                  href="/deals"
+                  className="text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors font-semibold flex items-center gap-1 py-0.5"
+                >
+                  Deals <span aria-label="Hot deals">🔥</span>
+                </Link>
+              </li>
             </ul>
           </div>
 

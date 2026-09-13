@@ -3,14 +3,11 @@ import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/s
 import { verifyAdminSession } from '@/lib/auth/adminAuth';
 
 function getDbClient() {
-  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      return createAdminClient();
-    } catch {
-      return supabaseServer;
-    }
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey || serviceKey.length < 20 || serviceKey.includes('PASTE_') || serviceKey.startsWith('sb_publishable_')) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for admin payment verification. Please configure SUPABASE_SERVICE_ROLE_KEY in your server environment.');
   }
-  return supabaseServer;
+  return createAdminClient();
 }
 
 export async function POST(req: Request) {
@@ -103,6 +100,9 @@ export async function POST(req: Request) {
       order: updatedOrder || { id: orderId, status: action === 'verify' ? 'Confirmed' : 'Cancelled' },
     });
   } catch (err: any) {
+    if (err?.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      return NextResponse.json({ error: err.message }, { status: 503 });
+    }
     console.error('Verify payment API error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

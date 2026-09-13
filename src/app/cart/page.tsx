@@ -13,6 +13,9 @@ import { CartItem, ProductSize } from '@/types';
 const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
 function getCartItemImage(item: CartItem): string {
+  if (item.type === 'deal') {
+    return item.dealImage || '/images/products/sleevless high.jpeg';
+  }
   if (item.image && item.image.trim() !== '') return item.image;
   if (item.quality === 'High Quality') {
     if (item.sleeve === 'Full Sleeve') return '/images/products/full sleeve high.jpeg';
@@ -106,102 +109,182 @@ export default function CartPage() {
             {/* Item rows with In-Place Size & Quantity Editing */}
             <div className="bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm divide-y divide-light-border dark:divide-[#34322D] overflow-hidden">
               {items.map((item) => {
-                const matchingProd = products.find((p) => p.id === item.productId);
-                const availableItemSizes = matchingProd
-                  ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
-                  : SIZES;
-
-                return (
-                  <div key={item.id} className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-light-elevated dark:bg-[#22211E] rounded-xl overflow-hidden relative flex-shrink-0 border border-light-border dark:border-[#34322D] p-1">
-                      <Image
-                        src={getCartItemImage(item)}
-                        alt={item.productName}
-                        fill
-                        sizes="80px"
-                        className="object-contain object-center"
-                      />
-                    </div>
-
-                    <div className="flex-1 space-y-1 w-full sm:w-auto">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">
-                          {item.productName}
-                        </h3>
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          className="text-charcoal-400 dark:text-[#8E8A80] hover:text-rose-500 transition-colors p-1"
-                          aria-label="Remove item"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                if (item.type === 'deal') {
+                  // Deal item display
+                  return (
+                    <div key={item.id} className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-light-elevated dark:bg-[#22211E] rounded-xl overflow-hidden relative flex-shrink-0 border border-light-border dark:border-[#34322D] p-1">
+                        <Image
+                          src={item.dealImage || '/images/products/sleevless high.jpeg'}
+                          alt={item.dealName}
+                          fill
+                          sizes="80px"
+                          className="object-contain object-center"
+                        />
                       </div>
 
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] px-2 py-0.5 rounded">
-                          {item.quality}
-                        </span>
-                        <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] px-2 py-0.5 rounded">
-                          {item.sleeve}
-                        </span>
-                      </div>
+                      <div className="flex-1 space-y-1 w-full sm:w-auto">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">
+                            {item.dealName}
+                          </h3>
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            className="text-charcoal-400 dark:text-[#8E8A80] hover:text-rose-500 transition-colors p-1"
+                            aria-label="Remove item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
 
-                      {/* In-Place Size Selector Pills */}
-                      <div className="flex items-center gap-1.5 pt-2">
-                        <span className="text-[11px] font-semibold text-charcoal-500 dark:text-[#8E8A80]">Size:</span>
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {(availableItemSizes.length > 0 ? availableItemSizes : SIZES).map((sz) => (
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] px-2 py-0.5 rounded">
+                            {item.piecesCount} pieces
+                          </span>
+                          <span className="text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded">
+                            {item.discountPercentage}% OFF
+                          </span>
+                          {item.isFreeDelivery && (
+                            <span className="text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded">
+                              Free Delivery
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-light-border dark:border-[#34322D]">
+                          {/* Quantity Stepper for deals */}
+                          <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-xl bg-light-elevated dark:bg-[#22211E] overflow-hidden">
                             <button
-                              key={sz}
-                              type="button"
-                              onClick={() => updateItemSize(item.id, sz)}
-                              className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
-                                item.size === sz
-                                  ? 'bg-champagne-500 text-charcoal-950 border-champagne-500 shadow-2xs'
-                                  : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border-light-border dark:border-[#34322D] hover:border-[#B89555]/50'
-                              }`}
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              className="w-8 h-8 flex items-center justify-center text-charcoal-700 dark:text-[#B8B3A8] hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors font-bold"
+                              aria-label="Decrease quantity"
                             >
-                              {sz}
+                              <Minus className="w-3 h-3" />
                             </button>
-                          ))}
+                            <span className="w-10 text-center text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="w-8 h-8 flex items-center justify-center text-charcoal-700 dark:text-[#B8B3A8] hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors font-bold"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          {/* Total Item Price */}
+                          <div className="text-right min-w-[80px]">
+                            <div className="font-extrabold text-sm text-[#B89555] dark:text-[#C9A96A]">
+                              Rs. {(item.unitPrice * item.quantity).toLocaleString()}
+                            </div>
+                            <div className="text-[10px] text-charcoal-400 dark:text-[#8E8A80]">
+                              Rs. {item.unitPrice}/deal
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  );
+                } else {
+                  // Product item display
+                  const matchingProd = products.find((p) => p.id === item.productId);
+                  const availableItemSizes = matchingProd
+                    ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
+                    : SIZES;
 
-                    <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-light-border dark:border-[#34322D]">
-                      {/* Quantity Stepper (1+ pieces) */}
-                      <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-xl bg-light-elevated dark:bg-[#22211E] overflow-hidden">
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-8 h-8 flex items-center justify-center text-charcoal-700 dark:text-[#B8B3A8] hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors font-bold"
-                          aria-label="Decrease quantity"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="w-10 text-center text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9]">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-8 h-8 flex items-center justify-center text-charcoal-700 dark:text-[#B8B3A8] hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors font-bold"
-                          aria-label="Increase quantity"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
+                  return (
+                    <div key={item.id} className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-light-elevated dark:bg-[#22211E] rounded-xl overflow-hidden relative flex-shrink-0 border border-light-border dark:border-[#34322D] p-1">
+                        <Image
+                          src={getCartItemImage(item)}
+                          alt={item.productName}
+                          fill
+                          sizes="80px"
+                          className="object-contain object-center"
+                        />
                       </div>
 
-                      {/* Total Item Price */}
-                      <div className="text-right min-w-[80px]">
-                        <div className="font-extrabold text-sm text-[#B89555] dark:text-[#C9A96A]">
-                          Rs. {(item.unitPrice * item.quantity).toLocaleString()}
+                      <div className="flex-1 space-y-1 w-full sm:w-auto">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">
+                            {item.productName}
+                          </h3>
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            className="text-charcoal-400 dark:text-[#8E8A80] hover:text-rose-500 transition-colors p-1"
+                            aria-label="Remove item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                        <div className="text-[10px] text-charcoal-400 dark:text-[#8E8A80]">
-                          Rs. {item.unitPrice}/pc
+
+                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                          <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] px-2 py-0.5 rounded">
+                            {item.quality}
+                          </span>
+                          <span className="text-[10px] font-semibold bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] px-2 py-0.5 rounded">
+                            {item.sleeve}
+                          </span>
+                        </div>
+
+                        {/* In-Place Size Selector Pills */}
+                        <div className="flex items-center gap-1.5 pt-2">
+                          <span className="text-[11px] font-semibold text-charcoal-500 dark:text-[#8E8A80]">Size:</span>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {(availableItemSizes.length > 0 ? availableItemSizes : SIZES).map((sz) => (
+                              <button
+                                key={sz}
+                                type="button"
+                                onClick={() => updateItemSize(item.id, sz)}
+                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
+                                  item.size === sz
+                                    ? 'bg-champagne-500 text-charcoal-950 border-champagne-500 shadow-2xs'
+                                    : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border-light-border dark:border-[#34322D] hover:border-[#B89555]/50'
+                                }`}
+                              >
+                                {sz}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-light-border dark:border-[#34322D]">
+                        {/* Quantity Stepper (1+ pieces) */}
+                        <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-xl bg-light-elevated dark:bg-[#22211E] overflow-hidden">
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            className="w-8 h-8 flex items-center justify-center text-charcoal-700 dark:text-[#B8B3A8] hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors font-bold"
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-10 text-center text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            className="w-8 h-8 flex items-center justify-center text-charcoal-700 dark:text-[#B8B3A8] hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors font-bold"
+                            aria-label="Increase quantity"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        {/* Total Item Price */}
+                        <div className="text-right min-w-[80px]">
+                          <div className="font-extrabold text-sm text-[#B89555] dark:text-[#C9A96A]">
+                            Rs. {(item.unitPrice * item.quantity).toLocaleString()}
+                          </div>
+                          <div className="text-[10px] text-charcoal-400 dark:text-[#8E8A80]">
+                            Rs. {item.unitPrice}/pc
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
+                  );
+                }
               })}
             </div>
           </div>

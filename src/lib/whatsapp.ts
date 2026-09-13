@@ -65,10 +65,12 @@ export function createCartWhatsAppMessage(
 ): string {
   const targetNumber = formatWhatsAppNumber(customWhatsApp);
   const itemsText = items
-    .map(
-      (item, idx) =>
-        `${idx + 1}. *${item.productName}*\n   • Quality: ${item.quality}\n   • Sleeve: ${item.sleeve}\n   • Size: ${item.size}\n   • Qty: ${item.quantity} x Rs. ${item.unitPrice} = Rs. ${item.quantity * item.unitPrice}`
-    )
+    .map((item, idx) => {
+      if (item.type === 'deal') {
+        return `${idx + 1}. *${item.dealName}* (SPECIAL DEAL)\n   • Pieces: ${item.piecesCount}\n   • Discount: ${item.discountPercentage}% OFF\n   • Qty: ${item.quantity} x Rs. ${item.unitPrice} = Rs. ${item.quantity * item.unitPrice}`;
+      }
+      return `${idx + 1}. *${item.productName}*\n   • Quality: ${item.quality}\n   • Sleeve: ${item.sleeve}\n   • Size: ${item.size}\n   • Qty: ${item.quantity} x Rs. ${item.unitPrice} = Rs. ${item.quantity * item.unitPrice}`;
+    })
     .join('\n\n');
 
   const deliveryText = deliveryFee === 0 ? 'FREE Delivery' : `Rs. ${deliveryFee}`;

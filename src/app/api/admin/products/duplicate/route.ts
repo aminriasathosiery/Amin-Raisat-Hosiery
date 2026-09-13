@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { Product } from '@/types';
+import { resolveVariantPricing } from '@/lib/pricing';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -134,27 +135,41 @@ export async function POST(req: Request) {
 
     // 4. Duplicate Variants
     const originalVariants = original.product_variants || [];
-    const duplicateVariantsPayload = originalVariants.map((v: any) => ({
-      id: crypto.randomUUID(),
-      product_id: newProductId,
-      quality: v.quality,
-      sleeve: v.sleeve,
-      size: v.size,
-      price: v.price,
-      sale_price: v.sale_price,
-      stock: v.stock,
-      sku: v.sku ? `${v.sku}-COPY` : null,
-      is_available: v.is_available ?? true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
+    const duplicateVariantsPayload = originalVariants.map((v: any) => {
+      const pricing = resolveVariantPricing(v);
+      return {
+        id: crypto.randomUUID(),
+        product_id: newProductId,
+        quality: v.quality,
+        sleeve: v.sleeve,
+        size: v.size,
+        price: pricing.originalPrice,
+        sale_price: pricing.isOnSale ? pricing.salePrice : null,
+        discount_percentage: pricing.discountPercentage,
+        stock: v.stock,
+        sku: v.sku ? `${v.sku}-COPY` : null,
+        is_available: v.is_available ?? true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    });
 
     let insertedVariants: any[] = [];
     if (duplicateVariantsPayload.length > 0) {
-      const { data: vData, error: vErr } = await db
+      let { data: vData, error: vErr } = await db
         .from('product_variants')
         .insert(duplicateVariantsPayload)
         .select();
+
+      if (vErr && (vErr.message?.includes('discount_percentage') || vErr.code === '42703')) {
+        const fallbackPayload = duplicateVariantsPayload.map(({ discount_percentage: _dp, ...rest }: any) => rest);
+        const retryRes = await db
+          .from('product_variants')
+          .insert(fallbackPayload)
+          .select();
+        vData = retryRes.data;
+        vErr = retryRes.error;
+      }
 
       if (vErr) {
         console.error('Failed to clone product variants:', vErr);
@@ -211,18 +226,22 @@ export async function POST(req: Request) {
       sizeGuideUrl: insertedProduct.size_guide_url || original.size_guide_url || undefined,
       isPublished: true,
       createdAt: insertedProduct.created_at,
-      variants: insertedVariants.map((v: any) => ({
-        id: v.id,
-        productId: newProductId,
-        quality: v.quality,
-        sleeve: v.sleeve,
-        size: v.size,
-        price: Number(v.price) || 0,
-        salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-        stock: Number(v.stock) || 0,
-        sku: v.sku || '',
-        isAvailable: v.is_available ?? true,
-      })),
+      variants: insertedVariants.map((v: any) => {
+        const pricing = resolveVariantPricing(v);
+        return {
+          id: v.id,
+          productId: newProductId,
+          quality: v.quality,
+          sleeve: v.sleeve,
+          size: v.size,
+          price: pricing.originalPrice,
+          discountPercentage: pricing.discountPercentage,
+          salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
+          stock: Number(v.stock) || 0,
+          sku: v.sku || '',
+          isAvailable: v.is_available ?? true,
+        };
+      }),
       media: insertedMedia.map((m: any) => ({
         id: m.id,
         productId: newProductId,

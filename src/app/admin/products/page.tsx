@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
 import { Product, ProductVariant, ProductMedia } from '@/types';
+import { calculateSalePrice, validateDiscountPercentage, resolveVariantPricing, formatPKR } from '@/lib/pricing';
 import {
   Package,
   Plus,
@@ -70,6 +71,10 @@ function AdminProductsContent() {
   // Clear Matrix Modal State
   const [isClearMatrixModalOpen, setIsClearMatrixModalOpen] = useState(false);
 
+  // Reorder Modal State
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
+  const [reorderProducts, setReorderProducts] = useState<Product[]>([]);
+
   // ------------------ 1. BASIC PRODUCT INFO STATE ------------------
   const [prodName, setProdName] = useState('');
   const [prodQualityGrade, setProdQualityGrade] = useState('High Quality');
@@ -102,7 +107,7 @@ function AdminProductsContent() {
 
   // Matrix Generator Settings
   const [genDefaultPrice, setGenDefaultPrice] = useState(480);
-  const [genDefaultComparePrice, setGenDefaultComparePrice] = useState<number | undefined>(undefined);
+  const [genDefaultDiscount, setGenDefaultDiscount] = useState<number>(0);
   const [genDefaultStock, setGenDefaultStock] = useState(50);
 
   // Individual Variant Add State
@@ -111,7 +116,7 @@ function AdminProductsContent() {
   const [singleVarStyle, setSingleVarStyle] = useState('');
   const [singleVarSize, setSingleVarSize] = useState('');
   const [singleVarPrice, setSingleVarPrice] = useState(480);
-  const [singleVarSalePrice, setSingleVarSalePrice] = useState<number | undefined>(undefined);
+  const [singleVarDiscount, setSingleVarDiscount] = useState<number>(0);
   const [singleVarStock, setSingleVarStock] = useState(50);
   const [singleVarSku, setSingleVarSku] = useState('');
 
@@ -252,7 +257,16 @@ function AdminProductsContent() {
     setCustomStyles(stylesFromVars.length > 0 ? stylesFromVars : ['Sleeveless', 'Full Sleeve']);
     setCustomSizes(sizesFromVars.length > 0 ? sizesFromVars : ['S', 'M', 'L', 'XL', 'XXL']);
 
-    setVariantsList(prod.variants || []);
+    const loadedVariants = (prod.variants || []).map((v) => {
+      const pricing = resolveVariantPricing(v);
+      return {
+        ...v,
+        price: pricing.originalPrice,
+        discountPercentage: pricing.discountPercentage,
+        salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
+      };
+    });
+    setVariantsList(loadedVariants);
     setMediaList(prod.media || []);
     setEditorTab('basic');
     setViewMode('editor');
@@ -323,14 +337,16 @@ function AdminProductsContent() {
       .filter((s) => s.length > 0);
 
     const cleanVariants: ProductVariant[] = variantsList.map((v, i) => {
-      const retailPrice = Number(v.price) || 0;
+      const pricing = resolveVariantPricing(v);
 
       return {
         ...v,
         id: v.id || `var-${currentId}-${i + 1}`,
         productId: currentId,
         quality: v.quality || prodQualityGrade || 'High Quality',
-        price: retailPrice,
+        price: pricing.originalPrice,
+        discountPercentage: pricing.discountPercentage,
+        salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
         stock: Number(v.stock) || 0,
       };
     });
@@ -520,6 +536,10 @@ function AdminProductsContent() {
           );
 
           const retail = existing ? existing.price : genDefaultPrice;
+          const discount = existing && existing.discountPercentage !== undefined
+            ? existing.discountPercentage
+            : genDefaultDiscount;
+          const sale = discount > 0 ? calculateSalePrice(retail, discount) : retail;
 
           generated.push({
             id: existing ? existing.id : `var-gen-${Date.now()}-${count++}`,
@@ -528,7 +548,8 @@ function AdminProductsContent() {
             sleeve: st,
             size: sz,
             price: retail,
-            salePrice: existing ? existing.salePrice : genDefaultComparePrice,
+            discountPercentage: discount,
+            salePrice: sale,
             stock: existing ? existing.stock : genDefaultStock,
             sku: existing?.sku || skuCode,
             isAvailable: existing ? existing.isAvailable : true,
@@ -539,6 +560,29 @@ function AdminProductsContent() {
 
     setVariantsList(generated);
     showNotice(`Generated matrix with ${generated.length} variant combinations!`);
+  };
+
+  // ------------------ BULK APPLY DISCOUNT TO MATRIX ------------------
+  const handleApplyBulkDiscountToMatrix = (bulkDiscountPercent: number) => {
+    const validated = validateDiscountPercentage(bulkDiscountPercent);
+    if (!validated.isValid) {
+      showNotice(validated.error || 'Please enter a valid discount percentage (0-99%).', 'error');
+      return;
+    }
+    const disc = validated.value;
+    setVariantsList((prev) =>
+      prev.map((v) => {
+        const orig = Math.max(0, Number(v.price) || 0);
+        const sale = disc > 0 ? calculateSalePrice(orig, disc) : orig;
+        return {
+          ...v,
+          price: orig,
+          discountPercentage: disc,
+          salePrice: sale,
+        };
+      })
+    );
+    showNotice(`Applied ${disc}% discount across all ${variantsList.length} variants in matrix!`);
   };
 
   // ------------------ ADD SINGLE CUSTOM VARIANT ------------------
@@ -558,6 +602,9 @@ function AdminProductsContent() {
     const autoSku = singleVarSku.trim() || `${prodPrefix}-${qShort}-${stShort}-${sz}`;
 
     const retail = Number(singleVarPrice) || 480;
+    const validated = validateDiscountPercentage(singleVarDiscount);
+    const discount = validated.isValid ? validated.value : 0;
+    const sale = discount > 0 ? calculateSalePrice(retail, discount) : retail;
 
     const newVariant: ProductVariant = {
       id: `var-custom-${Date.now()}`,
@@ -566,7 +613,8 @@ function AdminProductsContent() {
       sleeve: st,
       size: sz,
       price: retail,
-      salePrice: singleVarSalePrice ? Number(singleVarSalePrice) : undefined,
+      discountPercentage: discount,
+      salePrice: sale,
       stock: Number(singleVarStock) || 50,
       sku: autoSku,
       isAvailable: true,
@@ -584,7 +632,28 @@ function AdminProductsContent() {
     value: any
   ) => {
     setVariantsList((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, [field]: value } : v))
+      prev.map((v) => {
+        if (v.id !== id) return v;
+
+        let updated = { ...v, [field]: value };
+
+        if (field === 'price') {
+          const orig = Math.max(0, Number(value) || 0);
+          const disc = Math.min(99, Math.max(0, Number(updated.discountPercentage) || 0));
+          const sale = disc > 0 ? calculateSalePrice(orig, disc) : orig;
+          updated.price = orig;
+          updated.salePrice = sale;
+        } else if (field === 'discountPercentage') {
+          const orig = Math.max(0, Number(updated.price) || 0);
+          const validated = validateDiscountPercentage(value);
+          const disc = validated.isValid ? validated.value : 0;
+          const sale = disc > 0 ? calculateSalePrice(orig, disc) : orig;
+          updated.discountPercentage = disc;
+          updated.salePrice = sale;
+        }
+
+        return updated;
+      })
     );
   };
 
@@ -747,31 +816,41 @@ function AdminProductsContent() {
           {/* Header Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#191917] p-5 sm:p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card">
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">
-                  Garments &amp; Dynamic Catalog
-                </h1>
-                <span className="text-xs font-bold bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D] px-2.5 py-0.5 rounded-lg">
-                  {products.length} Products
-                </span>
-              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-charcoal-900 dark:text-[#F4F1E9] flex items-center gap-2">
+                <Package className="w-7 h-7 text-[#B89555] dark:text-[#C9A96A]" />
+                Products
+              </h1>
               <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8] mt-1">
-                Configure catalog garments, variant sizes, pricing, and live inventory.
+                Manage garment listings, variants, pricing, and inventory.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleStartCreate}
-              className="inline-flex items-center justify-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold min-h-[44px] px-5 sm:px-6 rounded-xl shadow-xs transition-all active:scale-[0.99] w-full sm:w-auto flex-shrink-0"
-            >
-              <Plus className="w-[18px] h-[18px] stroke-[2.2]" />
-              <span>Add Garment Listing</span>
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setReorderProducts([...products].sort((a, b) => (a.sortOrder || 9999) - (b.sortOrder || 9999)));
+                  setIsReorderModalOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] text-sm font-semibold rounded-xl transition-colors"
+              >
+                <Layers className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
+                <span>Reorder</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleStartCreate}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-sm font-bold rounded-xl shadow-xs transition-all active:scale-[0.99]"
+              >
+                <Plus className="w-4 h-4 stroke-[2.2]" />
+                <span>Create Product</span>
+              </button>
+            </div>
           </div>
 
-          {/* Filter / Search Strip */}
-          <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="w-full sm:w-80">
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex-1">
               <input
                 type="text"
                 placeholder="Search products by name, tagline, slug..."
@@ -1388,34 +1467,56 @@ function AdminProductsContent() {
                 </div>
 
                 {/* Generator Default Preset Inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
                   <div>
                     <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
-                      Default Retail Price (Rs.)
+                      Default Original Price (Rs.)
                     </label>
                     <input
                       type="number"
+                      min={0}
                       value={genDefaultPrice}
-                      onChange={(e) => setGenDefaultPrice(Number(e.target.value))}
-                      className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      onChange={(e) => setGenDefaultPrice(Math.max(0, Number(e.target.value) || 0))}
+                      className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
-                      Default Compare Price (Rs.) (Optional)
+                      Default Bulk Discount (%)
                     </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 580"
-                      value={genDefaultComparePrice || ''}
-                      onChange={(e) =>
-                        setGenDefaultComparePrice(
-                          e.target.value ? Number(e.target.value) : undefined
-                        )
-                      }
-                      className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        max={99}
+                        value={genDefaultDiscount}
+                        onChange={(e) => {
+                          const val = Math.min(99, Math.max(0, Number(e.target.value) || 0));
+                          setGenDefaultDiscount(val);
+                        }}
+                        className="w-full p-2 pr-6 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      />
+                      <span className="absolute right-2.5 top-2.5 text-xs text-charcoal-400 font-bold">%</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                      Calculated Sale Price Preview
+                    </label>
+                    <div className="p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs flex items-center justify-between h-[38px]">
+                      <span className="font-extrabold text-[#B89555] dark:text-[#C9A96A]">
+                        Rs. {calculateSalePrice(genDefaultPrice, genDefaultDiscount)}
+                      </span>
+                      {genDefaultDiscount > 0 ? (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                          {genDefaultDiscount}% OFF
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-charcoal-400">Regular</span>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -1424,12 +1525,28 @@ function AdminProductsContent() {
                     </label>
                     <input
                       type="number"
+                      min={0}
                       value={genDefaultStock}
-                      onChange={(e) => setGenDefaultStock(Number(e.target.value))}
+                      onChange={(e) => setGenDefaultStock(Math.max(0, Number(e.target.value) || 0))}
                       className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
                     />
                   </div>
                 </div>
+
+                {variantsList.length > 0 && (
+                  <div className="pt-1 flex items-center justify-between flex-wrap gap-2 text-xs">
+                    <span className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8]">
+                      Quick tool: Apply {genDefaultDiscount}% discount to all existing rows individually.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyBulkDiscountToMatrix(genDefaultDiscount)}
+                      className="px-3 py-1.5 bg-champagne-50 dark:bg-[#22211E] hover:bg-champagne-100 text-[#96763D] dark:text-[#C9A96A] border border-[#B89555]/30 rounded-xl font-bold text-xs transition-colors"
+                    >
+                      Apply {genDefaultDiscount}% to All Existing Variants
+                    </button>
+                  </div>
+                )}
 
                 {/* Add Individual Single Variant Modal */}
                 {isAddSingleVarOpen && (
@@ -1437,7 +1554,7 @@ function AdminProductsContent() {
                     <h4 className="font-bold text-xs text-[#B89555] dark:text-[#C9A96A] uppercase">
                       Add Specific Variant Combination
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Quality</label>
                         <input
@@ -1479,31 +1596,52 @@ function AdminProductsContent() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Retail Price (Rs.)</label>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Original Price (Rs.)</label>
                         <input
                           type="number"
+                          min={0}
                           value={singleVarPrice}
                           onChange={(e) => setSingleVarPrice(Number(e.target.value))}
-                          className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A]"
+                          className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9]"
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Discount (%)</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={0}
+                            max={99}
+                            value={singleVarDiscount}
+                            onChange={(e) => setSingleVarDiscount(Number(e.target.value))}
+                            className="w-full p-2 pr-6 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A]"
+                          />
+                          <span className="absolute right-2.5 top-2.5 text-xs text-charcoal-400 font-bold">%</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddSingleVarOpen(false)}
-                        className="px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border border-light-border dark:border-[#34322D] text-xs font-semibold rounded-xl"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAddSingleVariant}
-                        className="px-4 py-1.5 bg-champagne-500 text-charcoal-950 text-xs font-bold rounded-xl"
-                      >
-                        Add This Variant
-                      </button>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="text-xs text-charcoal-600 dark:text-[#B8B3A8]">
+                        Sale Price: <strong className="text-[#B89555] dark:text-[#C9A96A]">Rs. {calculateSalePrice(singleVarPrice, singleVarDiscount)}</strong>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsAddSingleVarOpen(false)}
+                          className="px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border border-light-border dark:border-[#34322D] text-xs font-semibold rounded-xl"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAddSingleVariant}
+                          className="px-4 py-1.5 bg-champagne-500 text-charcoal-950 text-xs font-bold rounded-xl"
+                        >
+                          Add This Variant
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1551,8 +1689,10 @@ function AdminProductsContent() {
                           <th className="p-3">Style / Sleeve</th>
                           <th className="p-3 text-center">Size</th>
                           <th className="p-3">SKU</th>
-                          <th className="p-3">Retail Price (PKR)</th>
-                          <th className="p-3">Stock Units</th>
+                          <th className="p-3">Original (PKR)</th>
+                          <th className="p-3">Discount %</th>
+                          <th className="p-3">Sale (PKR)</th>
+                          <th className="p-3">Stock</th>
                           <th className="p-3 text-center">Action</th>
                         </tr>
                       </thead>
@@ -1591,8 +1731,32 @@ function AdminProductsContent() {
                                       const newRetail = Number(e.target.value);
                                       handleUpdateVariantField(v.id, 'price', newRetail);
                                     }}
-                                    className="w-20 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                                    className="w-20 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
                                   />
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="99"
+                                    value={v.discountPercentage || 0}
+                                    onChange={(e) => {
+                                      const newDiscount = Math.min(99, Math.max(0, Number(e.target.value) || 0));
+                                      handleUpdateVariantField(v.id, 'discountPercentage', newDiscount);
+                                    }}
+                                    className="w-16 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                                  />
+                                  <span className="text-charcoal-400 text-xs">%</span>
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-charcoal-400 text-xs">Rs.</span>
+                                  <span className={`font-bold ${v.discountPercentage && v.discountPercentage > 0 ? 'text-[#B89555] dark:text-[#C9A96A]' : 'text-charcoal-900 dark:text-[#F4F1E9]'}`}>
+                                    {v.salePrice || v.price}
+                                  </span>
                                 </div>
                               </td>
                               <td className="p-3">
@@ -2044,13 +2208,107 @@ function AdminProductsContent() {
           </div>
         </div>
       )}
+
+      {/* Reorder Products Modal */}
+      {isReorderModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] p-5 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-elevation">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">Reorder Products</h3>
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="text-charcoal-400 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+              {reorderProducts.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="flex items-center gap-3 p-3 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl"
+                >
+                  <span className="text-xs font-bold text-charcoal-500 dark:text-[#B8B3A8] w-8">#{index + 1}</span>
+                  <span className="flex-1 text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]">{product.name}</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index > 0) {
+                          const newOrder = [...reorderProducts];
+                          [newOrder[index], newOrder[index - 1]] = [newOrder[index - 1], newOrder[index]];
+                          setReorderProducts(newOrder);
+                        }
+                      }}
+                      disabled={index === 0}
+                      className="p-1.5 text-charcoal-600 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-light-hover dark:hover:bg-[#2A2925]"
+                    >
+                      <ChevronRight className="w-4 h-4 -rotate-90" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (index < reorderProducts.length - 1) {
+                          const newOrder = [...reorderProducts];
+                          [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+                          setReorderProducts(newOrder);
+                        }
+                      }}
+                      disabled={index === reorderProducts.length - 1}
+                      className="p-1.5 text-charcoal-600 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-light-hover dark:hover:bg-[#2A2925]"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-90" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 pt-4 border-t border-light-border dark:border-[#34322D]">
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="px-4 py-2 bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] text-xs font-semibold rounded-xl hover:bg-light-hover dark:hover:bg-[#2A2925]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const payload = reorderProducts.map((p, i) => ({ id: p.id, sortOrder: i + 1 }));
+                    const res = await fetch('/api/admin/products/reorder', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ products: payload }),
+                    });
+                    if (res.ok) {
+                      showNotice('Product order updated successfully');
+                      setIsReorderModalOpen(false);
+                      // Refresh products
+                      window.location.reload();
+                    } else {
+                      showNotice('Failed to update product order', 'error');
+                    }
+                  } catch (err) {
+                    showNotice('Failed to update product order', 'error');
+                  }
+                }}
+                className="px-4 py-2 bg-champagne-500 text-charcoal-950 text-xs font-bold rounded-xl hover:bg-champagne-400"
+              >
+                Save Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function AdminProductsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-xs text-charcoal-500 dark:text-[#8E8A80]">Loading Catalog Manager...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#B89555]"></div></div>}>
       <AdminProductsContent />
     </Suspense>
   );

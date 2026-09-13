@@ -367,6 +367,19 @@ export const Navbar: React.FC = () => {
                   Shop
                 </Link>
 
+                {/* 4. DEALS */}
+                <Link
+                  href="/deals"
+                  className={`px-3 py-1.5 text-xs font-bold tracking-wide uppercase transition-colors rounded-lg flex items-center gap-1 ${
+                    pathname === '/deals' || pathname.startsWith('/deals/')
+                      ? 'text-[#B89555] dark:text-[#C9A96A] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]'
+                      : 'text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E]'
+                  }`}
+                >
+                  Deals
+                  <span className="text-base leading-none" aria-label="Hot deals">🔥</span>
+                </Link>
+
                 {/* 4. ABOUT */}
                 <Link
                   href="/about"
@@ -582,6 +595,16 @@ export const Navbar: React.FC = () => {
                   className="block px-3 py-2.5 text-sm font-semibold text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E] rounded-xl"
                 >
                   Shop All Products
+                </Link>
+
+                {/* 4. Deals */}
+                <Link
+                  href="/deals"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] hover:bg-light-hover dark:hover:bg-[#22211E] rounded-xl"
+                >
+                  <span>Deals</span>
+                  <span className="text-base leading-none" aria-label="Hot deals">🔥</span>
                 </Link>
               </>
 

@@ -84,10 +84,13 @@ export default function CheckoutPage() {
 
   const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
   const baseDeliveryCharge = settings.shipping?.baseDeliveryCharge ?? 200;
-  const isFreeDeliveryUnlocked = totalQuantity >= freeDeliveryThreshold;
+
+  // Check if any deal has free delivery
+  const hasFreeDeliveryDeal = items.some((it) => it.type === 'deal' && it.isFreeDelivery);
+  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalQuantity >= freeDeliveryThreshold;
   const deliveryFee = totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : baseDeliveryCharge;
   const totalAmount = subtotal + deliveryFee;
-  const piecesNeededForFree = Math.max(0, freeDeliveryThreshold - totalQuantity);
+  const piecesNeededForFree = hasFreeDeliveryDeal ? 0 : Math.max(0, freeDeliveryThreshold - totalQuantity);
 
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState('');
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
@@ -186,20 +189,44 @@ export default function CheckoutPage() {
         paymentMethod: formData.paymentMethod,
         paymentReference: formData.paymentReference.trim() || undefined,
         paymentScreenshotUrl: paymentScreenshotUrl || undefined,
-        items: items.map((it) => ({
-          id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          orderId: '',
-          productId: it.productId,
-          variantId: it.variantId || it.id,
-          productName: it.productName,
-          quality: it.quality,
-          sleeve: it.sleeve,
-          size: it.size,
-          unitPrice: it.unitPrice,
-          quantity: it.quantity,
-          totalPrice: it.unitPrice * it.quantity,
-          image: it.image,
-        })),
+        items: items.map((it) => {
+          if (it.type === 'deal') {
+            // Deal item
+            return {
+              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              orderId: '',
+              dealId: it.dealId,
+              dealName: it.dealName,
+              dealSlug: it.dealSlug,
+              piecesCount: it.piecesCount,
+              originalPrice: it.originalPrice,
+              discountPercentage: it.discountPercentage,
+              unitPrice: it.unitPrice,
+              quantity: it.quantity,
+              totalPrice: it.unitPrice * it.quantity,
+              image: it.dealImage,
+              isFreeDelivery: it.isFreeDelivery,
+            };
+          } else {
+            // Product item
+            return {
+              id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              orderId: '',
+              productId: it.productId,
+              variantId: it.variantId || it.id,
+              productName: it.productName,
+              quality: it.quality,
+              sleeve: it.sleeve,
+              size: it.size,
+              unitPrice: it.unitPrice,
+              originalPrice: it.originalPrice || it.unitPrice,
+              discountPercentage: it.discountPercentage || 0,
+              quantity: it.quantity,
+              totalPrice: it.unitPrice * it.quantity,
+              image: it.image,
+            };
+          }
+        }),
       };
 
       const createdOrder = await createOrder(orderPayload);
@@ -734,94 +761,161 @@ export default function CheckoutPage() {
                 {/* Items List with In-Place Size & Quantity Editing */}
                 <div className="space-y-4 divide-y divide-light-border dark:divide-[#34322D] max-h-96 overflow-y-auto pr-1">
                   {items.map((item) => {
-                    const matchingProd = products.find((p) => p.id === item.productId);
-                    const availableSizes = matchingProd
-                      ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
-                      : SIZES;
-
-                    return (
-                      <div key={item.id} className="pt-4 first:pt-0 space-y-2 text-xs">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{item.productName}</p>
-                            <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
-                              {item.quality} • {item.sleeve}
-                            </p>
+                    if (item.type === 'deal') {
+                      // Deal item display
+                      return (
+                        <div key={item.id} className="pt-4 first:pt-0 space-y-2 text-xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{item.dealName}</p>
+                              <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
+                                {item.piecesCount} pieces • {item.discountPercentage}% OFF
+                              </p>
+                              {item.isFreeDelivery && (
+                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                                  Free Delivery
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <span className="font-bold text-[#B89555] dark:text-[#C9A96A] text-sm">
+                                Rs. {(item.unitPrice * item.quantity).toLocaleString()}
+                              </span>
+                              <p className="text-[10px] text-charcoal-400 dark:text-[#8E8A80]">
+                                Rs. {item.unitPrice} / deal
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <span className="font-bold text-[#B89555] dark:text-[#C9A96A] text-sm">
-                              Rs. {(item.unitPrice * item.quantity).toLocaleString()}
-                            </span>
-                            <p className="text-[10px] text-charcoal-400 dark:text-[#8E8A80]">
-                              Rs. {item.unitPrice} / pc
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Interactive In-Place Controls: Size Pills + Quantity Stepper */}
-                        <div className="flex items-center justify-between gap-2 pt-1">
-                          {/* Size Pills */}
-                          <div className="flex items-center gap-1 flex-wrap">
-                            <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] font-medium mr-1">Size:</span>
-                            {(availableSizes.length > 0 ? availableSizes : SIZES).map((sz) => (
+                          {/* Quantity Stepper for deals (no size selection) */}
+                          <div className="flex items-center justify-end gap-2 pt-1">
+                            <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-lg bg-light-elevated dark:bg-[#1A1A18] overflow-hidden flex-shrink-0 shadow-2xs">
                               <button
-                                key={sz}
                                 type="button"
                                 onClick={() => {
                                   if (isBuyNow) {
-                                    updateBuyNowItem({ size: sz });
+                                    updateBuyNowItem({ quantity: Math.max(1, item.quantity - 1) });
                                   } else {
-                                    updateItemSize(item.id, sz);
+                                    updateQuantity(item.id, item.quantity - 1);
                                   }
                                 }}
-                                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
-                                  item.size === sz
-                                    ? 'bg-champagne-500 text-charcoal-950 border-champagne-500 shadow-2xs'
-                                    : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border-light-border dark:border-[#34322D] hover:border-[#B89555]/50'
-                                }`}
+                                className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
+                                aria-label="Decrease quantity"
                               >
-                                {sz}
+                                <Minus className="w-3 h-3" />
                               </button>
-                            ))}
-                          </div>
-
-                          {/* Quantity Stepper */}
-                          <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-lg bg-light-elevated dark:bg-[#1A1A18] overflow-hidden flex-shrink-0 shadow-2xs">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isBuyNow) {
-                                  updateBuyNowItem({ quantity: Math.max(1, item.quantity - 1) });
-                                } else {
-                                  updateQuantity(item.id, item.quantity - 1);
-                                }
-                              }}
-                              className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="w-7 text-center text-xs font-extrabold text-charcoal-900 dark:text-[#F4F1E9]">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isBuyNow) {
-                                  updateBuyNowItem({ quantity: item.quantity + 1 });
-                                } else {
-                                  updateQuantity(item.id, item.quantity + 1);
-                                }
-                              }}
-                              className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
-                              aria-label="Increase quantity"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
+                              <span className="w-7 text-center text-xs font-extrabold text-charcoal-900 dark:text-[#F4F1E9]">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isBuyNow) {
+                                    updateBuyNowItem({ quantity: item.quantity + 1 });
+                                  } else {
+                                    updateQuantity(item.id, item.quantity + 1);
+                                  }
+                                }}
+                                className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
+                                aria-label="Increase quantity"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
+                      );
+                    } else {
+                      // Product item display
+                      const matchingProd = products.find((p) => p.id === item.productId);
+                      const availableSizes = matchingProd
+                        ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
+                        : SIZES;
+
+                      return (
+                        <div key={item.id} className="pt-4 first:pt-0 space-y-2 text-xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{item.productName}</p>
+                              <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
+                                {item.quality} • {item.sleeve}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <span className="font-bold text-[#B89555] dark:text-[#C9A96A] text-sm">
+                                Rs. {(item.unitPrice * item.quantity).toLocaleString()}
+                              </span>
+                              <p className="text-[10px] text-charcoal-400 dark:text-[#8E8A80]">
+                                Rs. {item.unitPrice} / pc
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Interactive In-Place Controls: Size Pills + Quantity Stepper */}
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            {/* Size Pills */}
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] font-medium mr-1">Size:</span>
+                              {(availableSizes.length > 0 ? availableSizes : SIZES).map((sz) => (
+                                <button
+                                  key={sz}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isBuyNow) {
+                                      updateBuyNowItem({ size: sz });
+                                    } else {
+                                      updateItemSize(item.id, sz);
+                                    }
+                                  }}
+                                  className={`px-2 py-0.5 rounded-md text-[11px] font-bold border transition-all ${
+                                    item.size === sz
+                                      ? 'bg-champagne-500 text-charcoal-950 border-champagne-500 shadow-2xs'
+                                      : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border-light-border dark:border-[#34322D] hover:border-[#B89555]/50'
+                                  }`}
+                                >
+                                  {sz}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Quantity Stepper */}
+                            <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-lg bg-light-elevated dark:bg-[#1A1A18] overflow-hidden flex-shrink-0 shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isBuyNow) {
+                                    updateBuyNowItem({ quantity: Math.max(1, item.quantity - 1) });
+                                  } else {
+                                    updateQuantity(item.id, item.quantity - 1);
+                                  }
+                                }}
+                                className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-7 text-center text-xs font-extrabold text-charcoal-900 dark:text-[#F4F1E9]">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isBuyNow) {
+                                    updateBuyNowItem({ quantity: item.quantity + 1 });
+                                  } else {
+                                    updateQuantity(item.id, item.quantity + 1);
+                                  }
+                                }}
+                                className="w-7 h-7 flex items-center justify-center text-charcoal-700 dark:text-[#D7D7D4] hover:bg-light-hover dark:hover:bg-[#262521] active:scale-90 transition-colors font-bold text-xs"
+                                aria-label="Increase quantity"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
                   })}
                 </div>
 

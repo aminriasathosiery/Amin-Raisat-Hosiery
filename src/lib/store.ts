@@ -21,6 +21,7 @@ import {
   INITIAL_HERO_SLIDES,
 } from '@/data/initialData';
 import { supabaseBrowser, isSupabaseConfigured } from './supabase/client';
+import { resolveVariantPricing } from '@/lib/pricing';
 
 const LOCAL_STORAGE_KEYS = {
   PRODUCTS: 'arh_products_v6',
@@ -517,18 +518,22 @@ export class DataStore {
             isPublished: p.is_published ?? true,
             createdAt: p.created_at,
             variants: Array.isArray(p.product_variants)
-              ? p.product_variants.map((v: any) => ({
-                  id: v.id,
-                  productId: v.product_id,
-                  quality: v.quality,
-                  sleeve: v.sleeve,
-                  size: v.size,
-                  price: Number(v.price) || 0,
-                  salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-                  stock: Number(v.stock) || 0,
-                  sku: v.sku || '',
-                  isAvailable: v.is_available ?? true,
-                }))
+              ? p.product_variants.map((v: any) => {
+                  const pricing = resolveVariantPricing(v);
+                  return {
+                    id: v.id,
+                    productId: v.product_id,
+                    quality: v.quality,
+                    sleeve: v.sleeve,
+                    size: v.size,
+                    price: pricing.originalPrice,
+                    discountPercentage: pricing.discountPercentage,
+                    salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
+                    stock: Number(v.stock) || 0,
+                    sku: v.sku || '',
+                    isAvailable: v.is_available ?? true,
+                  };
+                })
               : [],
             media: Array.isArray(p.product_media)
               ? p.product_media
@@ -785,23 +790,43 @@ export class DataStore {
 
           // Insert line items
           if (orderData.items && orderData.items.length > 0) {
-            const itemsPayload = orderData.items.map((it) => ({
-              order_id: insertedOrder.id,
-              product_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(it.productId)
-                ? it.productId
-                : null,
-              variant_id: it.variantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(it.variantId)
-                ? it.variantId
-                : null,
-              product_name: it.productName,
-              quality: it.quality,
-              sleeve: it.sleeve,
-              size: it.size,
-              unit_price: it.unitPrice,
-              quantity: it.quantity,
-              total_price: it.totalPrice,
-              image_url: it.image,
-            }));
+            const itemsPayload = orderData.items.map((it) => {
+              if (it.dealId) {
+                // Deal item payload
+                return {
+                  order_id: insertedOrder.id,
+                  deal_id: it.dealId,
+                  deal_name: it.dealName,
+                  deal_slug: it.dealSlug,
+                  pieces_count: it.piecesCount,
+                  original_price: it.originalPrice,
+                  discount_percentage: it.discountPercentage,
+                  unit_price: it.unitPrice,
+                  is_free_delivery: it.isFreeDelivery,
+                  quantity: it.quantity,
+                  total_price: it.totalPrice,
+                  image_url: it.image || null,
+                };
+              }
+              // Product item payload
+              return {
+                order_id: insertedOrder.id,
+                product_id: it.productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(it.productId)
+                  ? it.productId
+                  : null,
+                variant_id: it.variantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(it.variantId)
+                  ? it.variantId
+                  : null,
+                product_name: it.productName,
+                quality: it.quality,
+                sleeve: it.sleeve,
+                size: it.size,
+                unit_price: it.unitPrice,
+                quantity: it.quantity,
+                total_price: it.totalPrice,
+                image_url: it.image,
+              };
+            });
             const adminDb = supabaseBrowser;
             await adminDb.from('order_items').insert(itemsPayload);
           }

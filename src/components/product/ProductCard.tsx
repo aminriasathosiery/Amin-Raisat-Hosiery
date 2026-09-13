@@ -58,7 +58,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   }, [product.variants, selectedSleeve, selectedSize]);
 
   const price = currentVariant?.salePrice || currentVariant?.price || 480;
-  const comparePrice = currentVariant?.salePrice ? currentVariant.price : undefined;
+  const comparePrice = currentVariant?.price && currentVariant.price > price ? currentVariant.price : undefined;
+  const discountPercentage = currentVariant?.discountPercentage || 0;
   const isAvailable = currentVariant ? currentVariant.isAvailable && currentVariant.stock > 0 : false;
 
   const photoMedia = useMemo(() => {
@@ -79,6 +80,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     if (!isAvailable) return;
 
     setBuyNowItem({
+      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
       productName: product.name,
@@ -87,6 +90,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       sleeve: selectedSleeve,
       size: selectedSize,
       unitPrice: price,
+      originalPrice: comparePrice || price,
+      discountPercentage: discountPercentage,
       quantity: 1,
       image: currentPhoto,
     });
@@ -99,6 +104,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     if (!isAvailable) return;
 
     addItem({
+      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
       productName: product.name,
@@ -107,6 +114,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       sleeve: selectedSleeve,
       size: selectedSize,
       unitPrice: price,
+      originalPrice: comparePrice || price,
+      discountPercentage: discountPercentage,
       quantity: 1,
       image: currentPhoto,
     });
@@ -260,6 +269,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {comparePrice && (
               <span className="text-xs text-charcoal-400 dark:text-[#8E8A80] line-through font-normal">
                 Rs. {comparePrice}
+              </span>
+            )}
+            {discountPercentage > 0 && (
+              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 px-1.5 py-0.5 rounded-md">
+                {discountPercentage}% OFF
               </span>
             )}
           </div>

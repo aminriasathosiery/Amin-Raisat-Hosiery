@@ -83,7 +83,7 @@ export default async function RootLayout({
           <AuthProvider>
             <StoreProvider initialProducts={initialProducts}>
               <CartProvider>
-                <PublicLayoutShell>{children}</PublicLayoutShell>
+                  <PublicLayoutShell>{children}</PublicLayoutShell>
               </CartProvider>
             </StoreProvider>
           </AuthProvider>

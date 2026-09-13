@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { Product, ProductVariant, ProductMedia } from '@/types';
 import { INITIAL_PRODUCTS } from '@/data/initialData';
+import { resolveVariantPricing } from '@/lib/pricing';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,7 @@ export async function GET(req: Request) {
     const { data: prods, error } = await dbClient
       .from('products')
       .select('*, product_variants(*), product_media(*)')
+      .order('sort_order', { ascending: true })
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -90,20 +92,25 @@ export async function GET(req: Request) {
           INITIAL_PRODUCTS.find((ip) => ip.slug === p.slug || p.slug?.startsWith(ip.slug))?.sizeGuideUrl ||
           'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/product-media/products/f0000000-0000-0000-0000-000000000001/size-guide/arh_mens_vest_size_chart.webp',
         isPublished: p.is_published ?? true,
+        sortOrder: Number(p.sort_order) || 9999,
         createdAt: p.created_at,
         variants: Array.isArray(p.product_variants)
-          ? p.product_variants.map((v: any) => ({
-              id: v.id,
-              productId: v.product_id,
-              quality: v.quality,
-              sleeve: v.sleeve,
-              size: v.size,
-              price: Number(v.price) || 0,
-              salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-              stock: Number(v.stock) || 0,
-              sku: v.sku || '',
-              isAvailable: v.is_available ?? true,
-            }))
+          ? p.product_variants.map((v: any) => {
+              const pricing = resolveVariantPricing(v);
+              return {
+                id: v.id,
+                productId: v.product_id,
+                quality: v.quality,
+                sleeve: v.sleeve,
+                size: v.size,
+                price: pricing.originalPrice,
+                discountPercentage: pricing.discountPercentage,
+                salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
+                stock: Number(v.stock) || 0,
+                sku: v.sku || '',
+                isAvailable: v.is_available ?? true,
+              };
+            })
           : [],
         media: mediaList
           .filter((m: any) => m.media_type !== 'size_guide')
@@ -285,24 +292,38 @@ export async function POST(req: Request) {
 
     let savedVariants: any[] = [];
     if (body.variants && body.variants.length > 0) {
-      const variantsPayload = body.variants.map((v) => ({
-        id: isUuid(v.id) ? v.id : crypto.randomUUID(),
-        product_id: confirmedProdId,
-        quality: v.quality || 'High Quality',
-        sleeve: v.sleeve || 'Sleeveless',
-        size: v.size || 'L',
-        price: Number(v.price) || 0,
-        sale_price: v.salePrice ? Number(v.salePrice) : null,
-        stock: Number(v.stock) || 0,
-        sku: v.sku || '',
-        is_available: v.isAvailable ?? true,
-        updated_at: new Date().toISOString(),
-      }));
+      const variantsPayload = body.variants.map((v) => {
+        const pricing = resolveVariantPricing(v);
+        return {
+          id: isUuid(v.id) ? v.id : crypto.randomUUID(),
+          product_id: confirmedProdId,
+          quality: v.quality || 'High Quality',
+          sleeve: v.sleeve || 'Sleeveless',
+          size: v.size || 'L',
+          price: pricing.originalPrice,
+          sale_price: pricing.isOnSale ? pricing.salePrice : null,
+          discount_percentage: pricing.discountPercentage,
+          stock: Number(v.stock) || 0,
+          sku: v.sku || '',
+          is_available: v.isAvailable ?? true,
+          updated_at: new Date().toISOString(),
+        };
+      });
 
       let { data: insertedVars, error: varErr } = await adminDb
         .from('product_variants')
         .insert(variantsPayload)
         .select();
+
+      if (varErr && (varErr.message?.includes('discount_percentage') || varErr.code === '42703')) {
+        const fallbackPayload = variantsPayload.map(({ discount_percentage, ...rest }) => rest);
+        const retryRes = await adminDb
+          .from('product_variants')
+          .insert(fallbackPayload)
+          .select();
+        insertedVars = retryRes.data;
+        varErr = retryRes.error;
+      }
 
       if (varErr) {
         console.error('FULL SUPABASE VARIANT INSERT ERROR:', varErr);
@@ -406,18 +427,22 @@ export async function POST(req: Request) {
       sizeGuideUrl: savedProd.size_guide_url || body.sizeGuideUrl || undefined,
       isPublished: savedProd.is_published,
       createdAt: savedProd.created_at,
-      variants: savedVariants.map((v: any) => ({
-        id: v.id,
-        productId: v.product_id,
-        quality: v.quality,
-        sleeve: v.sleeve,
-        size: v.size,
-        price: Number(v.price) || 0,
-        salePrice: v.sale_price ? Number(v.sale_price) : undefined,
-        stock: Number(v.stock) || 0,
-        sku: v.sku || '',
-        isAvailable: v.is_available,
-      })),
+      variants: savedVariants.map((v: any) => {
+        const pricing = resolveVariantPricing(v);
+        return {
+          id: v.id,
+          productId: v.product_id,
+          quality: v.quality,
+          sleeve: v.sleeve,
+          size: v.size,
+          price: pricing.originalPrice,
+          discountPercentage: pricing.discountPercentage,
+          salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
+          stock: Number(v.stock) || 0,
+          sku: v.sku || '',
+          isAvailable: v.is_available,
+        };
+      }),
       media: savedMedia
         .filter((m: any) => m.media_type !== 'size_guide')
         .map((m: any) => ({
