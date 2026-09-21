@@ -38,22 +38,22 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-[#11110F] text-charcoal-900 dark:text-[#F4F1E9] flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-3xl p-8 sm:p-10 shadow-elevation space-y-6">
+    <div className="min-h-screen bg-[#F7F3EA] text-[#1D2730] flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white border border-[#D8D0C3] rounded-3xl p-8 sm:p-10 shadow-elevation space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <div className="relative w-20 h-20 sm:w-22 sm:h-22 mx-auto overflow-hidden flex items-center justify-center bg-light-elevated dark:bg-[#22211E] rounded-2xl border border-light-border dark:border-[#34322D] p-2">
+          <div className="relative w-20 h-20 sm:w-22 sm:h-22 mx-auto overflow-hidden flex items-center justify-center bg-[#EEE8DC]/40 rounded-2xl border border-[#D8D0C3] p-2">
             <Image
-              src="/images/Favicon Logo.jpeg"
+              src="/logo2.png"
               alt="Amin Raisat Hosiery"
               fill
-              className="object-contain rounded-xl"
+              className="object-contain"
               priority
             />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">Owner Admin Portal</h1>
-            <p className="text-xs sm:text-sm text-[#B89555] dark:text-[#C9A96A] font-semibold mt-0.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-[#1D2730]">Owner Admin Portal</h1>
+            <p className="text-xs sm:text-sm text-[#C99A3D] font-semibold mt-0.5">
               Amin Raisat Hosiery
             </p>
           </div>
@@ -61,7 +61,7 @@ export default function AdminLoginPage() {
 
         {/* Error Alert */}
         {error && (
-          <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 rounded-xl text-xs font-semibold text-center animate-in fade-in">
+          <div className="p-3.5 bg-[#B8423A]/10 border border-[#B8423A]/30 text-[#B8423A] rounded-xl text-xs font-semibold text-center animate-in fade-in">
             {error}
           </div>
         )}
@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
         {/* Login Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8]">
+            <label className="block text-xs font-semibold text-[#1D2730]">
               Admin Security Password
             </label>
             <div className="relative">
@@ -81,26 +81,26 @@ export default function AdminLoginPage() {
                   setPassword(e.target.value);
                   if (error) setError('');
                 }}
-                className="w-full pl-10 pr-4 py-3 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none transition-all placeholder:text-charcoal-400 dark:placeholder-[#8E8A80]"
+                className="w-full pl-10 pr-4 py-3 bg-[#EEE8DC]/40 border border-[#D8D0C3] rounded-xl text-xs font-semibold text-[#1D2730] focus:border-[#C99A3D] focus:outline-none transition-all placeholder:text-[#66717C]"
                 autoFocus
                 required
               />
-              <Lock className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A] absolute left-3.5 top-3.5" />
+              <Lock className="w-4 h-4 text-[#C99A3D] absolute left-3.5 top-3.5" />
             </div>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 px-6 rounded-xl bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
+            className="w-full py-3.5 px-6 rounded-xl bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] font-bold text-xs shadow-xs transition-colors flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50"
           >
             <span>{isLoading ? 'Authenticating...' : 'Access Admin Dashboard'}</span>
             <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
         </form>
 
-        <div className="pt-2 text-center flex items-center justify-center gap-1.5 text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+        <div className="pt-2 text-center flex items-center justify-center gap-1.5 text-[11px] text-[#66717C]">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#2F7D5A]" />
           <span>Encrypted Store Management Session</span>
         </div>
       </div>

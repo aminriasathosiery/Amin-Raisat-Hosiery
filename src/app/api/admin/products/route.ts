@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { Product, ProductVariant, ProductMedia } from '@/types';
-import { INITIAL_PRODUCTS } from '@/data/initialData';
 import { resolveVariantPricing } from '@/lib/pricing';
 import crypto from 'crypto';
 
@@ -49,7 +48,7 @@ export async function GET(req: Request) {
   }
 
   if (!isSupabaseConfigured()) {
-    return NextResponse.json({ products: INITIAL_PRODUCTS });
+    return NextResponse.json({ products: [] });
   }
 
   try {
@@ -86,11 +85,7 @@ export async function GET(req: Request) {
         shippingInfo: p.shipping_info || '',
         returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
         videoUrl: p.video_url || videoMedia?.url || undefined,
-        sizeGuideUrl:
-          p.size_guide_url ||
-          sizeGuideMedia?.url ||
-          INITIAL_PRODUCTS.find((ip) => ip.slug === p.slug || p.slug?.startsWith(ip.slug))?.sizeGuideUrl ||
-          'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/product-media/products/f0000000-0000-0000-0000-000000000001/size-guide/arh_mens_vest_size_chart.webp',
+        sizeGuideUrl: p.size_guide_url || sizeGuideMedia?.url || undefined,
         isPublished: p.is_published ?? true,
         sortOrder: Number(p.sort_order) || 9999,
         createdAt: p.created_at,
@@ -113,7 +108,7 @@ export async function GET(req: Request) {
             })
           : [],
         media: mediaList
-          .filter((m: any) => m.media_type !== 'size_guide')
+          .filter((m: any) => m.media_type !== 'size_guide' && m.media_type !== 'video')
           .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
           .map((m: any) => ({
             id: m.id,

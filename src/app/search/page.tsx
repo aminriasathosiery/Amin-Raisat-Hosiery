@@ -78,23 +78,23 @@ function SearchContent() {
   const popularSuggestions = ['Vest', 'Cotton', 'Underwear', 'White Vest', 'Sleeveless', 'High Quality', 'Standard Quality'];
 
   return (
-    <div className="min-h-[85vh] py-8 sm:py-12 bg-light-bg dark:bg-[#11110F] text-charcoal-900 dark:text-[#F4F1E9] transition-colors duration-200">
+    <div className="min-h-[85vh] py-8 sm:py-12 bg-[#F7F3EA] text-[#1D2730]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-[#8E8A80] mb-6 flex-wrap">
-          <Link href="/" className="hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors">
+        <div className="flex items-center gap-2 text-xs text-[#66717C] mb-6 flex-wrap">
+          <Link href="/" className="hover:text-[#C99A3D] transition-colors">
             Home
           </Link>
-          <ChevronRight className="w-3 h-3 text-charcoal-400 dark:text-[#6E6A62]" />
-          <span className="font-semibold text-charcoal-900 dark:text-[#F4F1E9]">
+          <ChevronRight className="w-3 h-3 text-[#66717C]" />
+          <span className="font-semibold text-[#1D2730]">
             Search Products
           </span>
         </div>
 
         {/* Search Input Box Header */}
-        <div className="border-b border-light-border dark:border-[#34322D] pb-6 mb-8 max-w-2xl">
+        <div className="border-b border-[#D8D0C3] pb-6 mb-8 max-w-2xl">
           <div className="flex items-center gap-2 mb-3">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-charcoal-900 dark:text-[#F4F1E9] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1D2730] tracking-tight">
               Search Catalog
             </h1>
           </div>
@@ -111,14 +111,14 @@ function SearchContent() {
                 placeholder="Search by product name, category, or style..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:outline-none focus:border-[#B89555] dark:focus:border-[#C9A96A] shadow-xs"
+                className="w-full pl-10 pr-4 py-3 bg-white border border-[#D8D0C3] rounded-xl text-xs text-[#1D2730] placeholder-[#66717C] focus:outline-none focus:border-[#C99A3D] shadow-xs"
               />
-              <Search className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A] absolute left-3.5 top-3.5" />
+              <Search className="w-4 h-4 text-[#C99A3D] absolute left-3.5 top-3.5" />
             </div>
 
             <button
               type="submit"
-              className="px-6 py-3 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center justify-center gap-2 flex-shrink-0"
+              className="px-6 py-3 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-colors flex items-center justify-center gap-2 flex-shrink-0"
               aria-label="Submit Search"
             >
               <Search className="w-4 h-4 stroke-[2.5]" />
@@ -127,9 +127,9 @@ function SearchContent() {
           </form>
 
           {/* Quick Suggestions / Popular Searches */}
-          <div className="mt-3 flex items-center gap-1.5 flex-wrap text-xs text-charcoal-500 dark:text-[#8E8A80]">
+          <div className="mt-3 flex items-center gap-1.5 flex-wrap text-xs text-[#66717C]">
             <span className="flex items-center gap-1 text-[11px] font-semibold">
-              <Tag className="w-3 h-3 text-[#B89555] dark:text-[#C9A96A]" /> Popular:
+              <Tag className="w-3 h-3 text-[#C99A3D]" /> Popular:
             </span>
             {popularSuggestions.map((tag) => (
               <button
@@ -139,7 +139,7 @@ function SearchContent() {
                   setInputValue(tag);
                   executeSearch(tag);
                 }}
-                className="px-2.5 py-1 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] hover:border-[#B89555] dark:hover:border-[#C9A96A] text-charcoal-700 dark:text-[#B8B3A8] rounded-lg text-[11px] font-medium transition-colors"
+                className="px-2.5 py-1 bg-white border border-[#D8D0C3] hover:border-[#C99A3D] text-[#1D2730] rounded-lg text-[11px] font-medium transition-colors"
               >
                 {tag}
               </button>
@@ -149,28 +149,28 @@ function SearchContent() {
 
         {/* Results Area */}
         {!activeQuery.trim() ? (
-          <div className="bg-white dark:bg-[#191917] rounded-2xl p-8 sm:p-12 text-center border border-light-border dark:border-[#34322D] max-w-md mx-auto space-y-3 shadow-xs">
-            <div className="w-12 h-12 bg-light-elevated dark:bg-[#22211E] rounded-2xl flex items-center justify-center mx-auto text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D]">
+          <div className="bg-white rounded-2xl p-8 sm:p-12 text-center border border-[#D8D0C3] max-w-md mx-auto space-y-3 shadow-xs">
+            <div className="w-12 h-12 bg-[#EEE8DC]/50 rounded-2xl flex items-center justify-center mx-auto text-[#C99A3D] border border-[#D8D0C3]">
               <Search className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-charcoal-900 dark:text-[#F4F1E9]">Enter a search term</h3>
-            <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+            <h3 className="text-base font-bold text-[#1D2730]">Enter a search term</h3>
+            <p className="text-xs text-[#66717C]">
               Type a product name, style, or category above and press Enter or tap Search.
             </p>
           </div>
         ) : matchingProducts.length === 0 ? (
-          <div className="bg-white dark:bg-[#191917] rounded-2xl p-8 sm:p-12 text-center border border-light-border dark:border-[#34322D] max-w-md mx-auto space-y-3 shadow-xs">
-            <div className="w-12 h-12 bg-light-elevated dark:bg-[#22211E] rounded-2xl flex items-center justify-center mx-auto text-charcoal-400 dark:text-[#8E8A80] border border-light-border dark:border-[#34322D]">
+          <div className="bg-white rounded-2xl p-8 sm:p-12 text-center border border-[#D8D0C3] max-w-md mx-auto space-y-3 shadow-xs">
+            <div className="w-12 h-12 bg-[#EEE8DC]/50 rounded-2xl flex items-center justify-center mx-auto text-[#66717C] border border-[#D8D0C3]">
               <Search className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-bold text-charcoal-900 dark:text-[#F4F1E9]">No products found</h3>
-            <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+            <h3 className="text-base font-bold text-[#1D2730]">No products found</h3>
+            <p className="text-xs text-[#66717C]">
               No items matched &quot;{activeQuery}&quot;. Try checking for spelling mistakes or explore our catalog.
             </p>
             <div className="pt-2">
               <Link
                 href="/shop"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 rounded-xl text-xs font-bold shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] rounded-xl text-xs font-bold shadow-xs transition-colors"
               >
                 <ShoppingBag className="w-4 h-4 stroke-[2.2]" />
                 <span>Browse All Products</span>
@@ -179,7 +179,7 @@ function SearchContent() {
           </div>
         ) : (
           <div>
-            <p className="text-xs font-medium text-charcoal-500 dark:text-[#8E8A80] mb-6">
+            <p className="text-xs font-medium text-[#66717C] mb-6">
               Found {matchingProducts.length} product{matchingProducts.length > 1 ? 's' : ''}
               {activeQuery && ` matching "${activeQuery}"`}
             </p>
@@ -197,7 +197,7 @@ function SearchContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="p-12 text-center text-xs text-charcoal-500 dark:text-[#8E8A80] bg-light-bg dark:bg-[#11110F] min-h-[50vh]">Loading search...</div>}>
+    <Suspense fallback={<div className="p-12 text-center text-xs text-[#66717C] bg-[#F7F3EA] min-h-[50vh]">Loading search...</div>}>
       <SearchContent />
     </Suspense>
   );

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/admin/ConfirmModal';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
+import { parseVideoUrl } from '@/lib/videoParser';
 
 function AdminProductsContent() {
   const router = useRouter();
@@ -129,8 +130,6 @@ function AdminProductsContent() {
   const [uploadSleeveTarget, setUploadSleeveTarget] = useState<string>('All');
   const [uploadMediaTitle, setUploadMediaTitle] = useState('');
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'uploaded' | 'failed'>('idle');
-  const [videoUrlInput, setVideoUrlInput] = useState('');
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   // Active Editor Tab
   const [editorTab, setEditorTab] = useState<'basic' | 'media' | 'variants' | 'sizeguide'>('basic');
@@ -357,22 +356,8 @@ function AdminProductsContent() {
       productId: currentId,
     }));
 
-    // Maintain media redundancy for video and size guide
-    if (prodVideoUrl.trim()) {
-      if (!cleanMedia.some((m) => m.type === 'video' || m.url === prodVideoUrl.trim())) {
-        cleanMedia.push({
-          id: `med-${currentId}-vid`,
-          productId: currentId,
-          type: 'video',
-          url: prodVideoUrl.trim(),
-          alt: `${prodName.trim()} video demo`,
-          title: 'Product Video Showcase',
-          displayOrder: cleanMedia.length + 1,
-        });
-      }
-    } else {
-      cleanMedia = cleanMedia.filter((m) => m.type !== 'video');
-    }
+    // Gallery media contains photos only; video is persisted as videoUrl
+    cleanMedia = cleanMedia.filter((m) => m.type !== 'video');
 
     if (prodSizeGuideUrl.trim()) {
       cleanMedia = cleanMedia.filter((m) => m.type !== 'size_guide' && m.variantSleeve !== 'size_guide');
@@ -738,25 +723,6 @@ function AdminProductsContent() {
     }
   };
 
-  const handleAddVideo = () => {
-    if (!videoUrlInput.trim()) return;
-    const newVideo: ProductMedia = {
-      id: `media-vid-${Date.now()}`,
-      productId: editingProductId || '',
-      type: 'video',
-      url: videoUrlInput.trim(),
-      alt: `${prodName || 'Product'} video demo`,
-      title: 'Video Showcase',
-      displayOrder: mediaList.length + 1,
-      variantQuality: uploadQualityTarget === 'All' ? undefined : uploadQualityTarget,
-      variantSleeve: uploadSleeveTarget === 'All' ? undefined : uploadSleeveTarget,
-    };
-    setMediaList([...mediaList, newVideo]);
-    setVideoUrlInput('');
-    setIsVideoModalOpen(false);
-    showNotice('Attached video demonstration.');
-  };
-
   const handleRemoveMedia = (id: string) => {
     setMediaList(mediaList.filter((m) => m.id !== id));
   };
@@ -814,13 +780,13 @@ function AdminProductsContent() {
       {viewMode === 'list' && (
         <div className="space-y-6">
           {/* Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#191917] p-5 sm:p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-light-border shadow-sm">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-charcoal-900 dark:text-[#F4F1E9] flex items-center gap-2">
-                <Package className="w-7 h-7 text-[#B89555] dark:text-[#C9A96A]" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-charcoal-900 flex items-center gap-2">
+                <Package className="w-7 h-7 text-[#B89555]" />
                 Products
               </h1>
-              <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8] mt-1">
+              <p className="text-xs text-charcoal-500 mt-1">
                 Manage garment listings, variants, pricing, and inventory.
               </p>
             </div>
@@ -832,9 +798,9 @@ function AdminProductsContent() {
                   setReorderProducts([...products].sort((a, b) => (a.sortOrder || 9999) - (b.sortOrder || 9999)));
                   setIsReorderModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] text-sm font-semibold rounded-xl transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-light-elevated hover:bg-light-hover text-charcoal-900 border border-light-border text-sm font-semibold rounded-xl transition-colors"
               >
-                <Layers className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
+                <Layers className="w-4 h-4 text-[#B89555]" />
                 <span>Reorder</span>
               </button>
               <button
@@ -856,16 +822,16 @@ function AdminProductsContent() {
                 placeholder="Search products by name, tagline, slug..."
                 value={catalogSearch}
                 onChange={(e) => setCatalogSearch(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full px-3.5 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 placeholder-charcoal-400 rounded-xl focus:border-[#B89555] focus:outline-none"
               />
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">Category:</span>
+              <span className="text-xs text-charcoal-500">Category:</span>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="px-3 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
               >
                 <option value="all">All Categories ({products.length})</option>
                 {categories.map((c) => (
@@ -879,10 +845,10 @@ function AdminProductsContent() {
 
           {/* Products List */}
           {filteredProducts.length === 0 ? (
-            <div className="bg-white dark:bg-[#191917] p-12 text-center rounded-2xl border border-light-border dark:border-[#34322D] space-y-3">
-              <Package className="w-12 h-12 text-charcoal-400 dark:text-[#8E8A80] mx-auto" />
-              <h3 className="font-bold text-base text-charcoal-900 dark:text-[#F4F1E9]">No Products Found</h3>
-              <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">
+            <div className="bg-white p-12 text-center rounded-2xl border border-light-border space-y-3">
+              <Package className="w-12 h-12 text-charcoal-400 mx-auto" />
+              <h3 className="font-bold text-base text-charcoal-900">No Products Found</h3>
+              <p className="text-xs text-charcoal-500">
                 {catalogSearch || categoryFilter !== 'all'
                   ? 'No garment matched your current search or category filter.'
                   : 'Start by creating your first garment listing with the button above.'}
@@ -904,11 +870,11 @@ function AdminProductsContent() {
                 return (
                   <div
                     key={prod.id}
-                    className="bg-white dark:bg-[#191917] p-4 sm:p-5 rounded-2xl border border-light-border dark:border-[#34322D] hover:border-[#B89555]/40 dark:hover:border-[#C9A96A]/40 transition-all duration-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm"
+                    className="bg-white p-4 sm:p-5 rounded-2xl border border-light-border hover:border-[#B89555]/40 transition-all duration-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm"
                   >
                     {/* Left: Thumbnail & Info */}
                     <div className="flex items-center gap-4">
-                      <div className="relative w-16 h-20 sm:w-20 sm:h-24 bg-light-elevated dark:bg-[#22211E] rounded-xl overflow-hidden flex-shrink-0 border border-light-border dark:border-[#34322D]">
+                      <div className="relative w-16 h-20 sm:w-20 sm:h-24 bg-light-elevated rounded-xl overflow-hidden flex-shrink-0 border border-light-border">
                         <Image
                           src={firstImage}
                           alt={prod.name}
@@ -920,39 +886,39 @@ function AdminProductsContent() {
 
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border border-light-border dark:border-[#34322D]">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-light-elevated text-charcoal-700 border border-light-border">
                             {catObj?.name || 'Garment'}
                           </span>
                           {prod.isPublished ? (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
                               Published
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-charcoal-200 dark:bg-[#2A2925] text-charcoal-700 dark:text-[#B8B3A8]">
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-charcoal-200 text-charcoal-700">
                               Draft
                             </span>
                           )}
                         </div>
 
-                        <h3 className="font-bold text-base sm:text-lg text-charcoal-900 dark:text-[#F4F1E9] leading-tight">
+                        <h3 className="font-bold text-base sm:text-lg text-charcoal-900 leading-tight">
                           {prod.name}
                         </h3>
-                        <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8] line-clamp-1">{prod.subtitle}</p>
+                        <p className="text-xs text-charcoal-500 line-clamp-1">{prod.subtitle}</p>
 
-                        <div className="flex items-center gap-3 text-xs text-charcoal-500 dark:text-[#B8B3A8] pt-1 flex-wrap font-medium">
+                        <div className="flex items-center gap-3 text-xs text-charcoal-500 pt-1 flex-wrap font-medium">
                           <span>
-                            <strong className="text-charcoal-900 dark:text-[#F4F1E9]">Retail:</strong>{' '}
-                            <span className="text-[#B89555] dark:text-[#C9A96A] font-bold">
+                            <strong className="text-charcoal-900">Retail:</strong>{' '}
+                            <span className="text-[#B89555] font-bold">
                               {minPrice === maxPrice ? `Rs. ${minPrice}` : `Rs. ${minPrice} – Rs. ${maxPrice}`}
                             </span>
                           </span>
                           <span>•</span>
                           <span>
-                            <strong className="text-charcoal-900 dark:text-[#F4F1E9]">Stock:</strong> {totalStock} pcs
+                            <strong className="text-charcoal-900">Stock:</strong> {totalStock} pcs
                           </span>
                           <span>•</span>
                           <span>
-                            <strong className="text-charcoal-900 dark:text-[#F4F1E9]">Variants:</strong> {prod.variants.length}
+                            <strong className="text-charcoal-900">Variants:</strong> {prod.variants.length}
                           </span>
                         </div>
                       </div>
@@ -963,7 +929,7 @@ function AdminProductsContent() {
                       <a
                         href={`/product/${prod.slug}`}
                         target="_blank"
-                        className="p-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-600 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] rounded-xl border border-light-border dark:border-[#34322D] transition-colors"
+                        className="p-2 bg-light-elevated hover:bg-light-hover text-charcoal-600 hover:text-[#B89555] rounded-xl border border-light-border transition-colors"
                         title="View live product"
                       >
                         <Eye className="w-4 h-4" />
@@ -972,9 +938,9 @@ function AdminProductsContent() {
                       <button
                         type="button"
                         onClick={() => handleStartEdit(prod)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] hover:border-[#B89555] dark:hover:border-[#C9A96A] text-xs font-semibold rounded-xl shadow-xs transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-light-elevated hover:bg-light-hover text-charcoal-900 border border-light-border hover:border-[#B89555] text-xs font-semibold rounded-xl shadow-xs transition-colors"
                       >
-                        <Edit2 className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                        <Edit2 className="w-3.5 h-3.5 text-[#B89555]" />
                         <span>Edit</span>
                       </button>
 
@@ -982,17 +948,17 @@ function AdminProductsContent() {
                         type="button"
                         disabled={isDuplicatingId === prod.id}
                         onClick={() => handleDuplicateProduct(prod)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-700 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] border border-light-border dark:border-[#34322D] hover:border-[#B89555] dark:hover:border-[#C9A96A] text-xs font-semibold rounded-xl shadow-xs transition-colors disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-light-elevated hover:bg-light-hover text-charcoal-700 hover:text-[#B89555] border border-light-border hover:border-[#B89555] text-xs font-semibold rounded-xl shadow-xs transition-colors disabled:opacity-50"
                         title="Duplicate this product and all its variants & media"
                       >
-                        <Copy className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                        <Copy className="w-3.5 h-3.5 text-[#B89555]" />
                         <span>{isDuplicatingId === prod.id ? 'Duplicating...' : 'Duplicate'}</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setDeleteModalState({ isOpen: true, productId: prod.id, productName: prod.name })}
-                        className="p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl border border-rose-300 dark:border-rose-800 transition-colors"
+                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-300 transition-colors"
                         title="Delete garment listing"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1012,21 +978,21 @@ function AdminProductsContent() {
       {viewMode === 'editor' && (
         <form onSubmit={handleSaveProduct} className="space-y-6">
           {/* Top Bar Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#191917] p-5 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-light-border shadow-sm">
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className="p-2 text-charcoal-500 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] hover:bg-light-hover dark:hover:bg-[#22211E] rounded-xl transition-colors"
+                className="p-2 text-charcoal-500 hover:text-charcoal-900 hover:bg-light-hover rounded-xl transition-colors"
                 title="Back to all products"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-lg sm:text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                <h1 className="text-lg sm:text-xl font-bold text-charcoal-900">
                   {editingProductId ? `Edit Garment: ${prodName || 'Product'}` : 'Create New Garment Listing'}
                 </h1>
-                <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">
+                <p className="text-xs text-charcoal-500">
                   Set basic details and configure retail pricing for each variant combination.
                 </p>
               </div>
@@ -1036,7 +1002,7 @@ function AdminProductsContent() {
               <button
                 type="button"
                 onClick={() => setViewMode('list')}
-                className="px-4 py-2 text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] hover:bg-light-hover dark:hover:bg-[#2A2925] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] rounded-xl transition-colors"
+                className="px-4 py-2 text-xs font-semibold text-charcoal-700 bg-light-elevated border border-light-border hover:bg-light-hover hover:text-charcoal-900 rounded-xl transition-colors"
               >
                 Cancel
               </button>
@@ -1051,14 +1017,14 @@ function AdminProductsContent() {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 border-b border-light-border dark:border-[#34322D] pb-2 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-2 border-b border-light-border pb-2 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => setEditorTab('basic')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
                 editorTab === 'basic'
-                  ? 'bg-light-elevated dark:bg-[#22211E] text-charcoal-900 dark:text-[#F4F1E9] border-b-2 border-[#B89555] dark:border-[#C9A96A]'
-                  : 'bg-white dark:bg-[#191917] text-charcoal-500 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] border border-light-border dark:border-[#34322D]'
+                  ? 'bg-light-elevated text-charcoal-900 border-b-2 border-[#B89555]'
+                  : 'bg-white text-charcoal-500 hover:text-charcoal-900 border border-light-border'
               }`}
             >
               1. Basic Info
@@ -1069,8 +1035,8 @@ function AdminProductsContent() {
               onClick={() => setEditorTab('media')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 editorTab === 'media'
-                  ? 'bg-light-elevated dark:bg-[#22211E] text-charcoal-900 dark:text-[#F4F1E9] border-b-2 border-[#B89555] dark:border-[#C9A96A]'
-                  : 'bg-white dark:bg-[#191917] text-charcoal-500 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] border border-light-border dark:border-[#34322D]'
+                  ? 'bg-light-elevated text-charcoal-900 border-b-2 border-[#B89555]'
+                  : 'bg-white text-charcoal-500 hover:text-charcoal-900 border border-light-border'
               }`}
             >
               <span>2. Photos &amp; Video ({mediaList.length})</span>
@@ -1081,11 +1047,11 @@ function AdminProductsContent() {
               onClick={() => setEditorTab('variants')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 editorTab === 'variants'
-                  ? 'bg-light-elevated dark:bg-[#22211E] text-charcoal-900 dark:text-[#F4F1E9] border-b-2 border-[#B89555] dark:border-[#C9A96A]'
-                  : 'bg-white dark:bg-[#191917] text-charcoal-500 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] border border-light-border dark:border-[#34322D]'
+                  ? 'bg-light-elevated text-charcoal-900 border-b-2 border-[#B89555]'
+                  : 'bg-white text-charcoal-500 hover:text-charcoal-900 border border-light-border'
               }`}
             >
-              <Zap className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+              <Zap className="w-3.5 h-3.5 text-[#B89555]" />
               <span>3. Pricing &amp; Variants ({variantsList.length})</span>
             </button>
 
@@ -1094,13 +1060,13 @@ function AdminProductsContent() {
               onClick={() => setEditorTab('sizeguide')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 flex-shrink-0 ${
                 editorTab === 'sizeguide'
-                  ? 'bg-light-elevated dark:bg-[#22211E] text-charcoal-900 dark:text-[#F4F1E9] border-b-2 border-[#B89555] dark:border-[#C9A96A]'
-                  : 'bg-white dark:bg-[#191917] text-charcoal-500 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] border border-light-border dark:border-[#34322D]'
+                  ? 'bg-light-elevated text-charcoal-900 border-b-2 border-[#B89555]'
+                  : 'bg-white text-charcoal-500 hover:text-charcoal-900 border border-light-border'
               }`}
             >
               <span>4. Size Guide</span>
               {prodSizeGuideUrl ? (
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold">✓</span>
+                <span className="text-[10px] text-emerald-600 font-extrabold">✓</span>
               ) : (
                 <span className="text-[10px] text-rose-500 font-bold">*</span>
               )}
@@ -1111,19 +1077,19 @@ function AdminProductsContent() {
           {/* TAB 1: BASIC INFORMATION */}
           {/* ========================================================================= */}
           {editorTab === 'basic' && (
-            <div className="bg-white dark:bg-[#191917] p-5 sm:p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card space-y-5 animate-in fade-in">
-              <div className="flex items-center justify-between border-b border-light-border dark:border-[#34322D] pb-3">
-                <h2 className="text-xs font-bold text-[#B89555] dark:text-[#C9A96A] uppercase tracking-wider">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-light-border shadow-sm space-y-5 animate-in fade-in">
+              <div className="flex items-center justify-between border-b border-light-border pb-3">
+                <h2 className="text-xs font-bold text-[#B89555] uppercase tracking-wider">
                   Product Identification &amp; Craftsmanship
                 </h2>
-                <span className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8]">
+                <span className="text-[11px] text-charcoal-500">
                   Single-source normalized catalog listing
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                     Garment Name <span className="text-rose-600">*</span>
                   </label>
                   <input
@@ -1131,13 +1097,13 @@ function AdminProductsContent() {
                     placeholder="e.g. Men's Pure Cotton Vest — High Quality"
                     value={prodName}
                     onChange={(e) => setProdName(e.target.value)}
-                    className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs font-semibold text-charcoal-900 placeholder-charcoal-400 focus:border-[#B89555] focus:outline-none"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                     Quality Level <span className="text-rose-600">*</span>
                   </label>
                   <input
@@ -1150,7 +1116,7 @@ function AdminProductsContent() {
                         setCustomQualities([e.target.value.trim()]);
                       }
                     }}
-                    className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs font-bold text-[#B89555] focus:border-[#B89555] focus:outline-none"
                   />
                 </div>
               </div>
@@ -1158,7 +1124,7 @@ function AdminProductsContent() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4]">
+                    <label className="block text-xs font-semibold text-charcoal-700">
                       URL Slug
                     </label>
                     <button
@@ -1167,7 +1133,7 @@ function AdminProductsContent() {
                         const s = prodName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                         setProdSlug(s);
                       }}
-                      className="text-[10px] text-[#B89555] dark:text-[#C9A96A] hover:underline font-semibold"
+                      className="text-[10px] text-[#B89555] hover:underline font-semibold"
                     >
                       Generate from Name
                     </button>
@@ -1177,24 +1143,24 @@ function AdminProductsContent() {
                     placeholder="e.g. mens-cotton-vest-high-quality"
                     value={prodSlug}
                     onChange={(e) => setProdSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
-                    className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-mono text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs font-mono text-charcoal-900 placeholder-charcoal-400 focus:border-[#B89555] focus:outline-none"
                   />
-                  <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] mt-0.5 block truncate">
+                  <span className="text-[10px] text-charcoal-500 mt-0.5 block truncate">
                     Preview: /product/{prodSlug || 'product-slug'}
                   </span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                     Category <span className="text-rose-600">*</span>
                   </label>
                   <select
                     value={prodCategoryId}
                     onChange={(e) => setProdCategoryId(e.target.value)}
-                    className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs font-semibold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                   >
                     {categories.map((c) => (
-                      <option key={c.id} value={c.id} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                      <option key={c.id} value={c.id} className="bg-white text-charcoal-900">
                         {c.name}
                       </option>
                     ))}
@@ -1202,17 +1168,17 @@ function AdminProductsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                     Subcategory
                   </label>
                   <select
                     value={prodSubcategoryId}
                     onChange={(e) => setProdSubcategoryId(e.target.value)}
-                    className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                   >
-                    <option value="" className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">-- General / None --</option>
+                    <option value="" className="bg-white text-charcoal-900">-- General / None --</option>
                     {activeSubcatsForCategory.map((s) => (
-                      <option key={s.id} value={s.id} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                      <option key={s.id} value={s.id} className="bg-white text-charcoal-900">
                         {s.name}
                       </option>
                     ))}
@@ -1221,7 +1187,7 @@ function AdminProductsContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                   Tagline / Subtitle
                 </label>
                 <input
@@ -1229,12 +1195,12 @@ function AdminProductsContent() {
                   placeholder="e.g. 100% Fine Combed Cotton • Anti-Sag Neck Seams • All-Day Comfort"
                   value={prodSubtitle}
                   onChange={(e) => setProdSubtitle(e.target.value)}
-                  className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs text-charcoal-900 placeholder-charcoal-400 focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                   Short Description (Highlights displayed beneath price in storefront)
                 </label>
                 <textarea
@@ -1242,12 +1208,12 @@ function AdminProductsContent() {
                   placeholder="e.g. Premium 100% combed cotton vest with ultra-soft ribbed weave. Engineered for maximum airflow and daily comfort."
                   value={prodShortDesc}
                   onChange={(e) => setProdShortDesc(e.target.value)}
-                  className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs leading-relaxed text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs leading-relaxed text-charcoal-900 placeholder-charcoal-400 focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                   Full Craftsmanship Description
                 </label>
                 <textarea
@@ -1255,32 +1221,32 @@ function AdminProductsContent() {
                   placeholder="Detailed description of yarn quality, weave, softness, and durability..."
                   value={prodDesc}
                   onChange={(e) => setProdDesc(e.target.value)}
-                  className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs leading-relaxed text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs leading-relaxed text-charcoal-900 placeholder-charcoal-400 focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                     Key Features (One bullet per line)
                   </label>
                   <textarea
                     rows={3}
                     value={prodFeaturesText}
                     onChange={(e) => setProdFeaturesText(e.target.value)}
-                    className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                     Care Instructions (One bullet per line)
                   </label>
                   <textarea
                     rows={3}
                     value={prodCareText}
                     onChange={(e) => setProdCareText(e.target.value)}
-                    className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                   />
                 </div>
               </div>
@@ -1293,14 +1259,14 @@ function AdminProductsContent() {
           {editorTab === 'variants' && (
             <div className="space-y-6 animate-in fade-in">
               {/* STEP 1: Sleeve Styles */}
-              <div className="bg-white dark:bg-[#191917] p-5 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card space-y-3">
+              <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h3 className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] uppercase tracking-wider flex items-center gap-1.5">
+                    <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
                       <span>Step 1: Styles &amp; Sleeve Cuts</span>
-                      <span className="text-charcoal-500 dark:text-[#B8B3A8] font-normal">({customStyles.length})</span>
+                      <span className="text-charcoal-500 font-normal">({customStyles.length})</span>
                     </h3>
-                    <p className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8]">
+                    <p className="text-[11px] text-charcoal-500">
                       Define styles (e.g. Sleeveless, Half Sleeve, Full Sleeve).
                     </p>
                   </div>
@@ -1308,9 +1274,9 @@ function AdminProductsContent() {
                   <button
                     type="button"
                     onClick={() => setIsAddStyleOpen(true)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] border border-light-border dark:border-[#34322D] hover:border-[#B89555] dark:hover:border-[#C9A96A] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl text-xs font-semibold transition-colors self-start sm:self-auto"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-light-elevated hover:bg-light-hover border border-light-border hover:border-[#B89555] text-charcoal-900 rounded-xl text-xs font-semibold transition-colors self-start sm:self-auto"
                   >
-                    <Plus className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                    <Plus className="w-3.5 h-3.5 text-[#B89555]" />
                     <span>Add Style</span>
                   </button>
                 </div>
@@ -1319,13 +1285,13 @@ function AdminProductsContent() {
                   {customStyles.map((st) => (
                     <div
                       key={st}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-light-elevated border border-light-border rounded-xl text-xs font-semibold text-charcoal-900"
                     >
                       <span>{st}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveStyle(st)}
-                        className="text-charcoal-400 dark:text-[#8E8A80] hover:text-rose-600 transition-colors"
+                        className="text-charcoal-400 hover:text-rose-600 transition-colors"
                         title="Delete Style Option"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -1335,13 +1301,13 @@ function AdminProductsContent() {
                 </div>
 
                 {isAddStyleOpen && (
-                  <div className="p-3 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] flex items-center gap-2 max-w-md animate-in fade-in">
+                  <div className="p-3 bg-light-elevated rounded-xl border border-light-border flex items-center gap-2 max-w-md animate-in fade-in">
                     <input
                       type="text"
                       placeholder="e.g. Half Sleeve, Regular Fit..."
                       value={newStyleInput}
                       onChange={(e) => setNewStyleInput(e.target.value)}
-                      className="flex-1 p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg text-xs text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="flex-1 p-2 bg-white border border-light-border rounded-lg text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                       autoFocus
                     />
                     <button
@@ -1354,7 +1320,7 @@ function AdminProductsContent() {
                     <button
                       type="button"
                       onClick={() => setIsAddStyleOpen(false)}
-                      className="p-1.5 text-charcoal-400 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]"
+                      className="p-1.5 text-charcoal-400 hover:text-charcoal-900"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -1363,14 +1329,14 @@ function AdminProductsContent() {
               </div>
 
               {/* STEP 2: Sizes */}
-              <div className="bg-white dark:bg-[#191917] p-5 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card space-y-3">
+              <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h3 className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] uppercase tracking-wider flex items-center gap-1.5">
+                    <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
                       <span>Step 2: Size Options</span>
-                      <span className="text-charcoal-500 dark:text-[#B8B3A8] font-normal">({customSizes.length})</span>
+                      <span className="text-charcoal-500 font-normal">({customSizes.length})</span>
                     </h3>
-                    <p className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8]">
+                    <p className="text-[11px] text-charcoal-500">
                       Select sizes for this garment (e.g. S, M, L, XL, XXL).
                     </p>
                   </div>
@@ -1378,9 +1344,9 @@ function AdminProductsContent() {
                   <button
                     type="button"
                     onClick={() => setIsAddSizeOpen(true)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] border border-light-border dark:border-[#34322D] hover:border-[#B89555] dark:hover:border-[#C9A96A] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl text-xs font-semibold transition-colors self-start sm:self-auto"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-light-elevated hover:bg-light-hover border border-light-border hover:border-[#B89555] text-charcoal-900 rounded-xl text-xs font-semibold transition-colors self-start sm:self-auto"
                   >
-                    <Plus className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                    <Plus className="w-3.5 h-3.5 text-[#B89555]" />
                     <span>Add Size</span>
                   </button>
                 </div>
@@ -1389,13 +1355,13 @@ function AdminProductsContent() {
                   {customSizes.map((sz) => (
                     <div
                       key={sz}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-light-elevated border border-light-border rounded-xl text-xs font-semibold text-charcoal-900"
                     >
                       <span>{sz}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveSize(sz)}
-                        className="text-charcoal-400 dark:text-[#8E8A80] hover:text-rose-600 transition-colors"
+                        className="text-charcoal-400 hover:text-rose-600 transition-colors"
                         title="Delete Size Option"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -1405,13 +1371,13 @@ function AdminProductsContent() {
                 </div>
 
                 {isAddSizeOpen && (
-                  <div className="p-3 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] flex items-center gap-2 max-w-md animate-in fade-in">
+                  <div className="p-3 bg-light-elevated rounded-xl border border-light-border flex items-center gap-2 max-w-md animate-in fade-in">
                     <input
                       type="text"
                       placeholder="e.g. 28, 30, Free Size..."
                       value={newSizeInput}
                       onChange={(e) => setNewSizeInput(e.target.value)}
-                      className="flex-1 p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg text-xs text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="flex-1 p-2 bg-white border border-light-border rounded-lg text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                       autoFocus
                     />
                     <button
@@ -1424,7 +1390,7 @@ function AdminProductsContent() {
                     <button
                       type="button"
                       onClick={() => setIsAddSizeOpen(false)}
-                      className="p-1.5 text-charcoal-400 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]"
+                      className="p-1.5 text-charcoal-400 hover:text-charcoal-900"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -1433,14 +1399,14 @@ function AdminProductsContent() {
               </div>
 
               {/* STEP 3: Matrix Generator Settings & Action */}
-              <div className="bg-white dark:bg-[#191917] p-5 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card space-y-4">
+              <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] uppercase tracking-wider flex items-center gap-1.5">
-                      <Zap className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
+                    <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Zap className="w-4 h-4 text-[#B89555]" />
                       <span>Step 3: Generate Matrix Combinations</span>
                     </h3>
-                    <p className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8]">
+                    <p className="text-[11px] text-charcoal-500">
                       Auto-generate combination rows for Styles ({customStyles.length}) &times; Sizes ({customSizes.length}).
                     </p>
                   </div>
@@ -1449,9 +1415,9 @@ function AdminProductsContent() {
                     <button
                       type="button"
                       onClick={() => setIsAddSingleVarOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] text-xs font-semibold rounded-xl transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-light-elevated hover:bg-light-hover border border-light-border text-charcoal-900 text-xs font-semibold rounded-xl transition-colors"
                     >
-                      <Plus className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                      <Plus className="w-3.5 h-3.5 text-[#B89555]" />
                       <span>Custom Combination</span>
                     </button>
 
@@ -1469,7 +1435,7 @@ function AdminProductsContent() {
                 {/* Generator Default Preset Inputs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
                   <div>
-                    <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                    <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">
                       Default Original Price (Rs.)
                     </label>
                     <input
@@ -1477,12 +1443,12 @@ function AdminProductsContent() {
                       min={0}
                       value={genDefaultPrice}
                       onChange={(e) => setGenDefaultPrice(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="w-full p-2 bg-light-elevated border border-light-border rounded-xl text-xs font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                    <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">
                       Default Bulk Discount (%)
                     </label>
                     <div className="relative">
@@ -1495,22 +1461,22 @@ function AdminProductsContent() {
                           const val = Math.min(99, Math.max(0, Number(e.target.value) || 0));
                           setGenDefaultDiscount(val);
                         }}
-                        className="w-full p-2 pr-6 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                        className="w-full p-2 pr-6 bg-light-elevated border border-light-border rounded-xl text-xs font-bold text-[#B89555] focus:border-[#B89555] focus:outline-none"
                       />
                       <span className="absolute right-2.5 top-2.5 text-xs text-charcoal-400 font-bold">%</span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                    <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">
                       Calculated Sale Price Preview
                     </label>
-                    <div className="p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs flex items-center justify-between h-[38px]">
-                      <span className="font-extrabold text-[#B89555] dark:text-[#C9A96A]">
+                    <div className="p-2 bg-light-elevated border border-light-border rounded-xl text-xs flex items-center justify-between h-[38px]">
+                      <span className="font-extrabold text-[#B89555]">
                         Rs. {calculateSalePrice(genDefaultPrice, genDefaultDiscount)}
                       </span>
                       {genDefaultDiscount > 0 ? (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">
                           {genDefaultDiscount}% OFF
                         </span>
                       ) : (
@@ -1520,7 +1486,7 @@ function AdminProductsContent() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                    <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">
                       Default Stock Units (Pcs)
                     </label>
                     <input
@@ -1528,20 +1494,20 @@ function AdminProductsContent() {
                       min={0}
                       value={genDefaultStock}
                       onChange={(e) => setGenDefaultStock(Math.max(0, Number(e.target.value) || 0))}
-                      className="w-full p-2 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="w-full p-2 bg-light-elevated border border-light-border rounded-xl text-xs font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {variantsList.length > 0 && (
                   <div className="pt-1 flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <span className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8]">
+                    <span className="text-[11px] text-charcoal-500">
                       Quick tool: Apply {genDefaultDiscount}% discount to all existing rows individually.
                     </span>
                     <button
                       type="button"
                       onClick={() => handleApplyBulkDiscountToMatrix(genDefaultDiscount)}
-                      className="px-3 py-1.5 bg-champagne-50 dark:bg-[#22211E] hover:bg-champagne-100 text-[#96763D] dark:text-[#C9A96A] border border-[#B89555]/30 rounded-xl font-bold text-xs transition-colors"
+                      className="px-3 py-1.5 bg-champagne-50 hover:bg-champagne-100 text-[#96763D] border border-[#B89555]/30 rounded-xl font-bold text-xs transition-colors"
                     >
                       Apply {genDefaultDiscount}% to All Existing Variants
                     </button>
@@ -1550,30 +1516,30 @@ function AdminProductsContent() {
 
                 {/* Add Individual Single Variant Modal */}
                 {isAddSingleVarOpen && (
-                  <div className="p-4 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] space-y-3 animate-in fade-in">
-                    <h4 className="font-bold text-xs text-[#B89555] dark:text-[#C9A96A] uppercase">
+                  <div className="p-4 bg-light-elevated rounded-xl border border-light-border space-y-3 animate-in fade-in">
+                    <h4 className="font-bold text-xs text-[#B89555] uppercase">
                       Add Specific Variant Combination
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
                       <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Quality</label>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Quality</label>
                         <input
                           type="text"
                           value={singleVarQuality || prodQualityGrade}
                           onChange={(e) => setSingleVarQuality(e.target.value)}
-                          className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]"
+                          className="w-full p-2 bg-white border border-light-border rounded-xl text-xs font-semibold text-charcoal-900"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Style / Sleeve</label>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Style / Sleeve</label>
                         <select
                           value={singleVarStyle || customStyles[0]}
                           onChange={(e) => setSingleVarStyle(e.target.value)}
-                          className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]"
+                          className="w-full p-2 bg-white border border-light-border rounded-xl text-xs font-semibold text-charcoal-900"
                         >
                           {customStyles.map((st) => (
-                            <option key={st} value={st} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                            <option key={st} value={st} className="bg-white text-charcoal-900">
                               {st}
                             </option>
                           ))}
@@ -1581,14 +1547,14 @@ function AdminProductsContent() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Size</label>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Size</label>
                         <select
                           value={singleVarSize || customSizes[0]}
                           onChange={(e) => setSingleVarSize(e.target.value)}
-                          className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]"
+                          className="w-full p-2 bg-white border border-light-border rounded-xl text-xs font-semibold text-charcoal-900"
                         >
                           {customSizes.map((sz) => (
-                            <option key={sz} value={sz} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                            <option key={sz} value={sz} className="bg-white text-charcoal-900">
                               {sz}
                             </option>
                           ))}
@@ -1596,18 +1562,18 @@ function AdminProductsContent() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Original Price (Rs.)</label>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Original Price (Rs.)</label>
                         <input
                           type="number"
                           min={0}
                           value={singleVarPrice}
                           onChange={(e) => setSingleVarPrice(Number(e.target.value))}
-                          className="w-full p-2 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9]"
+                          className="w-full p-2 bg-white border border-light-border rounded-xl text-xs font-bold text-charcoal-900"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">Discount (%)</label>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Discount (%)</label>
                         <div className="relative">
                           <input
                             type="number"
@@ -1615,7 +1581,7 @@ function AdminProductsContent() {
                             max={99}
                             value={singleVarDiscount}
                             onChange={(e) => setSingleVarDiscount(Number(e.target.value))}
-                            className="w-full p-2 pr-6 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-bold text-[#B89555] dark:text-[#C9A96A]"
+                            className="w-full p-2 pr-6 bg-white border border-light-border rounded-xl text-xs font-bold text-[#B89555]"
                           />
                           <span className="absolute right-2.5 top-2.5 text-xs text-charcoal-400 font-bold">%</span>
                         </div>
@@ -1623,14 +1589,14 @@ function AdminProductsContent() {
                     </div>
 
                     <div className="flex items-center justify-between pt-2">
-                      <div className="text-xs text-charcoal-600 dark:text-[#B8B3A8]">
-                        Sale Price: <strong className="text-[#B89555] dark:text-[#C9A96A]">Rs. {calculateSalePrice(singleVarPrice, singleVarDiscount)}</strong>
+                      <div className="text-xs text-charcoal-600">
+                        Sale Price: <strong className="text-[#B89555]">Rs. {calculateSalePrice(singleVarPrice, singleVarDiscount)}</strong>
                       </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => setIsAddSingleVarOpen(false)}
-                          className="px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border border-light-border dark:border-[#34322D] text-xs font-semibold rounded-xl"
+                          className="px-3 py-1.5 bg-light-elevated text-charcoal-700 border border-light-border text-xs font-semibold rounded-xl"
                         >
                           Cancel
                         </button>
@@ -1648,13 +1614,13 @@ function AdminProductsContent() {
               </div>
 
               {/* STEP 4: Full Variant Matrix Table */}
-              <div className="bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card overflow-hidden">
-                <div className="p-4 sm:p-5 border-b border-light-border dark:border-[#34322D] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div className="bg-white rounded-2xl border border-light-border shadow-sm overflow-hidden">
+                <div className="p-4 sm:p-5 border-b border-light-border flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9] flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-charcoal-900 flex items-center gap-2">
                       <span>Active Variant Matrix ({variantsList.length} combinations)</span>
                     </h3>
-                    <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">
+                    <p className="text-xs text-charcoal-500">
                       Configure exact retail price and inventory stock per variant size.
                     </p>
                   </div>
@@ -1664,7 +1630,7 @@ function AdminProductsContent() {
                       <button
                         type="button"
                         onClick={() => setIsClearMatrixModalOpen(true)}
-                        className="text-xs text-rose-600 dark:text-rose-400 hover:underline font-semibold px-2 py-1"
+                        className="text-xs text-rose-600 hover:underline font-semibold px-2 py-1"
                       >
                         Clear Matrix
                       </button>
@@ -1674,16 +1640,16 @@ function AdminProductsContent() {
 
                 {variantsList.length === 0 ? (
                   <div className="p-10 text-center space-y-2">
-                    <Boxes className="w-8 h-8 text-charcoal-400 dark:text-[#8E8A80] mx-auto" />
-                    <p className="text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9]">No variants in matrix yet</p>
-                    <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8]">
+                    <Boxes className="w-8 h-8 text-charcoal-400 mx-auto" />
+                    <p className="text-xs font-bold text-charcoal-900">No variants in matrix yet</p>
+                    <p className="text-xs text-charcoal-500">
                       Click &quot;Generate Matrix&quot; above to create combinations automatically.
                     </p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left min-w-[620px]">
-                      <thead className="bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] uppercase font-bold text-[11px] border-b border-light-border dark:border-[#34322D]">
+                      <thead className="bg-light-elevated text-[#B89555] uppercase font-bold text-[11px] border-b border-light-border">
                         <tr>
                           <th className="p-3">Quality</th>
                           <th className="p-3">Style / Sleeve</th>
@@ -1696,29 +1662,29 @@ function AdminProductsContent() {
                           <th className="p-3 text-center">Action</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-light-border dark:divide-[#282723] font-medium text-charcoal-900 dark:text-[#F4F1E9]">
+                      <tbody className="divide-y divide-light-border font-medium text-charcoal-900">
                         {variantsList.map((v) => {
                           const retailPrice = Number(v.price) || 0;
 
                           return (
-                            <tr key={v.id} className="hover:bg-light-hover/60 dark:hover:bg-[#22211E]/60 transition-colors">
+                            <tr key={v.id} className="hover:bg-light-hover/60 transition-colors">
                               <td className="p-3">
-                                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] border border-light-border dark:border-[#34322D]">
+                                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-light-elevated text-charcoal-700 border border-light-border">
                                   {v.quality}
                                 </span>
                               </td>
-                              <td className="p-3 font-semibold text-charcoal-900 dark:text-[#F4F1E9]">{v.sleeve}</td>
+                              <td className="p-3 font-semibold text-charcoal-900">{v.sleeve}</td>
                               <td className="p-3 text-center">
-                                <span className="font-bold bg-champagne-100 dark:bg-[#22211E] text-[#96763D] dark:text-[#C9A96A] border border-[#B89555]/30 px-2 py-0.5 rounded-md text-xs">
+                                <span className="font-bold bg-champagne-100 text-[#96763D] border border-[#B89555]/30 px-2 py-0.5 rounded-md text-xs">
                                   {v.size}
                                 </span>
                               </td>
-                              <td className="p-3 font-mono text-[11px] text-charcoal-500 dark:text-[#B8B3A8]">
+                              <td className="p-3 font-mono text-[11px] text-charcoal-500">
                                 <input
                                   type="text"
                                   value={v.sku}
                                   onChange={(e) => handleUpdateVariantField(v.id, 'sku', e.target.value)}
-                                  className="w-28 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-mono text-[11px] text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                                  className="w-28 px-2 py-1 bg-light-elevated border border-light-border rounded-lg font-mono text-[11px] text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                                 />
                               </td>
                               <td className="p-3">
@@ -1731,7 +1697,7 @@ function AdminProductsContent() {
                                       const newRetail = Number(e.target.value);
                                       handleUpdateVariantField(v.id, 'price', newRetail);
                                     }}
-                                    className="w-20 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                                    className="w-20 px-2 py-1 bg-light-elevated border border-light-border rounded-lg font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                                   />
                                 </div>
                               </td>
@@ -1746,7 +1712,7 @@ function AdminProductsContent() {
                                       const newDiscount = Math.min(99, Math.max(0, Number(e.target.value) || 0));
                                       handleUpdateVariantField(v.id, 'discountPercentage', newDiscount);
                                     }}
-                                    className="w-16 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                                    className="w-16 px-2 py-1 bg-light-elevated border border-light-border rounded-lg font-bold text-[#B89555] focus:border-[#B89555] focus:outline-none"
                                   />
                                   <span className="text-charcoal-400 text-xs">%</span>
                                 </div>
@@ -1754,7 +1720,7 @@ function AdminProductsContent() {
                               <td className="p-3">
                                 <div className="flex items-center gap-1">
                                   <span className="text-charcoal-400 text-xs">Rs.</span>
-                                  <span className={`font-bold ${v.discountPercentage && v.discountPercentage > 0 ? 'text-[#B89555] dark:text-[#C9A96A]' : 'text-charcoal-900 dark:text-[#F4F1E9]'}`}>
+                                  <span className={`font-bold ${v.discountPercentage && v.discountPercentage > 0 ? 'text-[#B89555]' : 'text-charcoal-900'}`}>
                                     {v.salePrice || v.price}
                                   </span>
                                 </div>
@@ -1766,14 +1732,14 @@ function AdminProductsContent() {
                                   onChange={(e) =>
                                     handleUpdateVariantField(v.id, 'stock', Number(e.target.value))
                                   }
-                                  className="w-18 px-2 py-1 bg-light-elevated dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                                  className="w-18 px-2 py-1 bg-light-elevated border border-light-border rounded-lg font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                                 />
                               </td>
                               <td className="p-3 text-center">
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveVariant(v.id)}
-                                  className="p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                                  className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                   title="Remove this combination"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1794,31 +1760,31 @@ function AdminProductsContent() {
           {/* TAB 3: PHOTOS & VIDEOS (VARIANT SPECIFIC) */}
           {/* ========================================================================= */}
           {editorTab === 'media' && (
-            <div className="bg-white dark:bg-[#191917] p-5 sm:p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card space-y-6 animate-in fade-in">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-light-border shadow-sm space-y-6 animate-in fade-in">
               <div>
-                <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">
+                <h3 className="font-bold text-sm text-charcoal-900">
                   Variant-Specific Product Photos &amp; Video Demonstration
                 </h3>
-                <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8] mt-0.5">
+                <p className="text-xs text-charcoal-500 mt-0.5">
                   Attach specific photos to exact sleeve options (e.g. Sleeveless vs Full Sleeve). The storefront gallery dynamically adapts as buyers select different styles!
                 </p>
               </div>
 
               {/* Upload Box */}
-              <div className="p-5 bg-light-elevated dark:bg-[#22211E] rounded-2xl border border-dashed border-light-border dark:border-[#34322D] space-y-4">
+              <div className="p-5 bg-light-elevated rounded-2xl border border-dashed border-light-border space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                    <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                       1. Quality Target:
                     </label>
                     <select
                       value={uploadQualityTarget}
                       onChange={(e) => setUploadQualityTarget(e.target.value)}
-                      className="w-full p-2.5 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="w-full p-2.5 bg-white border border-light-border rounded-xl text-xs font-semibold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                     >
-                      <option value="All" className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">All Qualities</option>
+                      <option value="All" className="bg-white text-charcoal-900">All Qualities</option>
                       {customQualities.map((q) => (
-                        <option key={q} value={q} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                        <option key={q} value={q} className="bg-white text-charcoal-900">
                           For &quot;{q}&quot;
                         </option>
                       ))}
@@ -1826,17 +1792,17 @@ function AdminProductsContent() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                    <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                       2. Style / Sleeve Target:
                     </label>
                     <select
                       value={uploadSleeveTarget}
                       onChange={(e) => setUploadSleeveTarget(e.target.value)}
-                      className="w-full p-2.5 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="w-full p-2.5 bg-white border border-light-border rounded-xl text-xs font-semibold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                     >
-                      <option value="All" className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">All Styles</option>
+                      <option value="All" className="bg-white text-charcoal-900">All Styles</option>
                       {availableVariantStylesForMedia.map((st) => (
-                        <option key={st} value={st} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                        <option key={st} value={st} className="bg-white text-charcoal-900">
                           For &quot;{st}&quot;
                         </option>
                       ))}
@@ -1844,7 +1810,7 @@ function AdminProductsContent() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                    <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                       3. Photo Caption / Title:
                     </label>
                     <input
@@ -1852,13 +1818,13 @@ function AdminProductsContent() {
                       placeholder="e.g. Front chest close-up"
                       value={uploadMediaTitle}
                       onChange={(e) => setUploadMediaTitle(e.target.value)}
-                      className="w-full p-2.5 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="w-full p-2.5 bg-white border border-light-border rounded-xl text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Upload Actions */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-3 pt-2">
                   <label className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-all active:scale-[0.99]">
                     <Upload className="w-4 h-4" />
                     <span>Upload Image Files</span>
@@ -1870,53 +1836,50 @@ function AdminProductsContent() {
                       className="hidden"
                     />
                   </label>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsVideoModalOpen(true)}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white dark:bg-[#191917] hover:bg-light-hover dark:hover:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] text-xs font-semibold rounded-xl transition-colors"
-                  >
-                    <Film className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-                    <span>Attach Video URL</span>
-                  </button>
                 </div>
               </div>
 
               {/* Product Video URL Section */}
-              <div className="p-5 bg-light-elevated dark:bg-[#22211E] rounded-2xl border border-light-border dark:border-[#34322D] space-y-3">
+              <div className="p-5 bg-light-elevated rounded-2xl border border-light-border space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Film className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
-                    <h3 className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] uppercase tracking-wider">
+                    <Film className="w-4 h-4 text-[#B89555]" />
+                    <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider">
                       Product Video
                     </h3>
                   </div>
                   {prodVideoUrl && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                      ✓ Video Configured
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      parseVideoUrl(prodVideoUrl).isSupported
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border-amber-300'
+                    }`}>
+                      {parseVideoUrl(prodVideoUrl).isSupported
+                        ? `✓ ${parseVideoUrl(prodVideoUrl).providerDisplayName} Configured`
+                        : '⚠ Unsupported Provider'}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
-                  When provided, product cards display a &apos;Play Video&apos; overlay and the product page media area plays the video inline.
+                <p className="text-[11px] text-charcoal-500">
+                  Supported: YouTube (standard, shorts, youtu.be), Vimeo, Facebook Video, Instagram (Reel/Post), TikTok, and direct MP4/WebM files. The video plays inline in the exact same container over the product photo.
                 </p>
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                     Video URL
                   </label>
                   <div className="flex flex-col sm:flex-row items-center gap-2">
                     <input
                       type="url"
-                      placeholder="Paste YouTube or supported video URL (e.g. https://www.youtube.com/watch?v=XXXXXXXX)"
+                      placeholder="Paste YouTube, Vimeo, Facebook, Instagram, TikTok, or .mp4 video URL"
                       value={prodVideoUrl}
                       onChange={(e) => setProdVideoUrl(e.target.value)}
-                      className="flex-1 w-full p-2.5 bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="flex-1 w-full p-2.5 bg-white border border-light-border rounded-xl text-xs text-charcoal-900 placeholder-charcoal-400 focus:border-[#B89555] focus:outline-none"
                     />
                     {prodVideoUrl && (
                       <button
                         type="button"
                         onClick={() => setProdVideoUrl('')}
-                        className="px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-semibold transition-colors flex-shrink-0"
+                        className="px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl font-semibold transition-colors flex-shrink-0"
                       >
                         Remove Video URL
                       </button>
@@ -1924,66 +1887,77 @@ function AdminProductsContent() {
                   </div>
                 </div>
 
-                {prodVideoUrl && (
-                  <div className="flex items-center gap-3 p-3 bg-white dark:bg-[#191917] rounded-xl border border-light-border dark:border-[#34322D]">
-                    {(() => {
-                      const ytMatch = prodVideoUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-                      const ytId = ytMatch ? ytMatch[1] : null;
-                      if (ytId) {
-                        return (
-                          <div className="relative w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-black">
-                            <img
-                              src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
-                              alt="YouTube Video Preview"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                              <Film className="w-5 h-5 text-white drop-shadow" />
-                            </div>
+                {prodVideoUrl && (() => {
+                  const parsed = parseVideoUrl(prodVideoUrl);
+                  return (
+                    <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-light-border">
+                      {parsed.thumbnailUrl ? (
+                        <div className="relative w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-black">
+                          <img
+                            src={parsed.thumbnailUrl}
+                            alt="Video Thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Film className="w-5 h-5 text-white drop-shadow" />
                           </div>
-                        );
-                      }
-                      return (
-                        <div className="w-14 h-14 rounded-lg bg-light-elevated dark:bg-[#22211E] flex items-center justify-center flex-shrink-0 border border-light-border dark:border-[#34322D]">
-                          <Film className="w-6 h-6 text-[#B89555] dark:text-[#C9A96A]" />
                         </div>
-                      );
-                    })()}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-charcoal-900 dark:text-[#F4F1E9] truncate">
-                        {prodVideoUrl}
-                      </p>
-                      <a
-                        href={prodVideoUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[11px] text-[#B89555] dark:text-[#C9A96A] hover:underline font-semibold"
-                      >
-                        Test / View Video URL &rarr;
-                      </a>
+                      ) : (
+                        <div className="w-14 h-14 rounded-lg bg-light-elevated flex items-center justify-center flex-shrink-0 border border-light-border">
+                          <Film className="w-6 h-6 text-[#B89555]" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-charcoal-100 text-charcoal-800">
+                            {parsed.providerDisplayName}
+                          </span>
+                          {!parsed.isSupported && (
+                            <span className="text-[10px] font-bold text-rose-600">
+                              {parsed.errorMessage || 'Unsupported format'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs font-bold text-charcoal-900 truncate mt-1">
+                          {prodVideoUrl}
+                        </p>
+                        {parsed.warningMessage && (
+                          <p className="text-[10px] text-amber-700 mt-0.5">
+                            {parsed.warningMessage}
+                          </p>
+                        )}
+                        <a
+                          href={prodVideoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] text-[#B89555] hover:underline font-semibold inline-block mt-0.5"
+                        >
+                          Test / View Video URL &rarr;
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Media List Grid */}
               <div className="space-y-3">
-                <h4 className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] uppercase tracking-wider">
+                <h4 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider">
                   Attached Gallery Media ({mediaList.length})
                 </h4>
 
                 {mediaList.length === 0 ? (
-                  <p className="text-xs text-charcoal-500 dark:text-[#B8B3A8] italic">No photos or videos attached yet.</p>
+                  <p className="text-xs text-charcoal-500 italic">No photos or videos attached yet.</p>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
                     {mediaList.map((m, idx) => (
                       <div
                         key={m.id}
-                        className="relative group aspect-square rounded-xl overflow-hidden bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D]"
+                        className="relative group aspect-square rounded-xl overflow-hidden bg-light-elevated border border-light-border"
                       >
                         {m.type === 'video' ? (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-charcoal-900 text-charcoal-50 p-2 text-center">
-                            <Film className="w-6 h-6 text-[#B89555] dark:text-[#C9A96A] mb-1" />
+                            <Film className="w-6 h-6 text-[#B89555] mb-1" />
                             <span className="text-[10px] truncate max-w-full font-mono">{m.url}</span>
                           </div>
                         ) : (
@@ -2026,32 +2000,32 @@ function AdminProductsContent() {
           {/* TAB 4: SIZE GUIDE (MANDATORY ADMIN-UPLOADED CHART) */}
           {/* ========================================================================= */}
           {editorTab === 'sizeguide' && (
-            <div className="bg-white dark:bg-[#191917] p-5 sm:p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-card space-y-6 animate-in fade-in">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-light-border dark:border-[#34322D] pb-3">
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-light-border shadow-sm space-y-6 animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-light-border pb-3">
                 <div>
-                  <h2 className="text-xs font-bold text-[#B89555] dark:text-[#C9A96A] uppercase tracking-wider">
+                  <h2 className="text-xs font-bold text-[#B89555] uppercase tracking-wider">
                     Official Product Size Guide Chart <span className="text-rose-600">* (Mandatory)</span>
                   </h2>
-                  <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] mt-0.5">
+                  <p className="text-xs text-charcoal-500 mt-0.5">
                     This chart is the ONLY content shown inside the customer-facing &apos;Size Guide&apos; modal on the product page.
                   </p>
                 </div>
                 {prodSizeGuideUrl ? (
-                  <span className="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 self-start sm:self-auto">
+                  <span className="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 self-start sm:self-auto">
                     ✓ Size Guide Attached
                   </span>
                 ) : (
-                  <span className="text-xs font-bold px-3 py-1 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 self-start sm:self-auto">
+                  <span className="text-xs font-bold px-3 py-1 rounded-xl bg-rose-100 text-rose-800 border border-rose-300 self-start sm:self-auto">
                     * Upload Required to Save
                   </span>
                 )}
               </div>
 
               {prodSizeGuideUrl ? (
-                <div className="p-5 bg-light-elevated dark:bg-[#22211E] rounded-2xl border border-light-border dark:border-[#34322D] space-y-4">
+                <div className="p-5 bg-light-elevated rounded-2xl border border-light-border space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] flex-shrink-0 shadow-xs">
+                      <div className="relative w-28 h-28 rounded-xl overflow-hidden bg-white border border-light-border flex-shrink-0 shadow-xs">
                         <img
                           src={prodSizeGuideUrl}
                           alt="Size Guide Chart Preview"
@@ -2059,17 +2033,17 @@ function AdminProductsContent() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <p className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                        <p className="text-sm font-bold text-charcoal-900">
                           Attached Size Guide Chart
                         </p>
-                        <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+                        <p className="text-xs text-charcoal-500">
                           Ready to be rendered exclusively in the customer Size Guide modal.
                         </p>
                         <a
                           href={prodSizeGuideUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-[#B89555] dark:text-[#C9A96A] hover:underline font-semibold inline-block pt-1"
+                          className="text-xs text-[#B89555] hover:underline font-semibold inline-block pt-1"
                         >
                           View Full Image in New Tab &rarr;
                         </a>
@@ -2077,8 +2051,8 @@ function AdminProductsContent() {
                     </div>
 
                     <div className="flex items-center gap-3 w-full sm:w-auto">
-                      <label className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white dark:bg-[#191917] hover:bg-light-hover dark:hover:bg-[#2A2925] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] text-xs font-semibold rounded-xl cursor-pointer transition-colors flex-1 sm:flex-initial">
-                        <Upload className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                      <label className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-white hover:bg-light-hover border border-light-border text-charcoal-900 text-xs font-semibold rounded-xl cursor-pointer transition-colors flex-1 sm:flex-initial">
+                        <Upload className="w-3.5 h-3.5 text-[#B89555]" />
                         <span>{isUploadingSizeGuide ? 'Uploading...' : 'Replace Image'}</span>
                         <input
                           type="file"
@@ -2110,7 +2084,7 @@ function AdminProductsContent() {
                       <button
                         type="button"
                         onClick={() => setProdSizeGuideUrl('')}
-                        className="px-3 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-semibold transition-colors flex-1 sm:flex-initial text-center"
+                        className="px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-xl font-semibold transition-colors flex-1 sm:flex-initial text-center"
                       >
                         Remove
                       </button>
@@ -2118,7 +2092,7 @@ function AdminProductsContent() {
                   </div>
                 </div>
               ) : (
-                <div className="p-8 border-2 border-dashed border-rose-300 dark:border-rose-900/60 hover:border-[#B89555] rounded-2xl text-center transition-colors bg-rose-50/30 dark:bg-rose-950/10 space-y-3 relative">
+                <div className="p-8 border-2 border-dashed border-rose-300 hover:border-[#B89555] rounded-2xl text-center transition-colors bg-rose-50/30 space-y-3 relative">
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
@@ -2145,13 +2119,13 @@ function AdminProductsContent() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
-                    <div className="p-3.5 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                    <div className="p-3.5 rounded-2xl bg-rose-100 text-rose-600">
                       <Upload className={`w-7 h-7 ${isUploadingSizeGuide ? 'animate-bounce' : ''}`} />
                     </div>
-                    <span className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                    <span className="text-sm font-bold text-charcoal-900">
                       {isUploadingSizeGuide ? 'Uploading Size Guide Chart...' : 'Upload Size Guide Chart (Required)'}
                     </span>
-                    <span className="text-xs text-charcoal-500 dark:text-[#8E8A80] max-w-sm">
+                    <span className="text-xs text-charcoal-500 max-w-sm">
                       PNG, JPG, or WebP. This chart will be rendered at full fidelity when customers click &apos;Size Guide&apos; on the product page.
                     </span>
                   </div>
@@ -2162,63 +2136,16 @@ function AdminProductsContent() {
         </form>
       )}
 
-      {/* Video URL Modal */}
-      {isVideoModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] p-5 max-w-md w-full space-y-4 shadow-elevation">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">Attach Video Demonstration</h3>
-              <button
-                type="button"
-                onClick={() => setIsVideoModalOpen(false)}
-                className="text-charcoal-400 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#D8D8D4] mb-1">
-                Direct Video MP4 or Embed URL:
-              </label>
-              <input
-                type="url"
-                placeholder="https://..."
-                value={videoUrlInput}
-                onChange={(e) => setVideoUrlInput(e.target.value)}
-                className="w-full p-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-xs text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
-                autoFocus
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsVideoModalOpen(false)}
-                className="px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] text-xs font-semibold rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleAddVideo}
-                className="px-4 py-1.5 bg-champagne-500 text-charcoal-950 text-xs font-bold rounded-xl"
-              >
-                Attach Video
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Reorder Products Modal */}
       {isReorderModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] p-5 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-elevation">
+          <div className="bg-white rounded-2xl border border-light-border p-5 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col shadow-elevation">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">Reorder Products</h3>
+              <h3 className="font-bold text-sm text-charcoal-900">Reorder Products</h3>
               <button
                 type="button"
                 onClick={() => setIsReorderModalOpen(false)}
-                className="text-charcoal-400 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]"
+                className="text-charcoal-400 hover:text-charcoal-900"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2227,10 +2154,10 @@ function AdminProductsContent() {
               {reorderProducts.map((product, index) => (
                 <div
                   key={product.id}
-                  className="flex items-center gap-3 p-3 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl"
+                  className="flex items-center gap-3 p-3 bg-light-elevated border border-light-border rounded-xl"
                 >
-                  <span className="text-xs font-bold text-charcoal-500 dark:text-[#B8B3A8] w-8">#{index + 1}</span>
-                  <span className="flex-1 text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9]">{product.name}</span>
+                  <span className="text-xs font-bold text-charcoal-500 w-8">#{index + 1}</span>
+                  <span className="flex-1 text-xs font-semibold text-charcoal-900">{product.name}</span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -2242,7 +2169,7 @@ function AdminProductsContent() {
                         }
                       }}
                       disabled={index === 0}
-                      className="p-1.5 text-charcoal-600 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-light-hover dark:hover:bg-[#2A2925]"
+                      className="p-1.5 text-charcoal-600 hover:text-[#B89555] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-light-hover"
                     >
                       <ChevronRight className="w-4 h-4 -rotate-90" />
                     </button>
@@ -2256,7 +2183,7 @@ function AdminProductsContent() {
                         }
                       }}
                       disabled={index === reorderProducts.length - 1}
-                      className="p-1.5 text-charcoal-600 dark:text-[#B8B3A8] hover:text-[#B89555] dark:hover:text-[#C9A96A] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-light-hover dark:hover:bg-[#2A2925]"
+                      className="p-1.5 text-charcoal-600 hover:text-[#B89555] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg hover:bg-light-hover"
                     >
                       <ChevronRight className="w-4 h-4 rotate-90" />
                     </button>
@@ -2264,11 +2191,11 @@ function AdminProductsContent() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end gap-2 pt-4 border-t border-light-border dark:border-[#34322D]">
+            <div className="flex justify-end gap-2 pt-4 border-t border-light-border">
               <button
                 type="button"
                 onClick={() => setIsReorderModalOpen(false)}
-                className="px-4 py-2 bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] text-xs font-semibold rounded-xl hover:bg-light-hover dark:hover:bg-[#2A2925]"
+                className="px-4 py-2 bg-light-elevated text-charcoal-700 text-xs font-semibold rounded-xl hover:bg-light-hover"
               >
                 Cancel
               </button>

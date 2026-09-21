@@ -16,7 +16,6 @@ import {
 import {
   INITIAL_CATEGORIES,
   INITIAL_SUBCATEGORIES,
-  INITIAL_PRODUCTS,
   INITIAL_SITE_SETTINGS,
   INITIAL_HERO_SLIDES,
 } from '@/data/initialData';
@@ -30,7 +29,7 @@ const LOCAL_STORAGE_KEYS = {
   SETTINGS: 'arh_settings_v3',
   ORDERS: 'arh_orders_v3',
   REVIEWS: 'arh_reviews_v3',
-  HERO_SLIDES: 'arh_hero_slides_v4',
+  HERO_SLIDES: 'arh_hero_slides_v5',
 };
 
 export class DataStore {
@@ -506,15 +505,14 @@ export class DataStore {
             description: p.description || '',
             features: Array.isArray(p.features) ? p.features : [],
             qualityComparison: p.quality_comparison || {},
-            careInstructions: Array.isArray(p.care_instructions) ? p.care_instructions : INITIAL_PRODUCTS[0].careInstructions,
-            shippingInfo: p.shipping_info || INITIAL_PRODUCTS[0].shippingInfo,
+            careInstructions: Array.isArray(p.care_instructions) ? p.care_instructions : [],
+            shippingInfo: p.shipping_info || '',
             returnPolicy: 'We offer hassle-free exchange within 7 days of delivery in case of sizing or defect issues. Product must be unwashed and in original condition.',
             videoUrl: p.video_url || p.product_media?.find((m: any) => m.media_type === 'video')?.url || undefined,
             sizeGuideUrl:
               p.size_guide_url ||
               p.product_media?.find((m: any) => m.media_type === 'size_guide')?.url ||
-              INITIAL_PRODUCTS.find((ip) => ip.slug === p.slug || p.slug?.startsWith(ip.slug))?.sizeGuideUrl ||
-              'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/product-media/products/f0000000-0000-0000-0000-000000000001/size-guide/arh_mens_vest_size_chart.webp',
+              undefined,
             isPublished: p.is_published ?? true,
             createdAt: p.created_at,
             variants: Array.isArray(p.product_variants)
@@ -537,7 +535,7 @@ export class DataStore {
               : [],
             media: Array.isArray(p.product_media)
               ? p.product_media
-                  .filter((m: any) => m.media_type !== 'size_guide')
+                  .filter((m: any) => m.media_type !== 'size_guide' && m.media_type !== 'video')
                   .sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0))
                   .map((m: any) => ({
                     id: m.id,
@@ -570,9 +568,6 @@ export class DataStore {
             }
           } catch {}
         }
-      }
-      if (products.length === 0) {
-        products = INITIAL_PRODUCTS;
       }
     }
 

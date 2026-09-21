@@ -17,9 +17,9 @@ export const metadata: Metadata = {
   description:
     "Shop premium 100% fine combed cotton Men's Vests in High Quality (taped seams) and Standard Quality. Nationwide delivery across Pakistan with Free Delivery on 3+ pieces.",
   icons: {
-    icon: '/images/Favicon Logo.jpeg',
-    shortcut: '/images/Favicon Logo.jpeg',
-    apple: '/images/Favicon Logo.jpeg',
+    icon: '/logo2-bg.jpeg',
+    shortcut: '/logo2-bg.jpeg',
+    apple: '/logo2-bg.jpeg',
   },
   keywords: [
     'Amin Raisat Hosiery',
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     description:
       'Premium 100% fine combed cotton vests and innerwear. Free Delivery on 3+ pieces across Pakistan.',
     siteName: 'Amin Raisat Hosiery',
-    images: [{ url: '/images/header logo.png', width: 800, height: 300, alt: 'Amin Raisat Hosiery' }],
+    images: [{ url: '/logo2.png', width: 800, height: 300, alt: 'Amin Raisat Hosiery' }],
     locale: 'en_PK',
     type: 'website',
   },
@@ -56,29 +56,8 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning className="light">
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                var stored = localStorage.getItem('arh_theme_mode');
-                var theme = (stored === 'dark') ? 'dark' : 'light';
-                if (theme === 'dark') {
-                  document.documentElement.classList.remove('light');
-                  document.documentElement.classList.add('dark');
-                  document.documentElement.style.colorScheme = 'dark';
-                } else {
-                  document.documentElement.classList.remove('dark');
-                  document.documentElement.classList.add('light');
-                  document.documentElement.style.colorScheme = 'light';
-                }
-              } catch (e) {}
-            `,
-          }}
-        />
-      </head>
-      <body className="min-h-screen flex flex-col bg-light-bg dark:bg-dark-bg text-light-text dark:text-gray-100 antialiased selection:bg-gold-500 selection:text-black">
+    <html lang="en">
+      <body className="min-h-screen flex flex-col bg-[#F7F3EA] text-[#1D2730] antialiased selection:bg-[#C99A3D] selection:text-white">
         <ThemeProvider>
           <AuthProvider>
             <StoreProvider initialProducts={initialProducts}>

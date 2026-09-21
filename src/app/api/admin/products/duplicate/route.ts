@@ -222,8 +222,8 @@ export async function POST(req: Request) {
       careInstructions: Array.isArray(insertedProduct.care_instructions) ? insertedProduct.care_instructions : [],
       shippingInfo: insertedProduct.shipping_info || '',
       returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
-      videoUrl: insertedProduct.video_url || original.video_url || undefined,
-      sizeGuideUrl: insertedProduct.size_guide_url || original.size_guide_url || undefined,
+      videoUrl: insertedProduct.video_url || original.video_url || originalMedia.find((m: any) => m.media_type === 'video')?.url || undefined,
+      sizeGuideUrl: insertedProduct.size_guide_url || original.size_guide_url || originalMedia.find((m: any) => m.media_type === 'size_guide')?.url || undefined,
       isPublished: true,
       createdAt: insertedProduct.created_at,
       variants: insertedVariants.map((v: any) => {
@@ -242,7 +242,9 @@ export async function POST(req: Request) {
           isAvailable: v.is_available ?? true,
         };
       }),
-      media: insertedMedia.map((m: any) => ({
+      media: insertedMedia
+        .filter((m: any) => m.media_type !== 'size_guide' && m.media_type !== 'video')
+        .map((m: any) => ({
         id: m.id,
         productId: newProductId,
         type: m.media_type || 'photo',

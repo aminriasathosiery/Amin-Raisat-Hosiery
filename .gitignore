@@ -47,3 +47,4 @@ next-env.d.ts
 *.sw?
 .vercel
 src/data/.review-moderation.json
+scratch/

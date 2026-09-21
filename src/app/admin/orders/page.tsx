@@ -261,7 +261,7 @@ export default function AdminOrdersPage() {
 
     if (status === 'VERIFIED') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
           <CheckCircle className="w-2.5 h-2.5" />
           <span>Verified</span>
         </span>
@@ -269,7 +269,7 @@ export default function AdminOrdersPage() {
     }
     if (status === 'REJECTED') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-500/15 text-rose-700 border border-rose-500/30">
           <XCircle className="w-2.5 h-2.5" />
           <span>Rejected</span>
         </span>
@@ -277,39 +277,39 @@ export default function AdminOrdersPage() {
     }
     if (status === 'PENDING_VERIFICATION') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 animate-pulse">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/15 text-amber-700 border border-amber-500/30 animate-pulse">
           <Clock className="w-2.5 h-2.5" />
           <span>Verify Receipt</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-charcoal-100 dark:bg-[#22211E] text-charcoal-600 dark:text-[#8E8A80]">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium rounded-full bg-charcoal-100 text-charcoal-600">
         <span>COD Pending</span>
       </span>
     );
   };
 
   return (
-    <div className="space-y-6 max-w-7xl text-charcoal-900 dark:text-[#F4F1E9]">
+    <div className="space-y-6 max-w-7xl text-charcoal-900">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
-          <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white text-charcoal-900 border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
+          <CheckCircle className="w-4 h-4 text-emerald-600" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#191917] p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-light-border shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">Orders &amp; Dispatch</h1>
-            <span className="text-xs font-bold bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D] px-2.5 py-0.5 rounded-lg whitespace-nowrap">
+            <h1 className="text-xl font-bold text-charcoal-900">Orders &amp; Dispatch</h1>
+            <span className="text-xs font-bold bg-light-elevated text-[#B89555] border border-light-border px-2.5 py-0.5 rounded-lg whitespace-nowrap">
               {orders.length} Total
             </span>
           </div>
-          <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] mt-1">
+          <p className="text-xs text-charcoal-500 mt-1">
             Real-time customer dispatch desk. Confirm orders, inspect &amp; verify payment screenshots (JazzCash, EasyPaisa, SadaPay, Bank Transfer), and launch direct WhatsApp messages.
           </p>
         </div>
@@ -317,58 +317,58 @@ export default function AdminOrdersPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Pending Receipt
           </span>
           <div className="text-xl font-bold text-amber-500 mt-1">{stats.pendingVerification}</div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">Awaiting Verification</span>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">Awaiting Verification</span>
         </div>
 
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Pending Review
           </span>
-          <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.pending}</div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">Awaiting Call</span>
+          <div className="text-xl font-bold text-amber-600 mt-1">{stats.pending}</div>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">Awaiting Call</span>
         </div>
 
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             In Processing
           </span>
-          <div className="text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] mt-1">{stats.confirmed}</div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">Packing &amp; Ready</span>
+          <div className="text-xl font-bold text-charcoal-900 mt-1">{stats.confirmed}</div>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">Packing &amp; Ready</span>
         </div>
 
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Shipped
           </span>
-          <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats.shipped}</div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">With Courier</span>
+          <div className="text-xl font-bold text-blue-600 mt-1">{stats.shipped}</div>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">With Courier</span>
         </div>
 
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Delivered
           </span>
-          <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.delivered}</div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">Successfully Paid</span>
+          <div className="text-xl font-bold text-emerald-600 mt-1">{stats.delivered}</div>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">Successfully Paid</span>
         </div>
       </div>
 
       {/* Filter / Search Bar */}
-      <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="w-full sm:w-80 relative">
           <input
             type="text"
             placeholder="Search order #, customer, phone, city..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+            className="w-full pl-8 pr-3 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 placeholder-charcoal-400 rounded-xl focus:border-[#B89555] focus:outline-none"
           />
-          <Search className="w-3.5 h-3.5 text-charcoal-400 dark:text-[#8E8A80] absolute left-2.5 top-2.5" />
+          <Search className="w-3.5 h-3.5 text-charcoal-400 absolute left-2.5 top-2.5" />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
@@ -376,7 +376,7 @@ export default function AdminOrdersPage() {
           <select
             value={paymentFilter}
             onChange={(e) => setPaymentFilter(e.target.value)}
-            className="px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+            className="px-3 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
           >
             <option value="all">All Payments</option>
             <option value="PENDING_VERIFICATION">Needs Verification</option>
@@ -389,7 +389,7 @@ export default function AdminOrdersPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+            className="px-3 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
           >
             <option value="all">All Statuses ({orders.length})</option>
             {ALL_STATUSES.map((st) => (
@@ -414,26 +414,26 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Orders Container */}
-      <div className="bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-light-border shadow-sm overflow-hidden">
         {filteredOrders.length === 0 ? (
           <div className="text-center py-16 space-y-3">
-            <ShoppingCart className="w-10 h-10 text-charcoal-400 dark:text-[#8E8A80] mx-auto" />
-            <h3 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">No orders match your search or filter.</h3>
-            <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">Customer orders placed on the storefront will appear here instantly.</p>
+            <ShoppingCart className="w-10 h-10 text-charcoal-400 mx-auto" />
+            <h3 className="text-sm font-bold text-charcoal-900">No orders match your search or filter.</h3>
+            <p className="text-xs text-charcoal-500">Customer orders placed on the storefront will appear here instantly.</p>
           </div>
         ) : (
           <>
             {/* Desktop Table View (md:block) */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] uppercase font-bold text-[11px] border-b border-light-border dark:border-[#34322D]">
+                <thead className="bg-light-elevated text-[#B89555] uppercase font-bold text-[11px] border-b border-light-border">
                   <tr>
                     <th className="p-4 w-10 text-center">
                       <input
                         type="checkbox"
                         checked={isAllSelected}
                         onChange={toggleSelectAll}
-                        className="rounded border-light-border dark:border-[#34322D] accent-[#B89555] cursor-pointer"
+                        className="rounded border-light-border accent-[#B89555] cursor-pointer"
                         aria-label="Select all orders"
                       />
                     </th>
@@ -446,7 +446,7 @@ export default function AdminOrdersPage() {
                     <th className="p-4 w-40 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-light-border dark:divide-[#282723] font-medium text-charcoal-700 dark:text-[#B8B3A8]">
+                <tbody className="divide-y divide-light-border font-medium text-charcoal-700">
                   {filteredOrders.map((ord) => {
                     const targetPhone = formatWhatsAppNumber(ord.customerPhone);
                     const whatsappOrderLink = `https://wa.me/${targetPhone}?text=${encodeURIComponent(
@@ -469,28 +469,28 @@ export default function AdminOrdersPage() {
                     const isSelected = selectedOrderIds.includes(ord.id);
 
                     return (
-                      <tr key={ord.id} className={`hover:bg-light-hover dark:hover:bg-[#22211E]/60 transition-colors ${isSelected ? 'bg-[#B89555]/5 dark:bg-[#C9A96A]/5' : ''}`}>
+                      <tr key={ord.id} className={`hover:bg-light-hover transition-colors ${isSelected ? 'bg-[#B89555]/5' : ''}`}>
                         <td className="p-4 w-10 text-center">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => toggleSelectOrder(ord.id, e as any)}
-                            className="rounded border-light-border dark:border-[#34322D] accent-[#B89555] cursor-pointer"
+                            className="rounded border-light-border accent-[#B89555] cursor-pointer"
                             aria-label={`Select order ${ord.orderNumber}`}
                           />
                         </td>
-                        <td className="p-4 font-mono font-bold text-[#B89555] dark:text-[#C9A96A] whitespace-nowrap">
+                        <td className="p-4 font-mono font-bold text-[#B89555] whitespace-nowrap">
                           <div className="flex flex-col gap-1">
                             <div>
                               <span>#{ord.orderNumber}</span>
                             </div>
                             <div>
                               {ord.customerType === 'GUEST' ? (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-[#8E8A80]">
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-charcoal-100 text-charcoal-600">
                                   GUEST
                                 </span>
                               ) : (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20">
                                   REGISTERED
                                 </span>
                               )}
@@ -498,9 +498,9 @@ export default function AdminOrdersPage() {
                           </div>
                         </td>
                         <td className="p-4 min-w-[200px]">
-                          <div className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{ord.customerName}</div>
+                          <div className="font-bold text-charcoal-900">{ord.customerName}</div>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-charcoal-500 dark:text-[#8E8A80] font-mono text-[11px] whitespace-nowrap">{ord.customerPhone}</span>
+                            <span className="text-charcoal-500 font-mono text-[11px] whitespace-nowrap">{ord.customerPhone}</span>
                             <a
                               href={whatsappOrderLink}
                               target="_blank"
@@ -512,21 +512,21 @@ export default function AdminOrdersPage() {
                             </a>
                           </div>
                         </td>
-                        <td className="p-4 w-36 whitespace-nowrap text-charcoal-900 dark:text-[#F4F1E9]">
+                        <td className="p-4 w-36 whitespace-nowrap text-charcoal-900">
                           <div>{ord.city}</div>
-                          <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80]">{ord.province}</span>
+                          <span className="text-[10px] text-charcoal-500">{ord.province}</span>
                         </td>
-                        <td className="p-4 min-w-[200px] text-charcoal-900 dark:text-[#F4F1E9]">
-                          <div className="font-bold text-[#B89555] dark:text-[#C9A96A] text-sm whitespace-nowrap">
+                        <td className="p-4 min-w-[200px] text-charcoal-900">
+                          <div className="font-bold text-[#B89555] text-sm whitespace-nowrap">
                             Rs. {ord.totalAmount}
                           </div>
-                          <div className="text-[10px] text-charcoal-500 dark:text-[#8E8A80]">
+                          <div className="text-[10px] text-charcoal-500">
                             {ord.items.reduce((s, it) => s + it.quantity, 0)} pieces
                           </div>
                         </td>
                         <td className="p-4 w-44 whitespace-nowrap space-y-1.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="uppercase font-bold text-[10px] text-charcoal-700 dark:text-[#B8B3A8]">
+                            <span className="uppercase font-bold text-[10px] text-charcoal-700">
                               {ord.paymentMethod.replace('_', ' ')}
                             </span>
                             {renderPaymentStatusBadge(ord)}
@@ -537,7 +537,7 @@ export default function AdminOrdersPage() {
                             <button
                               type="button"
                               onClick={() => setReceiptModalOrder(ord)}
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B89555] dark:text-[#C9A96A] hover:underline"
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B89555] hover:underline"
                             >
                               <Eye className="w-3 h-3" />
                               <span>View Receipt</span>
@@ -554,16 +554,16 @@ export default function AdminOrdersPage() {
                             }
                             className={`px-2.5 py-1 text-xs font-bold rounded-xl border focus:outline-none ${
                               ord.status === 'Delivered'
-                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                                 : ord.status === 'Cancelled'
-                                ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800'
+                                ? 'bg-rose-50 text-rose-700 border-rose-300'
                                 : ord.status === 'Pending'
-                                ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800'
-                                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                                ? 'bg-amber-50 text-amber-700 border-amber-300'
+                                : 'bg-blue-50 text-blue-700 border-blue-300'
                             }`}
                           >
                             {ALL_STATUSES.map((st) => (
-                              <option key={st} value={st} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                              <option key={st} value={st} className="bg-white text-charcoal-900">
                                 {st}
                               </option>
                             ))}
@@ -588,7 +588,7 @@ export default function AdminOrdersPage() {
                             <button
                               type="button"
                               onClick={() => setSelectedOrder(ord)}
-                              className="px-2.5 py-1 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] border border-light-border dark:border-[#34322D] text-[#B89555] dark:text-[#C9A96A] hover:text-champagne-500 rounded-xl text-xs font-bold transition-colors whitespace-nowrap"
+                              className="px-2.5 py-1 bg-light-elevated hover:bg-light-hover border border-light-border text-[#B89555] hover:text-champagne-500 rounded-xl text-xs font-bold transition-colors whitespace-nowrap"
                             >
                               Details
                             </button>
@@ -597,7 +597,7 @@ export default function AdminOrdersPage() {
                             <button
                               type="button"
                               onClick={(e) => handleInitiateSingleDelete(ord, e)}
-                              className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition-colors active:scale-95"
+                              className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/30 rounded-xl text-xs font-bold transition-colors active:scale-95"
                               title="Delete Order Permanently"
                               aria-label={`Delete order ${ord.orderNumber}`}
                             >
@@ -613,7 +613,7 @@ export default function AdminOrdersPage() {
             </div>
 
             {/* Mobile Stacked Cards View (md:hidden) */}
-            <div className="md:hidden divide-y divide-light-border dark:divide-[#282723] p-3 space-y-3">
+            <div className="md:hidden divide-y divide-light-border p-3 space-y-3">
               {filteredOrders.map((ord) => {
                 const targetPhone = formatWhatsAppNumber(ord.customerPhone);
                 const whatsappOrderLink = `https://wa.me/${targetPhone}?text=${encodeURIComponent(
@@ -635,32 +635,32 @@ export default function AdminOrdersPage() {
                 return (
                   <div
                     key={ord.id}
-                    className="p-4 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] space-y-3"
+                    className="p-4 bg-light-elevated rounded-xl border border-light-border space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-sm text-[#B89555] dark:text-[#C9A96A]">
+                        <span className="font-mono font-bold text-sm text-[#B89555]">
                           #{ord.orderNumber}
                         </span>
                         {ord.customerType === 'GUEST' ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-[#8E8A80]">
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-charcoal-100 text-charcoal-600">
                             GUEST
                           </span>
                         ) : (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
                             REG
                           </span>
                         )}
                       </div>
-                      <span className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9]">
+                      <span className="font-bold text-sm text-charcoal-900">
                         Rs. {ord.totalAmount}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{ord.customerName}</div>
-                        <div className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">{ord.city}, {ord.province}</div>
+                        <div className="font-bold text-charcoal-900">{ord.customerName}</div>
+                        <div className="text-[11px] text-charcoal-500">{ord.city}, {ord.province}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         <a
@@ -676,7 +676,7 @@ export default function AdminOrdersPage() {
                     </div>
 
                     {/* Payment Info & Proof */}
-                    <div className="flex items-center justify-between pt-1 border-t border-light-border dark:border-[#34322D] text-[11px]">
+                    <div className="flex items-center justify-between pt-1 border-t border-light-border text-[11px]">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold uppercase text-[10px]">{ord.paymentMethod.replace('_', ' ')}</span>
                         {renderPaymentStatusBadge(ord)}
@@ -686,7 +686,7 @@ export default function AdminOrdersPage() {
                         <button
                           type="button"
                           onClick={() => setReceiptModalOrder(ord)}
-                          className="text-[#B89555] dark:text-[#C9A96A] font-bold flex items-center gap-1"
+                          className="text-[#B89555] font-bold flex items-center gap-1"
                         >
                           <Eye className="w-3 h-3" />
                           <span>Receipt</span>
@@ -694,7 +694,7 @@ export default function AdminOrdersPage() {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-light-border dark:border-[#34322D]">
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-light-border">
                       <select
                         value={ord.status}
                         onChange={(e) =>
@@ -702,16 +702,16 @@ export default function AdminOrdersPage() {
                         }
                         className={`flex-1 px-2.5 py-1.5 text-xs font-bold rounded-xl border focus:outline-none ${
                           ord.status === 'Delivered'
-                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                             : ord.status === 'Cancelled'
-                            ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border-rose-300 dark:border-rose-800'
+                            ? 'bg-rose-50 text-rose-700 border-rose-300'
                             : ord.status === 'Pending'
-                            ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800'
-                            : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : 'bg-blue-50 text-blue-700 border-blue-300'
                         }`}
                       >
                         {ALL_STATUSES.map((st) => (
-                          <option key={st} value={st} className="bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9]">
+                          <option key={st} value={st} className="bg-white text-charcoal-900">
                             {st}
                           </option>
                         ))}
@@ -741,7 +741,7 @@ export default function AdminOrdersPage() {
                       <button
                         type="button"
                         onClick={(e) => handleInitiateSingleDelete(ord, e)}
-                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition-colors active:scale-95"
+                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/30 rounded-xl text-xs font-bold transition-colors active:scale-95"
                         title="Delete Order Permanently"
                         aria-label={`Delete order ${ord.orderNumber}`}
                       >
@@ -759,14 +759,14 @@ export default function AdminOrdersPage() {
       {/* Payment Receipt / Screenshot Verification Modal */}
       {receiptModalOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-elevation max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-light-border dark:border-[#34322D] pb-3">
+          <div className="bg-white border border-light-border rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-elevation max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-light-border pb-3">
               <div>
-                <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9] flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
+                <h3 className="font-bold text-sm text-charcoal-900 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-[#B89555]" />
                   <span>Payment Receipt — Order #{receiptModalOrder.orderNumber}</span>
                 </h3>
-                <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
+                <p className="text-[11px] text-charcoal-500">
                   Customer: {receiptModalOrder.customerName} ({receiptModalOrder.customerPhone})
                 </p>
               </div>
@@ -776,23 +776,23 @@ export default function AdminOrdersPage() {
                   setReceiptModalOrder(null);
                   setShowRejectForm(false);
                 }}
-                className="p-1 rounded-lg text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white"
+                className="p-1 rounded-lg text-charcoal-400 hover:text-charcoal-900"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Order Summary Pill */}
-            <div className="grid grid-cols-3 gap-2 p-3 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] text-xs">
+            <div className="grid grid-cols-3 gap-2 p-3 bg-light-elevated rounded-xl border border-light-border text-xs">
               <div>
                 <span className="text-charcoal-400 block text-[10px]">Method</span>
-                <span className="font-bold uppercase text-charcoal-900 dark:text-[#F4F1E9]">
+                <span className="font-bold uppercase text-charcoal-900">
                   {receiptModalOrder.paymentMethod.replace('_', ' ')}
                 </span>
               </div>
               <div>
                 <span className="text-charcoal-400 block text-[10px]">Total Order</span>
-                <span className="font-bold text-[#B89555] dark:text-[#C9A96A]">
+                <span className="font-bold text-[#B89555]">
                   Rs. {receiptModalOrder.totalAmount}
                 </span>
               </div>
@@ -805,7 +805,7 @@ export default function AdminOrdersPage() {
             {/* Receipt Image Display */}
             {receiptModalOrder.paymentScreenshotUrl ? (
               <div className="space-y-2">
-                <div className="relative rounded-xl border border-light-border dark:border-[#34322D] overflow-hidden bg-black/5 dark:bg-black/30 flex items-center justify-center max-h-[50vh]">
+                <div className="relative rounded-xl border border-light-border overflow-hidden bg-black/5 flex items-center justify-center max-h-[50vh]">
                   <img
                     src={receiptModalOrder.paymentScreenshotUrl}
                     alt={`Payment receipt for order #${receiptModalOrder.orderNumber}`}
@@ -817,7 +817,7 @@ export default function AdminOrdersPage() {
                     href={receiptModalOrder.paymentScreenshotUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-[#B89555] dark:text-[#C9A96A] font-bold hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs text-[#B89555] font-bold hover:underline"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     <span>Open High-Res Original</span>
@@ -825,7 +825,7 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
             ) : (
-              <div className="p-8 text-center bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] text-xs text-charcoal-500">
+              <div className="p-8 text-center bg-light-elevated rounded-xl border border-light-border text-xs text-charcoal-500">
                 No screenshot uploaded by customer.
               </div>
             )}
@@ -833,7 +833,7 @@ export default function AdminOrdersPage() {
             {/* Rejection Form Input */}
             {showRejectForm && (
               <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-2 animate-in fade-in">
-                <label className="block text-xs font-bold text-rose-700 dark:text-rose-400">
+                <label className="block text-xs font-bold text-rose-700">
                   Reason for Rejecting Payment
                 </label>
                 <input
@@ -841,7 +841,7 @@ export default function AdminOrdersPage() {
                   placeholder="e.g. Screenshot unreadable, amount mismatch, or fake reference..."
                   value={rejectionReasonInput}
                   onChange={(e) => setRejectionReasonInput(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-white dark:bg-[#191917] border border-rose-300 dark:border-rose-800 rounded-lg text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                  className="w-full px-3 py-1.5 text-xs bg-white border border-rose-300 rounded-lg text-charcoal-900 focus:outline-none"
                 />
                 <div className="flex justify-end gap-2 pt-1">
                   <button
@@ -865,7 +865,7 @@ export default function AdminOrdersPage() {
 
             {/* Action Buttons */}
             {!showRejectForm && (
-              <div className="flex items-center justify-between pt-2 border-t border-light-border dark:border-[#34322D]">
+              <div className="flex items-center justify-between pt-2 border-t border-light-border">
                 <button
                   type="button"
                   onClick={() => setShowRejectForm(true)}
@@ -892,61 +892,61 @@ export default function AdminOrdersPage() {
 
       {/* Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/75 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-elevation max-h-[90vh] overflow-y-auto text-charcoal-900 dark:text-[#F4F1E9]">
-            <div className="flex items-center justify-between border-b border-light-border dark:border-[#34322D] pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white border border-light-border rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-elevation max-h-[90vh] overflow-y-auto text-charcoal-900">
+            <div className="flex items-center justify-between border-b border-light-border pb-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base text-charcoal-900 dark:text-[#F4F1E9]">Order #{selectedOrder.orderNumber}</h3>
+                  <h3 className="font-bold text-base text-charcoal-900">Order #{selectedOrder.orderNumber}</h3>
                   {selectedOrder.customerType === 'GUEST' ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-charcoal-100 dark:bg-charcoal-800 text-charcoal-600 dark:text-[#8E8A80]">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-charcoal-100 text-charcoal-600">
                       Guest Checkout
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 border border-blue-500/20">
                       Registered Customer
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+                <p className="text-xs text-charcoal-500">
                   Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedOrder(null)}
-                className="p-1 rounded-lg text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white"
+                className="p-1 rounded-lg text-charcoal-400 hover:text-charcoal-900"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Customer info */}
-            <div className="grid grid-cols-2 gap-3 text-xs bg-light-elevated dark:bg-[#22211E] p-4 rounded-xl border border-light-border dark:border-[#34322D]">
+            <div className="grid grid-cols-2 gap-3 text-xs bg-light-elevated p-4 rounded-xl border border-light-border">
               <div>
-                <span className="text-charcoal-500 dark:text-[#8E8A80] block">Customer Name</span>
-                <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{selectedOrder.customerName}</strong>
+                <span className="text-charcoal-500 block">Customer Name</span>
+                <strong className="text-charcoal-900">{selectedOrder.customerName}</strong>
               </div>
               <div>
-                <span className="text-charcoal-500 dark:text-[#8E8A80] block">Phone Number</span>
-                <strong className="text-charcoal-900 dark:text-[#F4F1E9]">{selectedOrder.customerPhone}</strong>
+                <span className="text-charcoal-500 block">Phone Number</span>
+                <strong className="text-charcoal-900">{selectedOrder.customerPhone}</strong>
               </div>
               <div className="col-span-2">
-                <span className="text-charcoal-500 dark:text-[#8E8A80] block">Delivery Address</span>
-                <p className="text-charcoal-900 dark:text-[#F4F1E9]">{selectedOrder.address}, {selectedOrder.city}, {selectedOrder.province}</p>
+                <span className="text-charcoal-500 block">Delivery Address</span>
+                <p className="text-charcoal-900">{selectedOrder.address}, {selectedOrder.city}, {selectedOrder.province}</p>
               </div>
               {selectedOrder.orderNotes && (
                 <div className="col-span-2">
-                  <span className="text-charcoal-500 dark:text-[#8E8A80] block">Customer Order Notes</span>
-                  <p className="text-[#B89555] dark:text-[#C9A96A] italic">{selectedOrder.orderNotes}</p>
+                  <span className="text-charcoal-500 block">Customer Order Notes</span>
+                  <p className="text-[#B89555] italic">{selectedOrder.orderNotes}</p>
                 </div>
               )}
             </div>
 
             {/* Payment & Proof Box */}
-            <div className="p-4 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D] flex items-center justify-between text-xs">
+            <div className="p-4 bg-light-elevated rounded-xl border border-light-border flex items-center justify-between text-xs">
               <div>
-                <span className="text-charcoal-500 dark:text-[#8E8A80] block text-[10px]">Payment Method</span>
+                <span className="text-charcoal-500 block text-[10px]">Payment Method</span>
                 <div className="flex items-center gap-2 mt-0.5">
                   <strong className="uppercase font-bold">{selectedOrder.paymentMethod.replace('_', ' ')}</strong>
                   {renderPaymentStatusBadge(selectedOrder)}
@@ -962,7 +962,7 @@ export default function AdminOrdersPage() {
                   onClick={() => {
                     setReceiptModalOrder(selectedOrder);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#B89555]/10 hover:bg-[#B89555]/20 text-[#B89555] dark:text-[#C9A96A] rounded-lg font-bold transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#B89555]/10 hover:bg-[#B89555]/20 text-[#B89555] rounded-lg font-bold transition-colors"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Inspect Receipt</span>
@@ -972,18 +972,18 @@ export default function AdminOrdersPage() {
 
             {/* Items */}
             <div className="space-y-2">
-              <h4 className="font-bold text-xs text-charcoal-700 dark:text-[#B8B3A8] uppercase">Ordered Items</h4>
-              <div className="divide-y divide-light-border dark:divide-[#34322D] border border-light-border dark:border-[#34322D] rounded-xl overflow-hidden">
+              <h4 className="font-bold text-xs text-charcoal-700 uppercase">Ordered Items</h4>
+              <div className="divide-y divide-light-border border border-light-border rounded-xl overflow-hidden">
                 {selectedOrder.items.map((it) => (
-                  <div key={it.id} className="p-3 flex items-center justify-between text-xs bg-white dark:bg-[#191917]">
+                  <div key={it.id} className="p-3 flex items-center justify-between text-xs bg-white">
                     <div>
-                      <div className="font-bold text-charcoal-900 dark:text-[#F4F1E9]">{it.productName}</div>
-                      <div className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">
+                      <div className="font-bold text-charcoal-900">{it.productName}</div>
+                      <div className="text-[11px] text-charcoal-500">
                         {it.quality} • {it.sleeve} • Size {it.size}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-[#B89555] dark:text-[#C9A96A]">
+                      <div className="font-bold text-[#B89555]">
                         {it.quantity} x Rs. {it.unitPrice} = Rs. {it.totalPrice}
                       </div>
                     </div>
@@ -993,27 +993,27 @@ export default function AdminOrdersPage() {
             </div>
 
             {/* Totals */}
-            <div className="bg-light-elevated dark:bg-[#22211E] p-4 rounded-xl space-y-1.5 text-xs text-charcoal-700 dark:text-[#B8B3A8]">
+            <div className="bg-light-elevated p-4 rounded-xl space-y-1.5 text-xs text-charcoal-700">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="text-charcoal-900 dark:text-[#F4F1E9] font-semibold">Rs. {selectedOrder.subtotal}</span>
+                <span className="text-charcoal-900 font-semibold">Rs. {selectedOrder.subtotal}</span>
               </div>
               <div className="flex justify-between">
                 <span>Delivery Fee</span>
                 <span>{selectedOrder.deliveryFee === 0 ? 'FREE DELIVERY' : `Rs. ${selectedOrder.deliveryFee}`}</span>
               </div>
-              <div className="border-t border-light-border dark:border-[#34322D] pt-2 flex justify-between text-sm font-extrabold text-[#B89555] dark:text-[#C9A96A]">
+              <div className="border-t border-light-border pt-2 flex justify-between text-sm font-extrabold text-[#B89555]">
                 <span>Total Amount</span>
                 <span>Rs. {selectedOrder.totalAmount}</span>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-2 border-t border-light-border dark:border-[#34322D]">
+            <div className="flex items-center justify-between pt-2 border-t border-light-border">
               <button
                 type="button"
                 onClick={(e) => handleInitiateSingleDelete(selectedOrder, e)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition-all active:scale-95"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 border border-rose-500/30 rounded-xl text-xs font-bold transition-all active:scale-95"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Delete Order Permanently</span>
@@ -1022,7 +1022,7 @@ export default function AdminOrdersPage() {
               <button
                 type="button"
                 onClick={() => setSelectedOrder(null)}
-                className="px-5 py-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] border border-light-border dark:border-[#34322D] text-charcoal-800 dark:text-[#F4F1E9] rounded-xl text-xs font-bold transition-all"
+                className="px-5 py-2 bg-light-elevated hover:bg-light-hover border border-light-border text-charcoal-800 rounded-xl text-xs font-bold transition-all"
               >
                 Close
               </button>
@@ -1034,39 +1034,39 @@ export default function AdminOrdersPage() {
       {/* Danger Deletion Modal */}
       {deleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-[#191917] border border-rose-500/30 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-elevation text-charcoal-900 dark:text-[#F4F1E9]">
-            <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
+          <div className="bg-white border border-rose-500/30 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-elevation text-charcoal-900">
+            <div className="flex items-center gap-3 text-rose-600">
               <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/30">
                 <Trash2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-base text-charcoal-900 dark:text-[#F4F1E9]">
+                <h3 className="font-bold text-base text-charcoal-900">
                   {deleteModal.isBulk
                     ? `Delete ${deleteModal.count} Selected Orders Permanently?`
                     : `Delete Order #${deleteModal.orderNumber} Permanently?`}
                 </h3>
-                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold block mt-0.5">
+                <span className="text-[11px] text-rose-600 font-semibold block mt-0.5">
                   Destructive Action • Cannot be Undone
                 </span>
               </div>
             </div>
 
-            <p className="text-xs text-charcoal-600 dark:text-[#B8B3A8] leading-relaxed">
+            <p className="text-xs text-charcoal-600 leading-relaxed">
               This action will permanently remove the order record, line items, and associated payment proof receipt from Supabase. Customer accounts and unrelated store data will not be affected.
             </p>
 
             {deleteError && (
-              <div className="p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-700 dark:text-rose-400 text-xs font-semibold">
+              <div className="p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-700 text-xs font-semibold">
                 {deleteError}
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-light-border dark:border-[#34322D]">
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-light-border">
               <button
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setDeleteModal(null)}
-                className="px-4 py-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-light-elevated hover:bg-light-hover border border-light-border text-charcoal-700 text-xs font-bold rounded-xl transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>

@@ -12,6 +12,15 @@ const DESKTOP_BANNER_HEIGHT = 800;
 const MOBILE_BANNER_WIDTH = 1080;
 const MOBILE_BANNER_HEIGHT = 1350;
 
+const SLIDER_ASSET_VERSION = '20260922_v2';
+
+const getVersionedSrc = (src: string): string => {
+  if (!src) return src;
+  if (src.startsWith('data:') || src.startsWith('blob:')) return src;
+  const separator = src.includes('?') ? '&' : '?';
+  return `${src}${separator}v=${SLIDER_ASSET_VERSION}`;
+};
+
 export const BrandHeroSlider: React.FC = () => {
   const { heroSlides } = useStore();
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -87,9 +96,6 @@ export const BrandHeroSlider: React.FC = () => {
     touchEndX.current = null;
   };
 
-  const activeDesktopSlide = desktopSlides[currentSlide % desktopSlides.length] || desktopSlides[0];
-  const activeMobileSlide = mobileSlides[currentSlide % mobileSlides.length] || mobileSlides[0];
-
   return (
     <section
       aria-label="Amin Raisat Hosiery Campaign Banner"
@@ -98,7 +104,7 @@ export const BrandHeroSlider: React.FC = () => {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative w-full select-none bg-light-bg dark:bg-[#11110F] transition-colors duration-200"
+      className="relative w-full select-none bg-[#F7F3EA]"
     >
       {/* Container with responsive margins so rounded edges are visible and framed naturally */}
       <div className="mx-auto w-full md:w-[calc(100%-48px)] max-w-[1240px] px-3 sm:px-4 md:px-0 pt-2.5 sm:pt-3 md:pt-4 pb-2 md:pb-3">
@@ -106,10 +112,11 @@ export const BrandHeroSlider: React.FC = () => {
         {/* ========================================================================= */}
         {/* 1. DESKTOP HERO VIEWPORT (Hidden on mobile < md) */}
         {/* ========================================================================= */}
-        <div className="hidden md:block relative w-full aspect-[1920/800] rounded-2xl lg:rounded-[20px] overflow-hidden border border-light-border dark:border-[#34322D] shadow-sm dark:shadow-elevation bg-white dark:bg-[#151513] transition-colors duration-200">
+        <div className="hidden md:block relative w-full aspect-[1920/800] rounded-2xl lg:rounded-[20px] overflow-hidden border border-[#D8D0C3] shadow-sm bg-white group">
           {desktopSlides.map((slide, idx) => {
             const isCurrent = (currentSlide % desktopSlides.length) === idx;
-            const imageSrc = slide.desktopImage || `/slider ${idx + 1}.png`;
+            const rawSrc = slide.desktopImage || `/slider ${idx + 1}.png`;
+            const imageSrc = getVersionedSrc(rawSrc);
 
             return (
               <div
@@ -121,7 +128,7 @@ export const BrandHeroSlider: React.FC = () => {
               >
                 <Link
                   href={slide.link || slide.buttonLink || '/shop'}
-                  className="block w-full h-full cursor-pointer overflow-hidden rounded-2xl lg:rounded-[20px] bg-white dark:bg-[#151513]"
+                  className="block w-full h-full cursor-pointer overflow-hidden rounded-2xl lg:rounded-[20px] bg-white"
                   tabIndex={isCurrent ? 0 : -1}
                 >
                   <Image
@@ -139,15 +146,71 @@ export const BrandHeroSlider: React.FC = () => {
               </div>
             );
           })}
+
+          {/* Desktop Navigation Arrows */}
+          {desktopSlides.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  prevSlide();
+                }}
+                aria-label="Previous Slide"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-10 rounded-full bg-[#1C2230]/75 hover:bg-[#1C2230] text-white backdrop-blur-sm transition-all shadow-md opacity-0 group-hover:opacity-90 hover:!opacity-100 hover:scale-105"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextSlide();
+                }}
+                aria-label="Next Slide"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-10 h-10 rounded-full bg-[#1C2230]/75 hover:bg-[#1C2230] text-white backdrop-blur-sm transition-all shadow-md opacity-0 group-hover:opacity-90 hover:!opacity-100 hover:scale-105"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              {/* Desktop Indicator Dots */}
+              <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-[#1C2230]/65 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/20 shadow-sm">
+                {desktopSlides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setCurrentSlide(idx);
+                    }}
+                    aria-label={`Go to slide ${idx + 1}`}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      (currentSlide % desktopSlides.length) === idx
+                        ? 'w-7 bg-[#C59B27]'
+                        : 'w-2 bg-white/50 hover:bg-white/90'
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* ========================================================================= */}
         {/* 2. MOBILE HERO VIEWPORT (Visible on mobile < md) */}
         {/* ========================================================================= */}
-        <div className="block md:hidden relative w-full aspect-[1080/1350] rounded-xl sm:rounded-2xl overflow-hidden border border-light-border dark:border-[#34322D] shadow-xs dark:shadow-card bg-white dark:bg-[#151513] transition-colors duration-200">
+        <div className="block md:hidden relative w-full aspect-[1080/1350] rounded-xl sm:rounded-2xl overflow-hidden border border-[#D8D0C3] shadow-xs bg-white">
           {mobileSlides.map((slide, idx) => {
             const isCurrent = (currentSlide % mobileSlides.length) === idx;
-            const imageSrc = slide.mobileImage || slide.desktopImage || `/mobile slider ${idx + 1}.png`;
+            const rawSrc = slide.mobileImage || slide.desktopImage || `/mobile slider ${idx + 1}.png`;
+            const imageSrc = getVersionedSrc(rawSrc);
 
             return (
               <div
@@ -159,7 +222,7 @@ export const BrandHeroSlider: React.FC = () => {
               >
                 <Link
                   href={slide.link || slide.buttonLink || '/shop'}
-                  className="block w-full h-full cursor-pointer overflow-hidden rounded-xl sm:rounded-2xl bg-white dark:bg-[#151513]"
+                  className="block w-full h-full cursor-pointer overflow-hidden rounded-xl sm:rounded-2xl bg-white"
                   tabIndex={isCurrent ? 0 : -1}
                 >
                   <Image
@@ -177,8 +240,30 @@ export const BrandHeroSlider: React.FC = () => {
               </div>
             );
           })}
-        </div>
 
+          {/* Mobile Indicator Dots */}
+          {mobileSlides.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-[#1C2230]/65 backdrop-blur-sm px-2.5 py-1 rounded-full border border-white/20 shadow-sm">
+              {mobileSlides.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCurrentSlide(idx);
+                  }}
+                  aria-label={`Go to mobile slide ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    (currentSlide % mobileSlides.length) === idx
+                      ? 'w-5 bg-[#C59B27]'
+                      : 'w-1.5 bg-white/50 hover:bg-white/90'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

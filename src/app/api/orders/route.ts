@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
-import { INITIAL_SHIPPING_SETTINGS, INITIAL_PRODUCTS } from '@/data/initialData';
+import { INITIAL_SHIPPING_SETTINGS } from '@/data/initialData';
 import { resolveVariantPricing } from '@/lib/pricing';
 
 export async function POST(req: Request) {
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       try {
         const { data: variantsData } = await supabaseServer
           .from('product_variants')
-          .select('*');
+          .select('*, products(id, name, slug)');
         if (variantsData && variantsData.length > 0) {
           dbVariants = variantsData;
         }
@@ -92,16 +92,6 @@ export async function POST(req: Request) {
         console.warn('Could not fetch deals from Supabase:', err);
       }
     }
-
-    // Fallback dictionary for initial products
-    const initialVariantsMap = new Map<string, any>();
-    INITIAL_PRODUCTS.forEach((p) => {
-      p.variants.forEach((v) => {
-        initialVariantsMap.set(v.id, { ...v, productName: p.name });
-        const compositeKey = `${p.id}_${v.quality}_${v.sleeve}_${v.size}`;
-        initialVariantsMap.set(compositeKey, { ...v, productName: p.name });
-      });
-    });
 
     // 3. Authoritative verification of all items & compute subtotal
     const totalItemCount = items.reduce(
@@ -153,8 +143,8 @@ export async function POST(req: Request) {
         };
       }
 
-      // Product item validation
-      let variant = dbVariants.find(
+      // Product item validation against authoritative database variants
+      const variant = dbVariants.find(
         (v) =>
           v.id === clientItem.variantId ||
           (v.product_id === clientItem.productId &&
@@ -163,25 +153,14 @@ export async function POST(req: Request) {
             v.size === clientItem.size)
       );
 
-      let productName = clientItem.productName || 'Hosiery Product';
-      let pricing = { originalPrice: 480, discountPercentage: 0, salePrice: 480, isOnSale: false };
-
-      if (variant) {
-        pricing = resolveVariantPricing(variant);
-      } else {
-        const initialVar =
-          initialVariantsMap.get(clientItem.variantId) ||
-          initialVariantsMap.get(
-            `${clientItem.productId}_${clientItem.quality}_${clientItem.sleeve}_${clientItem.size}`
-          );
-        if (initialVar) {
-          pricing = resolveVariantPricing(initialVar);
-          productName = initialVar.productName || productName;
-        } else {
-          // Never trust client-tampered price!
-          pricing = { originalPrice: 480, discountPercentage: 0, salePrice: 480, isOnSale: false };
-        }
+      if (!variant) {
+        throw new Error(
+          `The item "${clientItem.productName || 'Selected Item'}" is currently unavailable or does not exist in our catalog.`
+        );
       }
+
+      const productName = variant.products?.name || clientItem.productName || 'Hosiery Product';
+      const pricing = resolveVariantPricing(variant);
 
       const unitPrice = pricing.salePrice;
       const itemTotal = unitPrice * qty;
@@ -391,10 +370,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, order }, { status: 201 });
   } catch (err: any) {
     console.error('Order API error:', err);
-    if (err?.message?.includes('deal') || err?.message?.includes('Deal')) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message || 'Failed to place order. Please verify your items.' },
+      { status: 400 }
+    );
   }
 }
 

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Product, Category, Subcategory, SiteSettings, Order, ProductVariant, ProductMedia, OrderStatus, ProductReview, HeroSlide } from '@/types';
 import { DataStore } from '@/lib/store';
-import { INITIAL_CATEGORIES, INITIAL_SUBCATEGORIES, INITIAL_PRODUCTS, INITIAL_SITE_SETTINGS, INITIAL_HERO_SLIDES } from '@/data/initialData';
+import { INITIAL_CATEGORIES, INITIAL_SUBCATEGORIES, INITIAL_SITE_SETTINGS, INITIAL_HERO_SLIDES } from '@/data/initialData';
 
 interface StoreContextType {
   products: Product[];
@@ -54,16 +54,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
     if (initialProducts && initialProducts.length > 0) {
       return initialProducts;
     }
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('arh_products_v6');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch {}
-    }
-    return INITIAL_PRODUCTS;
+    return [];
   });
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [subcategories, setSubcategories] = useState<Subcategory[]>(INITIAL_SUBCATEGORIES);

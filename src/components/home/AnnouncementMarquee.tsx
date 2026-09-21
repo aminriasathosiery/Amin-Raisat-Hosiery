@@ -46,15 +46,15 @@ export const AnnouncementMarquee: React.FC = () => {
   }
 
   return (
-    <div className="bg-[#0b0b10] text-gray-200 text-[11px] font-medium py-2.5 overflow-hidden border-b border-dark-border relative z-30 select-none">
+    <div className="bg-[#23384D] text-[#F7F3EA] text-[11px] font-medium py-2.5 overflow-hidden border-b border-[#182B3D] relative z-30 select-none">
       <div className="flex w-max animate-marquee hover:[animation-play-state:paused] gap-12 items-center cursor-default">
         {[...stripsToDisplay, ...stripsToDisplay, ...stripsToDisplay].map((item, idx) => {
           const Icon = item.icon;
           return (
-            <div key={idx} className="flex items-center gap-2.5 flex-shrink-0 text-gray-300">
-              <Icon className="w-3.5 h-3.5 text-gold-500 flex-shrink-0" />
+            <div key={idx} className="flex items-center gap-2.5 flex-shrink-0 text-[#F7F3EA]">
+              <Icon className="w-3.5 h-3.5 text-[#C99A3D] flex-shrink-0" />
               <span className="tracking-wide uppercase font-semibold text-[10.5px]">{item.text}</span>
-              <span className="text-dark-border-light ml-4 font-bold">•</span>
+              <span className="text-[#C99A3D]/50 ml-4 font-bold">•</span>
             </div>
           );
         })}

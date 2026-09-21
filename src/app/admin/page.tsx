@@ -1,7 +1,6 @@
 'use client';
 import React, { useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useStore } from '@/context/StoreContext';
 import {
   ShoppingCart,
@@ -15,13 +14,11 @@ import {
   Boxes,
   MessageSquare,
   Star,
-  ExternalLink,
   Truck,
 } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
 
 export default function AdminDashboardPage() {
-  const { orders, products, reviews, settings, loadOrders, isLoading } = useStore();
+  const { orders, products, reviews, loadOrders, isLoading } = useStore();
 
   useEffect(() => {
     loadOrders();
@@ -68,29 +65,29 @@ export default function AdminDashboardPage() {
   if (isLoading) {
     return (
       <div className="space-y-6 animate-pulse max-w-7xl">
-        <div className="h-24 bg-white dark:bg-[#17191D] rounded-2xl border border-light-border dark:border-[#30343A]" />
+        <div className="h-24 bg-white rounded-2xl border border-[#D8D0C3]" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-white dark:bg-[#17191D] rounded-2xl border border-light-border dark:border-[#30343A]" />
+            <div key={i} className="h-28 bg-white rounded-2xl border border-[#D8D0C3]" />
           ))}
         </div>
-        <div className="h-64 bg-white dark:bg-[#17191D] rounded-2xl border border-light-border dark:border-[#30343A]" />
+        <div className="h-64 bg-white rounded-2xl border border-[#D8D0C3]" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-charcoal-900 dark:text-[#F1F0EC] max-w-7xl">
+    <div className="space-y-6 text-[#1D2730] max-w-7xl">
       {/* Top Welcome Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#17191D] p-6 rounded-2xl border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-[#D8D0C3] shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-charcoal-900 dark:text-[#F1F0EC]">Store Overview &amp; Live Telemetry</h1>
-            <span className="bg-emerald-100 dark:bg-[#3FB982]/15 text-emerald-700 dark:text-[#3FB982] border border-emerald-300 dark:border-[#3FB982]/30 text-[10px] font-bold px-2 py-0.5 rounded-md">
+            <h1 className="text-xl font-bold text-[#1D2730]">Store Overview &amp; Live Telemetry</h1>
+            <span className="bg-[#2F7D5A]/10 text-[#2F7D5A] border border-[#2F7D5A]/30 text-[10px] font-bold px-2 py-0.5 rounded-md">
               Live Supabase Data
             </span>
           </div>
-          <p className="text-xs text-charcoal-500 dark:text-[#85888E] mt-1">
+          <p className="text-xs text-[#66717C] mt-1">
             Real-time business performance, sales revenue, order fulfillment, and live inventory.
           </p>
         </div>
@@ -98,16 +95,16 @@ export default function AdminDashboardPage() {
         <div className="flex items-center gap-2.5 flex-wrap">
           <Link
             href="/admin/products"
-            className="inline-flex items-center gap-1.5 bg-champagne-500 hover:bg-champagne-400 text-black text-xs font-bold py-2.5 px-4 rounded-xl shadow-xs transition-all active:scale-[0.99]"
+            className="inline-flex items-center gap-1.5 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] text-xs font-bold py-2.5 px-4 rounded-xl shadow-xs transition-colors active:scale-[0.99]"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Add Product</span>
           </Link>
           <Link
             href="/admin/stock"
-            className="inline-flex items-center gap-1.5 bg-light-elevated dark:bg-[#202329] hover:bg-light-hover dark:hover:bg-[#272A2F] border border-light-border dark:border-[#30343A] text-charcoal-900 dark:text-[#F1F0EC] text-xs font-semibold py-2.5 px-4 rounded-xl transition-colors"
+            className="inline-flex items-center gap-1.5 bg-[#EEE8DC]/50 hover:bg-[#EEE8DC] border border-[#D8D0C3] text-[#1D2730] text-xs font-semibold py-2.5 px-4 rounded-xl transition-colors"
           >
-            <Boxes className="w-4 h-4 text-[#A07D38] dark:text-[#C9A96A]" />
+            <Boxes className="w-4 h-4 text-[#C99A3D]" />
             <span>Manage Stock</span>
           </Link>
         </div>
@@ -116,69 +113,69 @@ export default function AdminDashboardPage() {
       {/* Primary KPI Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Total Revenue */}
-        <div className="bg-white dark:bg-[#17191D] p-5 rounded-2xl border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card flex items-start justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-[#D8D0C3] shadow-sm flex items-start justify-between">
           <div>
-            <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#85888E] uppercase tracking-wider">Gross Revenue</span>
-            <div className="text-2xl font-bold text-[#A07D38] dark:text-[#C9A96A] mt-1">
+            <span className="text-[10px] font-bold text-[#66717C] uppercase tracking-wider">Gross Revenue</span>
+            <div className="text-2xl font-bold text-[#C99A3D] mt-1">
               Rs. {totalSales.toLocaleString()}
             </div>
-            <span className="text-[11px] text-charcoal-400 dark:text-[#85888E] mt-1 block">
+            <span className="text-[11px] text-[#66717C] mt-1 block">
               Delivered: Rs. {deliveredSales.toLocaleString()}
             </span>
           </div>
-          <div className="p-3 bg-light-elevated dark:bg-[#1D2025] border border-light-border dark:border-[#30343A] text-emerald-600 dark:text-[#3FB982] rounded-xl">
+          <div className="p-3 bg-[#EEE8DC]/50 border border-[#D8D0C3] text-[#2F7D5A] rounded-xl">
             <Banknote className="w-5 h-5" />
           </div>
         </div>
 
         {/* 2. Total Orders */}
-        <div className="bg-white dark:bg-[#17191D] p-5 rounded-2xl border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card flex items-start justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-[#D8D0C3] shadow-sm flex items-start justify-between">
           <div>
-            <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#85888E] uppercase tracking-wider">Total Customer Orders</span>
-            <div className="text-2xl font-bold text-charcoal-900 dark:text-[#F1F0EC] mt-1">{totalOrders}</div>
-            <div className="flex items-center gap-2 text-[11px] text-charcoal-500 dark:text-[#85888E] mt-1">
-              <span className="text-amber-600 dark:text-[#D6A84F] font-semibold">{pendingOrders} pending</span>
+            <span className="text-[10px] font-bold text-[#66717C] uppercase tracking-wider">Total Customer Orders</span>
+            <div className="text-2xl font-bold text-[#1D2730] mt-1">{totalOrders}</div>
+            <div className="flex items-center gap-2 text-[11px] text-[#66717C] mt-1">
+              <span className="text-[#C99A3D] font-semibold">{pendingOrders} pending</span>
               <span>•</span>
-              <span className="text-emerald-700 dark:text-[#3FB982]">{deliveredOrders} delivered</span>
+              <span className="text-[#2F7D5A]">{deliveredOrders} delivered</span>
             </div>
           </div>
-          <div className="p-3 bg-light-elevated dark:bg-[#1D2025] border border-light-border dark:border-[#30343A] text-[#A07D38] dark:text-[#C9A96A] rounded-xl">
+          <div className="p-3 bg-[#EEE8DC]/50 border border-[#D8D0C3] text-[#C99A3D] rounded-xl">
             <ShoppingCart className="w-5 h-5" />
           </div>
         </div>
 
         {/* 3. Units in Stock */}
-        <div className="bg-white dark:bg-[#17191D] p-5 rounded-2xl border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card flex items-start justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-[#D8D0C3] shadow-sm flex items-start justify-between">
           <div>
-            <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#85888E] uppercase tracking-wider">Total Units in Stock</span>
-            <div className="text-2xl font-bold text-emerald-700 dark:text-[#3FB982] mt-1">
+            <span className="text-[10px] font-bold text-[#66717C] uppercase tracking-wider">Total Units in Stock</span>
+            <div className="text-2xl font-bold text-[#2F7D5A] mt-1">
               {totalStockUnits.toLocaleString()} pcs
             </div>
-            <span className="text-[11px] text-charcoal-400 dark:text-[#85888E] mt-1 block">
+            <span className="text-[11px] text-[#66717C] mt-1 block">
               Across {allVariants.length} variant sizes
             </span>
           </div>
-          <div className="p-3 bg-light-elevated dark:bg-[#1D2025] border border-light-border dark:border-[#30343A] text-emerald-600 dark:text-[#3FB982] rounded-xl">
+          <div className="p-3 bg-[#EEE8DC]/50 border border-[#D8D0C3] text-[#2F7D5A] rounded-xl">
             <Boxes className="w-5 h-5" />
           </div>
         </div>
 
         {/* 4. Low & Out of Stock */}
-        <div className="bg-white dark:bg-[#17191D] p-5 rounded-2xl border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card flex items-start justify-between">
+        <div className="bg-white p-5 rounded-2xl border border-[#D8D0C3] shadow-sm flex items-start justify-between">
           <div>
-            <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#85888E] uppercase tracking-wider">Inventory Alerts</span>
+            <span className="text-[10px] font-bold text-[#66717C] uppercase tracking-wider">Inventory Alerts</span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className={`text-2xl font-bold ${lowStockVariants.length > 0 ? 'text-amber-600 dark:text-[#D6A84F]' : 'text-emerald-700 dark:text-[#3FB982]'}`}>
+              <span className={`text-2xl font-bold ${lowStockVariants.length > 0 ? 'text-[#C99A3D]' : 'text-[#2F7D5A]'}`}>
                 {lowStockVariants.length}
               </span>
-              <span className="text-xs text-charcoal-500 dark:text-[#85888E]">low stock</span>
+              <span className="text-xs text-[#66717C]">low stock</span>
               {outOfStockVariants.length > 0 && (
-                <span className="text-xs text-rose-600 dark:text-[#D96B6B] font-bold">({outOfStockVariants.length} out)</span>
+                <span className="text-xs text-[#B8423A] font-bold">({outOfStockVariants.length} out)</span>
               )}
             </div>
-            <span className="text-[11px] text-charcoal-400 dark:text-[#85888E] mt-1 block">Items &le; {lowStockThreshold} units</span>
+            <span className="text-[11px] text-[#66717C] mt-1 block">Items &le; {lowStockThreshold} units</span>
           </div>
-          <div className="p-3 bg-light-elevated dark:bg-[#1D2025] border border-light-border dark:border-[#30343A] text-amber-600 dark:text-[#D6A84F] rounded-xl">
+          <div className="p-3 bg-[#EEE8DC]/50 border border-[#D8D0C3] text-[#C99A3D] rounded-xl">
             <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
@@ -186,51 +183,51 @@ export default function AdminDashboardPage() {
 
       {/* Secondary Status Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white dark:bg-[#17191D] p-3.5 rounded-xl border border-light-border dark:border-[#30343A] flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-[#D8D0C3] flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-charcoal-500 dark:text-[#85888E] font-semibold uppercase">Pending Dispatch</span>
-            <div className="text-lg font-bold text-amber-600 dark:text-[#D6A84F]">{pendingOrders}</div>
+            <span className="text-[10px] text-[#66717C] font-semibold uppercase">Pending Dispatch</span>
+            <div className="text-lg font-bold text-[#C99A3D]">{pendingOrders}</div>
           </div>
-          <Clock className="w-4 h-4 text-amber-600 dark:text-[#D6A84F]" />
+          <Clock className="w-4 h-4 text-[#C99A3D]" />
         </div>
 
-        <div className="bg-white dark:bg-[#17191D] p-3.5 rounded-xl border border-light-border dark:border-[#30343A] flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-[#D8D0C3] flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-charcoal-500 dark:text-[#85888E] font-semibold uppercase">Processing / In Transit</span>
-            <div className="text-lg font-bold text-charcoal-900 dark:text-[#F1F0EC]">{processingOrders}</div>
+            <span className="text-[10px] text-[#66717C] font-semibold uppercase">Processing / In Transit</span>
+            <div className="text-lg font-bold text-[#1D2730]">{processingOrders}</div>
           </div>
-          <Truck className="w-4 h-4 text-[#A07D38] dark:text-[#C9A96A]" />
+          <Truck className="w-4 h-4 text-[#C99A3D]" />
         </div>
 
-        <div className="bg-white dark:bg-[#17191D] p-3.5 rounded-xl border border-light-border dark:border-[#30343A] flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-[#D8D0C3] flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-charcoal-500 dark:text-[#85888E] font-semibold uppercase">Delivered Orders</span>
-            <div className="text-lg font-bold text-emerald-700 dark:text-[#3FB982]">{deliveredOrders}</div>
+            <span className="text-[10px] text-[#66717C] font-semibold uppercase">Delivered Orders</span>
+            <div className="text-lg font-bold text-[#2F7D5A]">{deliveredOrders}</div>
           </div>
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-[#3FB982]" />
+          <CheckCircle2 className="w-4 h-4 text-[#2F7D5A]" />
         </div>
 
-        <div className="bg-white dark:bg-[#17191D] p-3.5 rounded-xl border border-light-border dark:border-[#30343A] flex items-center justify-between">
+        <div className="bg-white p-3.5 rounded-xl border border-[#D8D0C3] flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-charcoal-500 dark:text-[#85888E] font-semibold uppercase">Live Catalog Garments</span>
-            <div className="text-lg font-bold text-charcoal-900 dark:text-[#F1F0EC]">{totalProducts}</div>
+            <span className="text-[10px] text-[#66717C] font-semibold uppercase">Live Catalog Garments</span>
+            <div className="text-lg font-bold text-[#1D2730]">{totalProducts}</div>
           </div>
-          <Package className="w-4 h-4 text-[#A07D38] dark:text-[#C9A96A]" />
+          <Package className="w-4 h-4 text-[#C99A3D]" />
         </div>
       </div>
 
       {/* Main Activity Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Recent Orders */}
-        <div className="lg:col-span-7 bg-white dark:bg-[#17191D] rounded-2xl p-5 sm:p-6 border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card space-y-4">
-          <div className="flex items-center justify-between border-b border-light-border dark:border-[#30343A] pb-3">
+        <div className="lg:col-span-7 bg-white rounded-2xl p-5 sm:p-6 border border-[#D8D0C3] shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-[#D8D0C3] pb-3">
             <div>
-              <h2 className="text-base font-bold text-charcoal-900 dark:text-[#F1F0EC]">Recent Customer Orders</h2>
-              <p className="text-xs text-charcoal-500 dark:text-[#85888E]">Latest orders received from website checkout</p>
+              <h2 className="text-base font-bold text-[#1D2730]">Recent Customer Orders</h2>
+              <p className="text-xs text-[#66717C]">Latest orders received from website checkout</p>
             </div>
             <Link
               href="/admin/orders"
-              className="text-xs font-bold text-[#A07D38] dark:text-[#C9A96A] hover:text-[#D8BD88] flex items-center gap-1 transition-colors"
+              className="text-xs font-bold text-[#C99A3D] hover:underline flex items-center gap-1 transition-colors"
             >
               <span>View All ({totalOrders})</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -238,17 +235,17 @@ export default function AdminDashboardPage() {
           </div>
 
           {recentOrders.length === 0 ? (
-            <div className="text-center py-12 space-y-2 bg-light-elevated dark:bg-[#1D2025] rounded-xl border border-light-border dark:border-[#30343A]">
-              <ShoppingCart className="w-8 h-8 text-charcoal-400 dark:text-[#85888E] mx-auto" />
-              <p className="text-xs font-bold text-charcoal-900 dark:text-[#F1F0EC]">No orders placed yet.</p>
-              <p className="text-[11px] text-charcoal-500 dark:text-[#85888E]">
+            <div className="text-center py-12 space-y-2 bg-[#EEE8DC]/40 rounded-xl border border-[#D8D0C3]">
+              <ShoppingCart className="w-8 h-8 text-[#66717C] mx-auto" />
+              <p className="text-xs font-bold text-[#1D2730]">No orders placed yet.</p>
+              <p className="text-[11px] text-[#66717C]">
                 When customers place an order through the website, it will appear here instantly.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-light-elevated dark:bg-[#1D2025] text-[#A07D38] dark:text-[#C9A96A] uppercase font-bold text-[10px] border-b border-light-border dark:border-[#30343A]">
+                <thead className="bg-[#EEE8DC]/50 text-[#C99A3D] uppercase font-bold text-[10px] border-b border-[#D8D0C3]">
                   <tr>
                     <th className="p-3">Order #</th>
                     <th className="p-3">Customer</th>
@@ -258,28 +255,28 @@ export default function AdminDashboardPage() {
                     <th className="p-3 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-light-border dark:divide-[#272A2F] font-medium text-charcoal-700 dark:text-[#B4B5BA]">
+                <tbody className="divide-y divide-[#D8D0C3] font-medium text-[#1D2730]">
                   {recentOrders.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-light-hover dark:hover:bg-[#1D2025]/60 transition-colors">
-                      <td className="p-3 font-mono font-bold text-[#A07D38] dark:text-[#C9A96A]">
+                    <tr key={ord.id} className="hover:bg-[#EEE8DC]/30 transition-colors">
+                      <td className="p-3 font-mono font-bold text-[#C99A3D]">
                         <span>#{ord.orderNumber}</span>
                       </td>
                       <td className="p-3">
-                        <div className="font-bold text-charcoal-900 dark:text-[#F1F0EC]">{ord.customerName}</div>
-                        <span className="text-[10px] text-charcoal-500 dark:text-[#85888E]">{ord.city}</span>
+                        <div className="font-bold text-[#1D2730]">{ord.customerName}</div>
+                        <span className="text-[10px] text-[#66717C]">{ord.city}</span>
                       </td>
-                      <td className="p-3 text-charcoal-900 dark:text-[#F1F0EC]">
+                      <td className="p-3 text-[#1D2730]">
                         {ord.items.reduce((s, it) => s + it.quantity, 0)} pcs
                       </td>
-                      <td className="p-3 font-bold text-[#A07D38] dark:text-[#C9A96A]">Rs. {ord.totalAmount}</td>
+                      <td className="p-3 font-bold text-[#C99A3D]">Rs. {ord.totalAmount}</td>
                       <td className="p-3">
                         <span
                           className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
                             ord.status === 'Delivered'
-                              ? 'bg-emerald-100 dark:bg-[#3FB982]/15 text-emerald-700 dark:text-[#3FB982] border border-emerald-300 dark:border-[#3FB982]/30'
+                              ? 'bg-[#2F7D5A]/10 text-[#2F7D5A] border border-[#2F7D5A]/30'
                               : ord.status === 'Pending'
-                              ? 'bg-amber-100 dark:bg-[#D6A84F]/15 text-amber-700 dark:text-[#D6A84F] border border-amber-300 dark:border-[#D6A84F]/30'
-                              : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800/60'
+                              ? 'bg-[#C99A3D]/10 text-[#C99A3D] border border-[#C99A3D]/30'
+                              : 'bg-[#23384D]/10 text-[#23384D] border border-[#23384D]/30'
                           }`}
                         >
                           {ord.status}
@@ -288,7 +285,7 @@ export default function AdminDashboardPage() {
                       <td className="p-3 text-right">
                         <Link
                           href="/admin/orders"
-                          className="text-xs font-bold text-[#A07D38] dark:text-[#C9A96A] hover:underline"
+                          className="text-xs font-bold text-[#C99A3D] hover:underline"
                         >
                           Details
                         </Link>
@@ -304,25 +301,25 @@ export default function AdminDashboardPage() {
         {/* Right: Low Stock Alerts & Recent Reviews */}
         <div className="lg:col-span-5 space-y-6">
           {/* Low Stock Warning Box */}
-          <div className="bg-white dark:bg-[#17191D] rounded-2xl p-5 sm:p-6 border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card space-y-4">
-            <div className="flex items-center justify-between border-b border-light-border dark:border-[#30343A] pb-3">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-[#D8D0C3] shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D8D0C3] pb-3">
               <div>
-                <h3 className="text-sm font-bold text-charcoal-900 dark:text-[#F1F0EC] flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-[#D6A84F]" />
+                <h3 className="text-sm font-bold text-[#1D2730] flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[#C99A3D]" />
                   <span>Low Stock Warning</span>
                 </h3>
-                <p className="text-xs text-charcoal-500 dark:text-[#85888E]">Garments requiring replenishment</p>
+                <p className="text-xs text-[#66717C]">Garments requiring replenishment</p>
               </div>
               <Link
                 href="/admin/stock"
-                className="text-xs font-bold text-[#A07D38] dark:text-[#C9A96A] hover:underline"
+                className="text-xs font-bold text-[#C99A3D] hover:underline"
               >
                 Stock Matrix
               </Link>
             </div>
 
             {lowStockProductsList.length === 0 ? (
-              <div className="p-4 bg-light-elevated dark:bg-[#1D2025] rounded-xl border border-light-border dark:border-[#30343A] text-center text-xs text-emerald-700 dark:text-[#3FB982] font-semibold flex items-center justify-center gap-2">
+              <div className="p-4 bg-[#EEE8DC]/40 rounded-xl border border-[#D8D0C3] text-center text-xs text-[#2F7D5A] font-semibold flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>All garment variants are well stocked!</span>
               </div>
@@ -331,17 +328,17 @@ export default function AdminDashboardPage() {
                 {lowStockProductsList.map(({ product, lowVars, totalPStock }) => (
                   <div
                     key={product.id}
-                    className="p-3 bg-light-elevated dark:bg-[#1D2025] rounded-xl border border-light-border dark:border-[#30343A] flex items-center justify-between gap-3 text-xs"
+                    className="p-3 bg-[#EEE8DC]/40 rounded-xl border border-[#D8D0C3] flex items-center justify-between gap-3 text-xs"
                   >
                     <div>
-                      <h4 className="font-bold text-charcoal-900 dark:text-[#F1F0EC] truncate max-w-[200px]">{product.name}</h4>
-                      <p className="text-[11px] text-charcoal-500 dark:text-[#85888E]">
+                      <h4 className="font-bold text-[#1D2730] truncate max-w-[200px]">{product.name}</h4>
+                      <p className="text-[11px] text-[#66717C]">
                         {lowVars.length} variant(s) low &bull; Total: {totalPStock} pcs
                       </p>
                     </div>
                     <Link
                       href="/admin/stock"
-                      className="px-2.5 py-1 bg-white dark:bg-[#202329] hover:bg-light-hover dark:hover:bg-[#272A2F] border border-light-border dark:border-[#30343A] text-[#A07D38] dark:text-[#C9A96A] rounded-lg font-bold text-[11px]"
+                      className="px-2.5 py-1 bg-white hover:bg-[#EEE8DC] border border-[#D8D0C3] text-[#C99A3D] rounded-lg font-bold text-[11px]"
                     >
                       Update
                     </Link>
@@ -352,44 +349,44 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Recent Reviews Moderation Preview */}
-          <div className="bg-white dark:bg-[#17191D] rounded-2xl p-5 sm:p-6 border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card space-y-4">
-            <div className="flex items-center justify-between border-b border-light-border dark:border-[#30343A] pb-3">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-[#D8D0C3] shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D8D0C3] pb-3">
               <div>
-                <h3 className="text-sm font-bold text-charcoal-900 dark:text-[#F1F0EC] flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-[#A07D38] dark:text-[#C9A96A]" />
+                <h3 className="text-sm font-bold text-[#1D2730] flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#C99A3D]" />
                   <span>Customer Reviews</span>
                 </h3>
-                <p className="text-xs text-charcoal-500 dark:text-[#85888E]">Latest submitted feedback</p>
+                <p className="text-xs text-[#66717C]">Latest submitted feedback</p>
               </div>
               <Link
                 href="/admin/reviews"
-                className="text-xs font-bold text-[#A07D38] dark:text-[#C9A96A] hover:underline"
+                className="text-xs font-bold text-[#C99A3D] hover:underline"
               >
                 Moderate ({reviews.length})
               </Link>
             </div>
 
             {latestReviews.length === 0 ? (
-              <p className="text-xs text-charcoal-500 dark:text-[#85888E] text-center py-4">No reviews submitted yet.</p>
+              <p className="text-xs text-[#66717C] text-center py-4">No reviews submitted yet.</p>
             ) : (
               <div className="space-y-2.5">
                 {latestReviews.map((rev) => (
                   <div
                     key={rev.id}
-                    className="p-3 bg-light-elevated dark:bg-[#1D2025] rounded-xl border border-light-border dark:border-[#30343A] text-xs space-y-1"
+                    className="p-3 bg-[#EEE8DC]/40 rounded-xl border border-[#D8D0C3] text-xs space-y-1"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-charcoal-900 dark:text-[#F1F0EC]">{rev.customerName}</span>
-                      <div className="flex text-[#A07D38] dark:text-[#C9A96A]">
+                      <span className="font-bold text-[#1D2730]">{rev.customerName}</span>
+                      <div className="flex text-[#C99A3D]">
                         {[1, 2, 3, 4, 5].map((s) => (
                           <Star
                             key={s}
-                            className={`w-2.5 h-2.5 ${s <= rev.rating ? 'fill-current' : 'text-charcoal-300 dark:text-[#30343A]'}`}
+                            className={`w-2.5 h-2.5 ${s <= rev.rating ? 'fill-current' : 'text-[#D8D0C3]'}`}
                           />
                         ))}
                       </div>
                     </div>
-                    <p className="text-[11px] text-charcoal-600 dark:text-[#B4B5BA] line-clamp-1 italic">&quot;{rev.comment}&quot;</p>
+                    <p className="text-[11px] text-[#66717C] line-clamp-1 italic">&quot;{rev.comment}&quot;</p>
                   </div>
                 ))}
               </div>

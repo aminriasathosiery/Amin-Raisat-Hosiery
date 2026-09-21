@@ -162,48 +162,48 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   );
 
   return (
-    <div className="space-y-6 select-none text-charcoal-900 dark:text-[#F4F1E9]">
+    <div className="space-y-6 select-none text-[#1D2730]">
       {/* 1. DYNAMIC MAIN PRICE SECTION */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] shadow-sm space-y-2.5">
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#D8D0C3] shadow-sm space-y-2.5">
         <div className="flex items-start justify-between gap-3">
           <div>
             {/* Primary Price */}
             <div className="flex items-baseline gap-2.5">
-              <span className="text-2xl sm:text-3xl font-extrabold text-[#B89555] dark:text-[#C9A96A] tracking-tight">
+              <span className="text-2xl sm:text-3xl font-extrabold text-[#C99A3D] tracking-tight">
                 Rs. {unitPrice}
               </span>
               {regularPrice > unitPrice && (
-                <span className="text-sm text-charcoal-400 dark:text-[#8E8A80] line-through font-normal">
+                <span className="text-sm text-[#66717C] line-through font-normal">
                   Rs. {regularPrice}
                 </span>
               )}
               {discountPercentage > 0 && (
-                <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 px-2 py-0.5 rounded-md">
+                <span className="text-[11px] font-bold text-[#B8423A] bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
                   {discountPercentage}% OFF
                 </span>
               )}
-              <span className="text-xs text-charcoal-500 dark:text-[#B8B3A8] font-normal">/ piece</span>
+              <span className="text-xs text-[#66717C] font-normal">/ piece</span>
             </div>
 
             {/* Total Calculation Row */}
-            <p className="text-xs text-charcoal-600 dark:text-[#B8B3A8] pt-1.5 font-medium">
+            <p className="text-xs text-[#66717C] pt-1.5 font-medium">
               Total for {quantity} piece{quantity > 1 ? 's' : ''}:{' '}
-              <strong className="text-charcoal-900 dark:text-[#F4F1E9] font-bold">Rs. {totalPrice.toLocaleString()}</strong>
+              <strong className="text-[#1D2730] font-bold">Rs. {totalPrice.toLocaleString()}</strong>
             </p>
           </div>
 
           {/* Stock / SKU Status */}
           <div className="text-right flex-shrink-0">
             {stock <= 0 ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 px-3 py-1 rounded-xl border border-rose-300 dark:border-rose-800 whitespace-nowrap">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-rose-100 text-rose-700 px-3 py-1 rounded-xl border border-rose-300 whitespace-nowrap">
                 <ShieldAlert className="w-3.5 h-3.5" /> Out of Stock
               </span>
             ) : (
               <div className="space-y-0.5">
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#2F7D5A]">
                   <Check className="w-3.5 h-3.5" /> In Stock
                 </span>
-                <p className="text-[10px] font-mono text-charcoal-400 dark:text-[#8E8A80]">
+                <p className="text-[10px] font-mono text-[#66717C]">
                   SKU: {currentVariant?.sku || 'ARH-SKU'}
                 </p>
               </div>
@@ -215,9 +215,9 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       {/* 2. Sleeve Style Selector (if multiple sleeve types exist) */}
       {availableSleeves.length > 1 && (
         <div className="space-y-2.5">
-          <label className="text-xs font-bold uppercase tracking-wider text-charcoal-700 dark:text-[#B8B3A8] flex items-center justify-between">
+          <label className="text-xs font-bold uppercase tracking-wider text-[#1D2730] flex items-center justify-between">
             <span>Select Sleeve Style</span>
-            <span className="text-[#B89555] dark:text-[#C9A96A] font-semibold text-[11px]">
+            <span className="text-[#C99A3D] font-semibold text-[11px]">
               {selectedSleeve}
             </span>
           </label>
@@ -231,8 +231,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
                   onClick={() => setSelectedSleeve(sl)}
                   className={`h-11 sm:h-12 px-3 rounded-xl border text-center font-bold text-xs sm:text-sm transition-all flex items-center justify-center whitespace-nowrap ${
                     isSelected
-                      ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-50 dark:bg-[#22211E] text-[#96763D] dark:text-[#C9A96A] shadow-xs'
-                      : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] text-charcoal-700 dark:text-[#B8B3A8] hover:border-[#B89555]/40'
+                      ? 'border-[#C99A3D] bg-[#EEE8DC] text-[#C99A3D] shadow-xs'
+                      : 'border-[#D8D0C3] bg-white text-[#1D2730] hover:border-[#C99A3D]'
                   }`}
                 >
                   {sl}
@@ -247,13 +247,13 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       {availableSizes.length > 0 && (
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold uppercase tracking-wider text-charcoal-700 dark:text-[#B8B3A8]">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#1D2730]">
               Select Size
             </label>
             <button
               type="button"
               onClick={() => setIsSizeGuideOpen(true)}
-              className="text-xs font-medium text-[#B89555] dark:text-[#C9A96A] hover:underline flex items-center gap-1"
+              className="text-xs font-medium text-[#C99A3D] hover:underline flex items-center gap-1"
             >
               <HelpCircle className="w-3.5 h-3.5" /> Size Guide
             </button>
@@ -276,10 +276,10 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
                   onClick={() => setSelectedSize(s)}
                   className={`h-11 sm:h-12 min-w-[48px] sm:min-w-[56px] px-3.5 sm:px-4 rounded-xl border text-xs sm:text-sm font-bold transition-all flex items-center justify-center ${
                     isSelected
-                      ? 'border-[#B89555] dark:border-[#C9A96A] bg-champagne-500 text-charcoal-950 font-extrabold shadow-xs scale-105'
+                      ? 'border-[#23384D] bg-[#23384D] text-white font-extrabold shadow-xs scale-105'
                       : isOutOfStock
-                      ? 'border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] text-charcoal-400 dark:text-[#8E8A80] line-through opacity-50 cursor-not-allowed'
-                      : 'border-light-border dark:border-[#34322D] bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] hover:border-[#B89555]/50 active:scale-95'
+                      ? 'border-[#D8D0C3] bg-[#EEE8DC] text-[#66717C] line-through opacity-50 cursor-not-allowed'
+                      : 'border-[#D8D0C3] bg-white text-[#1D2730] hover:border-[#C99A3D] active:scale-95'
                   }`}
                 >
                   <span>{s}</span>
@@ -291,35 +291,35 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       )}
 
       {/* 4. QUANTITY STEPPER (Min 1 piece) */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] shadow-sm space-y-3">
+      <div className="p-4 rounded-2xl bg-white border border-[#D8D0C3] shadow-sm space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-charcoal-900 dark:text-[#F4F1E9] block">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#1D2730] block">
               Quantity (Pieces)
             </label>
-            <span className="text-[11px] text-charcoal-500 dark:text-[#B8B3A8] font-normal">
+            <span className="text-[11px] text-[#66717C] font-normal">
               1 piece is a valid order • Free delivery on 3+ pieces
             </span>
           </div>
 
-          <div className="flex items-center border border-light-border dark:border-[#34322D] rounded-xl bg-light-elevated dark:bg-[#22211E] overflow-hidden shadow-xs">
+          <div className="flex items-center border border-[#D8D0C3] rounded-xl bg-[#EEE8DC] overflow-hidden shadow-xs">
             <button
               type="button"
               disabled={quantity <= minOrder}
               onClick={() => setQuantity((prev) => Math.max(minOrder, prev - 1))}
-              className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center text-charcoal-900 dark:text-[#F4F1E9] hover:bg-light-hover dark:hover:bg-[#2A2925] disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-base"
+              className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center text-[#1D2730] hover:bg-[#E8E1D3] disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-base"
               aria-label="Decrease quantity"
             >
               −
             </button>
-            <span className="w-12 sm:w-14 text-center text-xs sm:text-sm font-extrabold text-[#B89555] dark:text-[#C9A96A]">
+            <span className="w-12 sm:w-14 text-center text-xs sm:text-sm font-extrabold text-[#C99A3D]">
               {quantity}
             </span>
             <button
               type="button"
               disabled={quantity >= maxOrder}
               onClick={() => setQuantity((prev) => Math.min(maxOrder, prev + 1))}
-              className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center text-charcoal-900 dark:text-[#F4F1E9] hover:bg-light-hover dark:hover:bg-[#2A2925] disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-base"
+              className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center text-[#1D2730] hover:bg-[#E8E1D3] disabled:opacity-30 disabled:cursor-not-allowed transition-colors font-bold text-base"
               aria-label="Increase quantity"
             >
               +
@@ -328,8 +328,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
         </div>
 
         {/* Free Delivery Incentive Bar */}
-        <div className="pt-2 border-t border-light-border dark:border-[#34322D] flex items-center justify-between text-xs flex-wrap gap-2">
-          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold">
+        <div className="pt-2 border-t border-[#D8D0C3] flex items-center justify-between text-xs flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-[#2F7D5A] font-semibold">
             <Truck className="w-4 h-4 flex-shrink-0" />
             <span>
               {isFreeDeliveryForThis
@@ -349,11 +349,11 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
           onClick={handleBuyNow}
           className={`w-full min-h-[46px] sm:min-h-[50px] py-3 px-6 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${
             isAvailable
-              ? 'bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 active:scale-[0.99]'
-              : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-400 dark:text-[#8E8A80] border border-light-border dark:border-[#34322D] cursor-not-allowed'
+              ? 'bg-[#23384D] hover:bg-[#182B3D] text-white active:scale-[0.99]'
+              : 'bg-[#EEE8DC] text-[#66717C] border border-[#D8D0C3] cursor-not-allowed'
           }`}
         >
-          <Zap className="w-4 h-4 fill-current stroke-[2.5]" />
+          <Zap className="w-4 h-4 fill-current stroke-[2.5] text-[#C99A3D]" />
           <span>
             {isAvailable
               ? `BUY NOW (${quantity} PC${quantity > 1 ? 'S' : ''}) • Rs. ${totalPrice.toLocaleString()}${
@@ -370,9 +370,9 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
             type="button"
             disabled={!isAvailable}
             onClick={handleAddToCart}
-            className="w-full min-h-[44px] sm:min-h-[46px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-[#191917] hover:bg-light-hover dark:hover:bg-[#22211E] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] transition-colors flex items-center justify-center gap-2 shadow-xs"
+            className="w-full min-h-[44px] sm:min-h-[46px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white hover:bg-[#EEE8DC] text-[#1D2730] border border-[#D8D0C3] transition-colors flex items-center justify-center gap-2 shadow-xs"
           >
-            <ShoppingBag className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
+            <ShoppingBag className="w-4 h-4 text-[#C99A3D]" />
             <span>Add to Cart</span>
           </button>
 
@@ -393,21 +393,21 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       {/* SIZE GUIDE MODAL */}
       {isSizeGuideOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 dark:bg-black/85 backdrop-blur-xs animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in"
           onClick={() => setIsSizeGuideOpen(false)}
         >
           <div
-            className="bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-2xl max-w-xl w-full p-4 sm:p-6 shadow-elevation max-h-[90vh] flex flex-col space-y-3"
+            className="bg-white border border-[#D8D0C3] rounded-2xl max-w-xl w-full p-4 sm:p-6 shadow-elevation max-h-[90vh] flex flex-col space-y-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-light-border dark:border-[#34322D] pb-3 flex-shrink-0">
-              <h3 className="font-bold text-base text-charcoal-900 dark:text-[#F4F1E9]">
+            <div className="flex items-center justify-between border-b border-[#D8D0C3] pb-3 flex-shrink-0">
+              <h3 className="font-bold text-base text-[#1D2730]">
                 Size Guide
               </h3>
               <button
                 type="button"
                 onClick={() => setIsSizeGuideOpen(false)}
-                className="p-1 rounded-lg text-charcoal-400 hover:text-charcoal-900 dark:hover:text-white transition-colors"
+                className="p-1 rounded-lg text-[#66717C] hover:text-[#1D2730] transition-colors"
                 aria-label="Close Size Guide"
               >
                 <X className="w-5 h-5" />
@@ -427,14 +427,14 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
                       <img
                         src={sizeGuideSrc}
                         alt={`${product.name} Size Guide`}
-                        className="max-w-full h-auto object-contain rounded-xl border border-light-border dark:border-[#34322D]"
+                        className="max-w-full h-auto object-contain rounded-xl border border-[#D8D0C3]"
                       />
                     </div>
                   );
                 }
 
                 return (
-                  <div className="py-12 text-center text-xs text-charcoal-500 dark:text-[#8E8A80]">
+                  <div className="py-12 text-center text-xs text-[#66717C]">
                     Size guide not available.
                   </div>
                 );

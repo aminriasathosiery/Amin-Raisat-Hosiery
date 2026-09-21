@@ -135,20 +135,20 @@ export default function AdminSettingsPage() {
   const methods = formState.paymentMethods || INITIAL_SITE_SETTINGS.paymentMethods!;
 
   return (
-    <div className="space-y-6 max-w-5xl text-charcoal-900 dark:text-[#F4F1E9]">
+    <div className="space-y-6 max-w-5xl text-charcoal-900">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
-          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white text-charcoal-900 border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
+          <Check className="w-4 h-4 text-emerald-600" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#191917] p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-light-border shadow-sm">
         <div>
-          <h1 className="text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">Store &amp; Delivery Engine Settings</h1>
-          <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] mt-1">
+          <h1 className="text-xl font-bold text-charcoal-900">Store &amp; Delivery Engine Settings</h1>
+          <p className="text-xs text-charcoal-500 mt-1">
             Configure delivery rules (MOQ, 100+ Max Qty, Free Delivery), Pakistan payment gateways (COD, Bank Transfer, JazzCash, EasyPaisa, SadaPay), and announcement bar strips.
           </p>
         </div>
@@ -165,14 +165,14 @@ export default function AdminSettingsPage() {
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* 1. Delivery & Order Rules */}
-        <div className="bg-white dark:bg-[#191917] rounded-2xl p-5 sm:p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-4">
-          <div className="flex items-center gap-3 border-b border-light-border dark:border-[#34322D] pb-3">
-            <div className="p-2 bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] rounded-xl border border-light-border dark:border-[#34322D]">
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-light-border shadow-sm space-y-4">
+          <div className="flex items-center gap-3 border-b border-light-border pb-3">
+            <div className="p-2 bg-light-elevated text-[#B89555] rounded-xl border border-light-border">
               <Truck className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">1. Delivery Rules &amp; Shipping Charges</h2>
-              <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+              <h2 className="text-sm font-bold text-charcoal-900">1. Delivery Rules &amp; Shipping Charges</h2>
+              <p className="text-xs text-charcoal-500">
                 These parameters automatically sync across homepage benefit strips, cart calculations, checkout, and WhatsApp order messages.
               </p>
             </div>
@@ -180,7 +180,7 @@ export default function AdminSettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                 Free Delivery After (Pieces) *
               </label>
               <input
@@ -198,15 +198,15 @@ export default function AdminSettingsPage() {
                     },
                   })
                 }
-                className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-[#B89555] focus:border-[#B89555] focus:outline-none"
               />
-              <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] mt-1 block">
+              <span className="text-[10px] text-charcoal-500 mt-1 block">
                 Store policy: 3+ pieces = FREE DELIVERY
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                 Standard Delivery Charge (Rs.) *
               </label>
               <input
@@ -223,15 +223,15 @@ export default function AdminSettingsPage() {
                     },
                   })
                 }
-                className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-[#B89555] focus:border-[#B89555] focus:outline-none"
               />
-              <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] mt-1 block">
+              <span className="text-[10px] text-charcoal-500 mt-1 block">
                 Applied when order &lt; free delivery threshold
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                 Minimum Order Quantity (Pieces) *
               </label>
               <input
@@ -249,15 +249,15 @@ export default function AdminSettingsPage() {
                     },
                   })
                 }
-                className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
               />
-              <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] mt-1 block">
+              <span className="text-[10px] text-charcoal-500 mt-1 block">
                 Store policy: 1 piece is a valid order (MOQ = 1)
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                 Maximum Order Quantity (Pieces) *
               </label>
               <input
@@ -275,17 +275,17 @@ export default function AdminSettingsPage() {
                     },
                   })
                 }
-                className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
               />
-              <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] mt-1 block">
+              <span className="text-[10px] text-charcoal-500 mt-1 block">
                 Max retail order limit (e.g. 12, 100, or 500)
               </span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-light-border dark:border-[#34322D] grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="pt-2 border-t border-light-border grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                 Exchange / Return Period (Days)
               </label>
               <input
@@ -299,9 +299,9 @@ export default function AdminSettingsPage() {
                     exchangeReturnDays: Number(e.target.value),
                   })
                 }
-                className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
               />
-              <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] mt-1 block">
+              <span className="text-[10px] text-charcoal-500 mt-1 block">
                 Shown on exchange &amp; returns page (Default: 7 days)
               </span>
             </div>
@@ -309,15 +309,15 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* 2. Announcement Bar & Strips Settings */}
-        <div className="bg-white dark:bg-[#191917] rounded-2xl p-5 sm:p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-5">
-          <div className="flex items-center justify-between border-b border-light-border dark:border-[#34322D] pb-3">
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-light-border shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-light-border pb-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] rounded-xl border border-light-border dark:border-[#34322D]">
+              <div className="p-2 bg-light-elevated text-[#B89555] rounded-xl border border-light-border">
                 <Megaphone className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">2. Website Announcement Bar &amp; Dynamic Strips</h2>
-                <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+                <h2 className="text-sm font-bold text-charcoal-900">2. Website Announcement Bar &amp; Dynamic Strips</h2>
+                <p className="text-xs text-charcoal-500">
                   Dynamic marquee ticker rotating at the top of every page.
                 </p>
               </div>
@@ -326,7 +326,7 @@ export default function AdminSettingsPage() {
             <button
               type="button"
               onClick={handleAddStrip}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#B89555]/10 hover:bg-[#B89555]/20 text-[#B89555] dark:text-[#C9A96A] rounded-lg text-xs font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#B89555]/10 hover:bg-[#B89555]/20 text-[#B89555] rounded-lg text-xs font-bold transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Strip</span>
@@ -347,13 +347,13 @@ export default function AdminSettingsPage() {
                 }
                 className="rounded accent-[#B89555] w-4 h-4"
               />
-              <label htmlFor="announcement-toggle" className="text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9] cursor-pointer">
+              <label htmlFor="announcement-toggle" className="text-xs font-semibold text-charcoal-900 cursor-pointer">
                 Enable Top Announcement Bar on Website
               </label>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+              <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                 Default Static Announcement Text (Fallback)
               </label>
               <input
@@ -361,13 +361,13 @@ export default function AdminSettingsPage() {
                 placeholder="100% Pure Combed Cotton Innerwear — Free Delivery on Orders of 3+ Pieces Across Pakistan!"
                 value={formState.announcementText || ''}
                 onChange={(e) => setFormState({ ...formState, announcementText: e.target.value })}
-                className="w-full px-3.5 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full px-3.5 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:border-[#B89555] focus:outline-none"
               />
             </div>
 
             {/* Dynamic Strips List */}
             <div className="space-y-2 pt-2">
-              <span className="block text-xs font-bold text-charcoal-800 dark:text-[#D1CCC0]">
+              <span className="block text-xs font-bold text-charcoal-800">
                 Active Marquee Strips ({formState.announcementStrips?.length || 0})
               </span>
               
@@ -375,13 +375,13 @@ export default function AdminSettingsPage() {
                 {(formState.announcementStrips || []).map((strip, idx) => (
                   <div
                     key={strip.id || idx}
-                    className="p-3 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl flex flex-col sm:flex-row sm:items-center gap-3"
+                    className="p-3 bg-light-elevated border border-light-border rounded-xl flex flex-col sm:flex-row sm:items-center gap-3"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[#B89555]/20 text-[#B89555] dark:text-[#C9A96A] text-[10px] font-bold flex items-center justify-center shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-[#B89555]/20 text-[#B89555] text-[10px] font-bold flex items-center justify-center shrink-0">
                         {idx + 1}
                       </span>
-                      <label className="flex items-center gap-1.5 text-xs text-charcoal-600 dark:text-[#B8B3A8] cursor-pointer shrink-0">
+                      <label className="flex items-center gap-1.5 text-xs text-charcoal-600 cursor-pointer shrink-0">
                         <input
                           type="checkbox"
                           checked={strip.isActive}
@@ -398,7 +398,7 @@ export default function AdminSettingsPage() {
                         value={strip.text}
                         onChange={(e) => handleUpdateStrip(idx, { text: e.target.value })}
                         placeholder="Strip promotional text..."
-                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                        className="w-full px-3 py-1.5 text-xs bg-white border border-light-border rounded-lg text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                       />
                     </div>
 
@@ -408,7 +408,7 @@ export default function AdminSettingsPage() {
                         value={strip.link || ''}
                         onChange={(e) => handleUpdateStrip(idx, { link: e.target.value })}
                         placeholder="Link (optional, e.g. /delivery)"
-                        className="w-full px-2.5 py-1.5 text-[11px] bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D] rounded-lg text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                        className="w-full px-2.5 py-1.5 text-[11px] bg-white border border-light-border rounded-lg text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                       />
                     </div>
 
@@ -434,21 +434,21 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* 3. Pakistan Payment Gateways & Accounts */}
-        <div className="bg-white dark:bg-[#191917] rounded-2xl p-5 sm:p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-5">
-          <div className="flex items-center gap-3 border-b border-light-border dark:border-[#34322D] pb-3">
-            <div className="p-2 bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] rounded-xl border border-light-border dark:border-[#34322D]">
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-light-border shadow-sm space-y-5">
+          <div className="flex items-center gap-3 border-b border-light-border pb-3">
+            <div className="p-2 bg-light-elevated text-[#B89555] rounded-xl border border-light-border">
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">3. Pakistan Payment Gateways &amp; Accounts</h2>
-              <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+              <h2 className="text-sm font-bold text-charcoal-900">3. Pakistan Payment Gateways &amp; Accounts</h2>
+              <p className="text-xs text-charcoal-500">
                 Configure enabled methods, account titles, account numbers, and customer instructions shown at checkout and /payment-info.
               </p>
             </div>
           </div>
 
           {/* Payment Method Selector Tabs */}
-          <div className="flex flex-wrap gap-2 border-b border-light-border dark:border-[#34322D] pb-3">
+          <div className="flex flex-wrap gap-2 border-b border-light-border pb-3">
             {(
               [
                 { id: 'cod', label: 'Cash on Delivery', icon: Truck },
@@ -468,7 +468,7 @@ export default function AdminSettingsPage() {
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
                     activePaymentTab === tab.id
                       ? 'bg-champagne-500 text-charcoal-950 shadow-xs'
-                      : 'bg-light-elevated dark:bg-[#22211E] text-charcoal-600 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]'
+                      : 'bg-light-elevated text-charcoal-600 hover:text-charcoal-900'
                   }`}
                 >
                   <TabIcon className="w-3.5 h-3.5" />
@@ -486,10 +486,10 @@ export default function AdminSettingsPage() {
           {/* Tab 1: Cash on Delivery (COD) */}
           {activePaymentTab === 'cod' && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="flex items-center justify-between p-3.5 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D]">
+              <div className="flex items-center justify-between p-3.5 bg-light-elevated rounded-xl border border-light-border">
                 <div>
-                  <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] block">Enable Cash on Delivery (COD)</span>
-                  <span className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">Allow customers across Pakistan to pay cash to rider upon delivery</span>
+                  <span className="font-bold text-xs text-charcoal-900 block">Enable Cash on Delivery (COD)</span>
+                  <span className="text-[11px] text-charcoal-500">Allow customers across Pakistan to pay cash to rider upon delivery</span>
                 </div>
                 <input
                   type="checkbox"
@@ -500,22 +500,22 @@ export default function AdminSettingsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Display Name</label>
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">Display Name</label>
                 <input
                   type="text"
                   value={methods.cod?.displayName || 'Cash on Delivery (COD)'}
                   onChange={(e) => updatePaymentMethod('cod', { displayName: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Customer Instructions</label>
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">Customer Instructions</label>
                 <textarea
                   rows={2}
                   value={methods.cod?.instructions || 'Pay in cash directly to the courier rider upon parcel delivery.'}
                   onChange={(e) => updatePaymentMethod('cod', { instructions: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:outline-none"
                 />
               </div>
             </div>
@@ -524,10 +524,10 @@ export default function AdminSettingsPage() {
           {/* Tab 2: Direct Bank Transfer */}
           {activePaymentTab === 'bank_transfer' && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="flex items-center justify-between p-3.5 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D]">
+              <div className="flex items-center justify-between p-3.5 bg-light-elevated rounded-xl border border-light-border">
                 <div>
-                  <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] block">Enable Direct Bank Transfer</span>
-                  <span className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">Requires customer to upload receipt screenshot before order placement</span>
+                  <span className="font-bold text-xs text-charcoal-900 block">Enable Direct Bank Transfer</span>
+                  <span className="text-[11px] text-charcoal-500">Requires customer to upload receipt screenshot before order placement</span>
                 </div>
                 <input
                   type="checkbox"
@@ -539,68 +539,68 @@ export default function AdminSettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Bank Name *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Bank Name *</label>
                   <input
                     type="text"
                     value={methods.bank_transfer?.bankName || ''}
                     onChange={(e) => updatePaymentMethod('bank_transfer', { bankName: e.target.value })}
                     placeholder="e.g. Meezan Bank Ltd."
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Account Title *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Account Title *</label>
                   <input
                     type="text"
                     value={methods.bank_transfer?.accountTitle || ''}
                     onChange={(e) => updatePaymentMethod('bank_transfer', { accountTitle: e.target.value })}
                     placeholder="e.g. Muhammad Amin"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Account Number *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Account Number *</label>
                   <input
                     type="text"
                     value={methods.bank_transfer?.accountNumber || ''}
                     onChange={(e) => updatePaymentMethod('bank_transfer', { accountNumber: e.target.value })}
                     placeholder="e.g. 01010101010101"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-mono font-bold text-[#B89555] dark:text-[#C9A96A] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-mono font-bold text-[#B89555] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">IBAN / Raast ID</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">IBAN / Raast ID</label>
                   <input
                     type="text"
                     value={methods.bank_transfer?.iban || ''}
                     onChange={(e) => updatePaymentMethod('bank_transfer', { iban: e.target.value })}
                     placeholder="e.g. PK00MEZN0000000000000000"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-mono font-bold text-[#B89555] dark:text-[#C9A96A] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-mono font-bold text-[#B89555] focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Branch Name / City</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Branch Name / City</label>
                   <input
                     type="text"
                     value={methods.bank_transfer?.branch || ''}
                     onChange={(e) => updatePaymentMethod('bank_transfer', { branch: e.target.value })}
                     placeholder="e.g. Clock Tower Branch, Faisalabad"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Instructions</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Instructions</label>
                   <textarea
                     rows={2}
                     value={methods.bank_transfer?.instructions || ''}
                     onChange={(e) => updatePaymentMethod('bank_transfer', { instructions: e.target.value })}
                     placeholder="Instructions displayed to customer before transferring..."
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:outline-none"
                   />
                 </div>
               </div>
@@ -610,10 +610,10 @@ export default function AdminSettingsPage() {
           {/* Tab 3: JazzCash */}
           {activePaymentTab === 'jazzcash' && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="flex items-center justify-between p-3.5 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D]">
+              <div className="flex items-center justify-between p-3.5 bg-light-elevated rounded-xl border border-light-border">
                 <div>
-                  <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] block">Enable JazzCash Wallet</span>
-                  <span className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">Accept payments via JazzCash mobile account with mandatory screenshot</span>
+                  <span className="font-bold text-xs text-charcoal-900 block">Enable JazzCash Wallet</span>
+                  <span className="text-[11px] text-charcoal-500">Accept payments via JazzCash mobile account with mandatory screenshot</span>
                 </div>
                 <input
                   type="checkbox"
@@ -625,35 +625,35 @@ export default function AdminSettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">JazzCash Account Title *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">JazzCash Account Title *</label>
                   <input
                     type="text"
                     value={methods.jazzcash?.accountTitle || ''}
                     onChange={(e) => updatePaymentMethod('jazzcash', { accountTitle: e.target.value })}
                     placeholder="e.g. Muhammad Amin"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">JazzCash Mobile Number *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">JazzCash Mobile Number *</label>
                   <input
                     type="text"
                     value={methods.jazzcash?.accountNumber || ''}
                     onChange={(e) => updatePaymentMethod('jazzcash', { accountNumber: e.target.value })}
                     placeholder="e.g. 03088666075"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-mono font-bold text-[#B89555] dark:text-[#C9A96A] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-mono font-bold text-[#B89555] focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Instructions</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Instructions</label>
                   <textarea
                     rows={2}
                     value={methods.jazzcash?.instructions || ''}
                     onChange={(e) => updatePaymentMethod('jazzcash', { instructions: e.target.value })}
                     placeholder="Instructions displayed to customer..."
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:outline-none"
                   />
                 </div>
               </div>
@@ -663,10 +663,10 @@ export default function AdminSettingsPage() {
           {/* Tab 4: Easypaisa */}
           {activePaymentTab === 'easypaisa' && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="flex items-center justify-between p-3.5 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D]">
+              <div className="flex items-center justify-between p-3.5 bg-light-elevated rounded-xl border border-light-border">
                 <div>
-                  <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] block">Enable Easypaisa Wallet</span>
-                  <span className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">Accept payments via Easypaisa mobile account with mandatory screenshot</span>
+                  <span className="font-bold text-xs text-charcoal-900 block">Enable Easypaisa Wallet</span>
+                  <span className="text-[11px] text-charcoal-500">Accept payments via Easypaisa mobile account with mandatory screenshot</span>
                 </div>
                 <input
                   type="checkbox"
@@ -678,35 +678,35 @@ export default function AdminSettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Easypaisa Account Title *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Easypaisa Account Title *</label>
                   <input
                     type="text"
                     value={methods.easypaisa?.accountTitle || ''}
                     onChange={(e) => updatePaymentMethod('easypaisa', { accountTitle: e.target.value })}
                     placeholder="e.g. Muhammad Amin"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Easypaisa Mobile Number *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Easypaisa Mobile Number *</label>
                   <input
                     type="text"
                     value={methods.easypaisa?.accountNumber || ''}
                     onChange={(e) => updatePaymentMethod('easypaisa', { accountNumber: e.target.value })}
                     placeholder="e.g. 03088666075"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-mono font-bold text-[#B89555] dark:text-[#C9A96A] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-mono font-bold text-[#B89555] focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Instructions</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Instructions</label>
                   <textarea
                     rows={2}
                     value={methods.easypaisa?.instructions || ''}
                     onChange={(e) => updatePaymentMethod('easypaisa', { instructions: e.target.value })}
                     placeholder="Instructions displayed to customer..."
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:outline-none"
                   />
                 </div>
               </div>
@@ -716,10 +716,10 @@ export default function AdminSettingsPage() {
           {/* Tab 5: SadaPay */}
           {activePaymentTab === 'sadapay' && (
             <div className="space-y-4 animate-in fade-in">
-              <div className="flex items-center justify-between p-3.5 bg-light-elevated dark:bg-[#22211E] rounded-xl border border-light-border dark:border-[#34322D]">
+              <div className="flex items-center justify-between p-3.5 bg-light-elevated rounded-xl border border-light-border">
                 <div>
-                  <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] block">Enable SadaPay</span>
-                  <span className="text-[11px] text-charcoal-500 dark:text-[#8E8A80]">Accept payments via SadaPay number or IBAN with mandatory screenshot</span>
+                  <span className="font-bold text-xs text-charcoal-900 block">Enable SadaPay</span>
+                  <span className="text-[11px] text-charcoal-500">Accept payments via SadaPay number or IBAN with mandatory screenshot</span>
                 </div>
                 <input
                   type="checkbox"
@@ -731,46 +731,46 @@ export default function AdminSettingsPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">SadaPay Account Title *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">SadaPay Account Title *</label>
                   <input
                     type="text"
                     value={methods.sadapay?.accountTitle || ''}
                     onChange={(e) => updatePaymentMethod('sadapay', { accountTitle: e.target.value })}
                     placeholder="e.g. Muhammad Amin"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">SadaPay Mobile Number *</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">SadaPay Mobile Number *</label>
                   <input
                     type="text"
                     value={methods.sadapay?.accountNumber || ''}
                     onChange={(e) => updatePaymentMethod('sadapay', { accountNumber: e.target.value })}
                     placeholder="e.g. 03088666075"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-mono font-bold text-[#B89555] dark:text-[#C9A96A] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-mono font-bold text-[#B89555] focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">SadaPay IBAN</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">SadaPay IBAN</label>
                   <input
                     type="text"
                     value={methods.sadapay?.iban || ''}
                     onChange={(e) => updatePaymentMethod('sadapay', { iban: e.target.value })}
                     placeholder="e.g. PK45SADA0000000308866607"
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-mono font-bold text-[#B89555] dark:text-[#C9A96A] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-mono font-bold text-[#B89555] focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Instructions</label>
+                  <label className="block text-xs font-semibold text-charcoal-700 mb-1">Instructions</label>
                   <textarea
                     rows={2}
                     value={methods.sadapay?.instructions || ''}
                     onChange={(e) => updatePaymentMethod('sadapay', { instructions: e.target.value })}
                     placeholder="Instructions displayed to customer..."
-                    className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:outline-none"
                   />
                 </div>
               </div>
@@ -779,14 +779,14 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* 4. Business & Contact Info */}
-        <div className="bg-white dark:bg-[#191917] rounded-2xl p-5 sm:p-6 border border-light-border dark:border-[#34322D] shadow-sm space-y-4">
-          <div className="flex items-center gap-3 border-b border-light-border dark:border-[#34322D] pb-3">
-            <div className="p-2 bg-light-elevated dark:bg-[#22211E] text-[#25D366] rounded-xl border border-light-border dark:border-[#34322D]">
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-light-border shadow-sm space-y-4">
+          <div className="flex items-center gap-3 border-b border-light-border pb-3">
+            <div className="p-2 bg-light-elevated text-[#25D366] rounded-xl border border-light-border">
               <WhatsAppIcon size={20} className="fill-current" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">4. Store Info, Contact &amp; WhatsApp</h2>
-              <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">Official contact info displayed across the storefront.</p>
+              <h2 className="text-sm font-bold text-charcoal-900">4. Store Info, Contact &amp; WhatsApp</h2>
+              <p className="text-xs text-charcoal-500">Official contact info displayed across the storefront.</p>
             </div>
           </div>
 
@@ -804,34 +804,34 @@ export default function AdminSettingsPage() {
                 }
                 className="rounded accent-[#B89555] w-4 h-4"
               />
-              <label htmlFor="whatsapp-floating-toggle" className="text-xs font-semibold text-charcoal-900 dark:text-[#F4F1E9] cursor-pointer">
+              <label htmlFor="whatsapp-floating-toggle" className="text-xs font-semibold text-charcoal-900 cursor-pointer">
                 Enable Floating WhatsApp Button on Website
               </label>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Brand Name</label>
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">Brand Name</label>
                 <input
                   type="text"
                   value={formState.brandName}
                   onChange={(e) => setFormState({ ...formState, brandName: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Owner Name</label>
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">Owner Name</label>
                 <input
                   type="text"
                   value={formState.ownerName}
                   onChange={(e) => setFormState({ ...formState, ownerName: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                   WhatsApp Order Number *
                 </label>
                 <input
@@ -839,19 +839,19 @@ export default function AdminSettingsPage() {
                   required
                   value={formState.whatsapp}
                   onChange={(e) => setFormState({ ...formState, whatsapp: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-[#B89555] dark:text-[#C9A96A] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-[#B89555] focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">
+                <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                   Official Support Email
                 </label>
                 <input
                   type="email"
                   value={formState.email}
                   onChange={(e) => setFormState({ ...formState, email: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                 />
               </div>
             </div>

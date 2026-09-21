@@ -45,12 +45,12 @@ export default function CategoryPage() {
 
   if (!currentCategory && slug !== 'men' && slug !== 'women' && slug !== 'kids') {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center bg-light-bg dark:bg-[#101114] text-charcoal-900 dark:text-[#F1F0EC] min-h-[70vh] flex flex-col items-center justify-center transition-colors duration-200">
-        <h1 className="text-2xl font-bold text-charcoal-900 dark:text-[#F1F0EC]">Category Not Found</h1>
-        <p className="text-xs text-charcoal-500 dark:text-[#85888E] mt-2">The category you requested does not exist.</p>
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center bg-[#F7F3EA] text-[#1D2730] min-h-[70vh] flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold text-[#1D2730]">Category Not Found</h1>
+        <p className="text-xs text-[#66717C] mt-2">The category you requested does not exist.</p>
         <Link
           href="/"
-          className="mt-6 inline-flex items-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-black text-xs font-bold py-3 px-6 rounded-xl shadow-xs"
+          className="mt-6 inline-flex items-center gap-2 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] text-xs font-bold py-3 px-6 rounded-xl shadow-xs transition-colors"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Home
         </Link>
@@ -61,31 +61,31 @@ export default function CategoryPage() {
   const categoryName = currentCategory?.name || (slug === 'men' ? 'Men' : slug === 'women' ? 'Women' : 'Kids');
 
   return (
-    <div className="min-h-[85vh] py-10 bg-light-bg dark:bg-[#101114] text-charcoal-900 dark:text-[#F1F0EC] transition-colors duration-200">
+    <div className="min-h-[85vh] py-10 bg-[#F7F3EA] text-[#1D2730]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 text-xs text-charcoal-500 dark:text-[#85888E] mb-6">
-          <Link href="/" className="hover:text-[#C9A96A] transition-colors">
+        <div className="flex items-center gap-2 text-xs text-[#66717C] mb-6">
+          <Link href="/" className="hover:text-[#C99A3D] transition-colors">
             Home
           </Link>
-          <ChevronRight className="w-3 h-3 text-charcoal-400 dark:text-[#30343A]" />
-          <Link href="/shop" className="hover:text-[#C9A96A] transition-colors">
+          <ChevronRight className="w-3 h-3 text-[#66717C]" />
+          <Link href="/shop" className="hover:text-[#C99A3D] transition-colors">
             Shop
           </Link>
-          <ChevronRight className="w-3 h-3 text-charcoal-400 dark:text-[#30343A]" />
-          <span className="font-bold text-charcoal-900 dark:text-[#F1F0EC]">{categoryName}&apos;s Collection</span>
+          <ChevronRight className="w-3 h-3 text-[#66717C]" />
+          <span className="font-bold text-[#1D2730]">{categoryName}&apos;s Collection</span>
         </div>
 
         {/* Category Header Banner */}
-        <div className="bg-white dark:bg-[#17191D] rounded-2xl p-6 sm:p-10 border border-light-border dark:border-[#30343A] shadow-sm dark:shadow-card mb-8">
+        <div className="bg-white rounded-2xl p-6 sm:p-10 border border-[#D8D0C3] shadow-sm mb-8">
           <div className="max-w-2xl">
-            <span className="text-[10px] font-bold text-[#B89555] dark:text-[#C9A96A] uppercase tracking-widest block mb-1">
+            <span className="text-[10px] font-bold text-[#C99A3D] uppercase tracking-widest block mb-1">
               Category Collection
             </span>
-            <h1 className="text-3xl sm:text-4xl font-bold text-charcoal-900 dark:text-[#F4F1E9] tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#1D2730] tracking-tight">
               {categoryName}&apos;s Collection
             </h1>
-            <p className="text-xs sm:text-sm text-charcoal-600 dark:text-[#B8B3A8] mt-2 leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-[#66717C] mt-2 leading-relaxed font-normal">
               {currentCategory?.description ||
                 `Browse our collection of breathable cotton essentials for ${categoryName.toLowerCase()}.`}
             </p>
@@ -101,8 +101,8 @@ export default function CategoryPage() {
                 onClick={() => setActiveSubcatSlug('all')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
                   activeSubcatSlug === 'all'
-                    ? 'bg-champagne-500 text-black shadow-xs'
-                    : 'bg-white dark:bg-[#1D2025] text-charcoal-700 dark:text-[#B4B5BA] hover:text-charcoal-900 dark:hover:text-[#F1F0EC] hover:bg-light-hover dark:hover:bg-[#202329] border border-light-border dark:border-[#30343A]'
+                    ? 'bg-[#23384D] text-[#F7F3EA] shadow-xs'
+                    : 'bg-white text-[#1D2730] hover:bg-[#EEE8DC]/50 border border-[#D8D0C3]'
                 }`}
               >
                 All {categoryName} Items
@@ -115,8 +115,8 @@ export default function CategoryPage() {
                   onClick={() => setActiveSubcatSlug(sub.slug)}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 flex items-center gap-1.5 ${
                     activeSubcatSlug === sub.slug
-                      ? 'bg-champagne-500 text-black shadow-xs'
-                      : 'bg-white dark:bg-[#1D2025] text-charcoal-700 dark:text-[#B4B5BA] hover:text-charcoal-900 dark:hover:text-[#F1F0EC] hover:bg-light-hover dark:hover:bg-[#202329] border border-light-border dark:border-[#30343A]'
+                      ? 'bg-[#23384D] text-[#F7F3EA] shadow-xs'
+                      : 'bg-white text-[#1D2730] hover:bg-[#EEE8DC]/50 border border-[#D8D0C3]'
                   }`}
                 >
                   <span>{sub.name}</span>
@@ -128,22 +128,22 @@ export default function CategoryPage() {
 
         {/* Product Grid / Empty State */}
         {categoryProducts.length === 0 ? (
-          <div className="bg-white dark:bg-[#17191D] rounded-2xl p-10 sm:p-12 text-center border border-light-border dark:border-[#30343A] max-w-lg mx-auto shadow-sm dark:shadow-card space-y-4">
-            <div className="w-14 h-14 bg-light-elevated dark:bg-[#1D2025] rounded-2xl flex items-center justify-center mx-auto text-[#A07D38] dark:text-[#C9A96A] border border-light-border dark:border-[#30343A]">
+          <div className="bg-white rounded-2xl p-10 sm:p-12 text-center border border-[#D8D0C3] max-w-lg mx-auto shadow-sm space-y-4">
+            <div className="w-14 h-14 bg-[#EEE8DC]/50 rounded-2xl flex items-center justify-center mx-auto text-[#C99A3D] border border-[#D8D0C3]">
               <Package className="w-6 h-6" />
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-charcoal-900 dark:text-[#F1F0EC]">
+            <h3 className="text-lg sm:text-xl font-bold text-[#1D2730]">
               {activeSubcatSlug !== 'all'
                 ? `No Products Found in ${subcategories.find((s) => s.slug === activeSubcatSlug)?.name || 'Collection'}`
                 : `No Products in ${categoryName}'s Collection`}
             </h3>
-            <p className="text-xs text-charcoal-500 dark:text-[#85888E] leading-relaxed">
+            <p className="text-xs text-[#66717C] leading-relaxed">
               Explore our current in-stock pure cotton vests and innerwear in the main shop.
             </p>
             <div className="pt-2">
               <Link
                 href="/shop"
-                className="inline-flex items-center gap-2 bg-champagne-500 hover:bg-champagne-400 text-black font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition-colors"
               >
                 <ShoppingBag className="w-4 h-4 stroke-[2.2]" />
                 <span>Explore Full Shop</span>
@@ -153,7 +153,7 @@ export default function CategoryPage() {
         ) : (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <p className="text-xs font-semibold text-charcoal-500 dark:text-[#85888E]">
+              <p className="text-xs font-semibold text-[#66717C]">
                 Showing {categoryProducts.length} Product{categoryProducts.length > 1 ? 's' : ''}
               </p>
             </div>

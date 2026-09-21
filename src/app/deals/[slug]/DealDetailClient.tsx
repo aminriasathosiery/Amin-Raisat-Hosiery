@@ -34,20 +34,18 @@ export function DealDetailClient({ deal }: { deal: Deal }) {
   };
 
   const handleBuyNow = () => {
-    // ISOLATION: Use setBuyNowItem so the deal purchase is completely isolated
-    // from the persistent cart — exactly the same pattern as VariantSelector/ProductCard.
     setBuyNowItem(dealCartItem);
     router.push('/checkout?buyNow=1');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1A1A1A]">
+    <div className="min-h-screen bg-[#F7F3EA] text-[#1D2730]">
       {/* Breadcrumb */}
-      <div className="bg-white dark:bg-[#22211E] border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white border-b border-[#D8D0C3]">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <Link
             href="/deals"
-            className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-[#B89555] dark:hover:text-[#C9A96A] transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-[#66717C] hover:text-[#C99A3D] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Deals
@@ -59,7 +57,7 @@ export function DealDetailClient({ deal }: { deal: Deal }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Image Section */}
           <div className="space-y-4">
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-white dark:bg-[#22211E] shadow-sm">
+            <div className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-[#D8D0C3] shadow-sm">
               {deal.imageUrl ? (
                 <Image
                   src={deal.imageUrl}
@@ -69,20 +67,20 @@ export function DealDetailClient({ deal }: { deal: Deal }) {
                   priority
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
-                  <Package className="w-24 h-24 text-gray-400" />
+                <div className="w-full h-full bg-[#EEE8DC]/50 flex items-center justify-center">
+                  <Package className="w-24 h-24 text-[#66717C]" />
                 </div>
               )}
               {deal.badgeText && (
                 <div className="absolute top-4 left-4">
-                  <span className="px-4 py-2 bg-[#B89555] text-white text-sm font-bold rounded-full">
+                  <span className="px-4 py-2 bg-[#C99A3D] text-[#1D2730] text-sm font-bold rounded-full">
                     {deal.badgeText}
                   </span>
                 </div>
               )}
               {deal.discountPercentage > 0 && (
                 <div className="absolute top-4 right-4">
-                  <span className="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-full flex items-center gap-2">
+                  <span className="px-4 py-2 bg-[#B8423A] text-white text-sm font-bold rounded-full flex items-center gap-2">
                     <Percent className="w-4 h-4" />
                     {deal.discountPercentage}% OFF
                   </span>
@@ -93,14 +91,14 @@ export function DealDetailClient({ deal }: { deal: Deal }) {
             {/* Features */}
             <div className="grid grid-cols-2 gap-4">
               {deal.isFreeDelivery && (
-                <div className="flex items-center gap-3 p-4 bg-white dark:bg-[#22211E] rounded-xl border border-gray-200 dark:border-gray-700">
-                  <Truck className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">Free Delivery</span>
+                <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#D8D0C3]">
+                  <Truck className="w-5 h-5 text-[#2F7D5A]" />
+                  <span className="text-sm font-medium text-[#1D2730]">Free Delivery</span>
                 </div>
               )}
-              <div className="flex items-center gap-3 p-4 bg-white dark:bg-[#22211E] rounded-xl border border-gray-200 dark:border-gray-700">
-                <Package className="w-5 h-5 text-[#B89555] dark:text-[#C9A96A]" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{deal.piecesCount} Pieces</span>
+              <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#D8D0C3]">
+                <Package className="w-5 h-5 text-[#C99A3D]" />
+                <span className="text-sm font-medium text-[#1D2730]">{deal.piecesCount} Pieces</span>
               </div>
             </div>
           </div>
@@ -108,43 +106,43 @@ export function DealDetailClient({ deal }: { deal: Deal }) {
           {/* Details Section */}
           <div className="space-y-6">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+              <h1 className="text-3xl md:text-4xl font-bold text-[#1D2730] mb-2">
                 {deal.name}
               </h1>
               {deal.subtitle && (
-                <p className="text-lg text-gray-600 dark:text-gray-400">{deal.subtitle}</p>
+                <p className="text-lg text-[#66717C]">{deal.subtitle}</p>
               )}
             </div>
 
             {/* Pricing */}
-            <div className="p-6 bg-white dark:bg-[#22211E] rounded-2xl border border-gray-200 dark:border-gray-700">
+            <div className="p-6 bg-white rounded-2xl border border-[#D8D0C3]">
               <div className="flex items-center gap-3 mb-4">
                 {deal.discountPercentage > 0 && (
-                  <span className="text-xl text-gray-400 line-through">
+                  <span className="text-xl text-[#66717C] line-through">
                     {formatPKR(deal.originalPrice)}
                   </span>
                 )}
-                <span className="text-4xl font-bold text-[#B89555] dark:text-[#C9A96A]">
+                <span className="text-4xl font-bold text-[#C99A3D]">
                   {formatPKR(deal.salePrice)}
                 </span>
                 {deal.discountPercentage > 0 && (
-                  <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm font-bold rounded-full">
+                  <span className="px-3 py-1 bg-[#B8423A]/10 text-[#B8423A] text-sm font-bold rounded-full border border-[#B8423A]/20">
                     {deal.discountPercentage}% OFF
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <Info className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-sm text-[#66717C]">
+                <Info className="w-4 h-4 text-[#C99A3D]" />
                 <span>Bundle price for {deal.piecesCount} pieces</span>
               </div>
             </div>
 
             {/* Description */}
             {deal.description && (
-              <div className="p-6 bg-white dark:bg-[#22211E] rounded-2xl border border-gray-200 dark:border-gray-700">
-                <h3 className="font-bold text-gray-900 dark:text-white mb-3">Description</h3>
-                <p className="text-gray-600 dark:text-gray-400 whitespace-pre-line">{deal.description}</p>
+              <div className="p-6 bg-white rounded-2xl border border-[#D8D0C3]">
+                <h3 className="font-bold text-[#1D2730] mb-3">Description</h3>
+                <p className="text-[#66717C] whitespace-pre-line">{deal.description}</p>
               </div>
             )}
 
@@ -152,32 +150,32 @@ export function DealDetailClient({ deal }: { deal: Deal }) {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleAddToCart}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-[#B89555] hover:bg-[#A68444] text-white font-bold rounded-xl transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-white hover:bg-[#EEE8DC]/40 text-[#1D2730] border border-[#D8D0C3] font-bold rounded-xl transition-colors shadow-2xs"
               >
-                <ShoppingCart className="w-5 h-5" />
+                <ShoppingCart className="w-5 h-5 text-[#C99A3D]" />
                 Add to Cart
               </button>
               <button
                 onClick={handleBuyNow}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 font-bold rounded-xl transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] font-bold rounded-xl transition-colors shadow-xs"
               >
                 Buy Now
               </button>
             </div>
 
             {/* Trust Badges */}
-            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-4 text-sm text-[#66717C]">
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <CheckCircle className="w-5 h-5 text-[#2F7D5A]" />
                 <span>100% Original</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <CheckCircle className="w-5 h-5 text-[#2F7D5A]" />
                 <span>Cash on Delivery</span>
               </div>
               {deal.isFreeDelivery && (
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle className="w-5 h-5 text-[#2F7D5A]" />
                   <span>Free Shipping</span>
                 </div>
               )}

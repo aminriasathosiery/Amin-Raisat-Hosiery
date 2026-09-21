@@ -150,11 +150,11 @@ export default function AdminHeroPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl text-charcoal-900 dark:text-[#F4F1E9]">
+    <div className="space-y-6 max-w-6xl text-charcoal-900">
       {/* Toast Notification */}
       {saveSuccessToast && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
-          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white text-charcoal-900 border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
+          <Check className="w-4 h-4 text-emerald-600" />
           <span>{saveSuccessToast}</span>
         </div>
       )}
@@ -172,17 +172,17 @@ export default function AdminHeroPage() {
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#191917] p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-light-border shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+            <h1 className="text-xl font-bold text-charcoal-900">
               Hero Banners &amp; Slider Architecture
             </h1>
-            <span className="text-xs font-bold bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D] px-2.5 py-0.5 rounded-lg">
+            <span className="text-xs font-bold bg-light-elevated text-[#B89555] border border-light-border px-2.5 py-0.5 rounded-lg">
               {filteredSlides.length} {activeTab === 'desktop' ? 'Desktop' : 'Mobile'} Slides
             </span>
           </div>
-          <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] mt-1">
+          <p className="text-xs text-charcoal-500 mt-1">
             Separate systems for Desktop (1920&times;800) and Mobile (1080&times;1350) responsive banners.
           </p>
         </div>
@@ -197,13 +197,13 @@ export default function AdminHeroPage() {
       </div>
 
       {/* Device Mode Switcher Tabs */}
-      <div className="flex gap-2 border-b border-light-border dark:border-[#34322D] pb-1">
+      <div className="flex gap-2 border-b border-light-border pb-1">
         <button
           onClick={() => setActiveTab('desktop')}
           className={`py-3 px-5 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
             activeTab === 'desktop'
               ? 'bg-champagne-500 text-charcoal-950 shadow-xs'
-              : 'text-charcoal-600 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D]'
+              : 'text-charcoal-600 hover:text-charcoal-900 bg-white border border-light-border'
           }`}
         >
           <Monitor className="w-4 h-4" />
@@ -215,7 +215,7 @@ export default function AdminHeroPage() {
           className={`py-3 px-5 text-xs font-bold rounded-xl flex items-center gap-2 transition-all ${
             activeTab === 'mobile'
               ? 'bg-champagne-500 text-charcoal-950 shadow-xs'
-              : 'text-charcoal-600 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] bg-white dark:bg-[#191917] border border-light-border dark:border-[#34322D]'
+              : 'text-charcoal-600 hover:text-charcoal-900 bg-white border border-light-border'
           }`}
         >
           <Smartphone className="w-4 h-4" />
@@ -226,23 +226,23 @@ export default function AdminHeroPage() {
       {/* Slides List */}
       <div className="space-y-4">
         {filteredSlides.length === 0 ? (
-          <div className="bg-white dark:bg-[#191917] p-12 text-center rounded-2xl border border-light-border dark:border-[#34322D] space-y-3 shadow-sm">
-            <ImageIcon className="w-10 h-10 text-charcoal-400 dark:text-[#8E8A80] mx-auto" />
-            <h3 className="text-sm font-bold text-charcoal-900 dark:text-[#F4F1E9]">No {activeTab} Slides Configured</h3>
-            <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">Click &quot;Add {activeTab === 'desktop' ? 'Desktop' : 'Mobile'} Slide&quot; above to upload your banner image.</p>
+          <div className="bg-white p-12 text-center rounded-2xl border border-light-border space-y-3 shadow-sm">
+            <ImageIcon className="w-10 h-10 text-charcoal-400 mx-auto" />
+            <h3 className="text-sm font-bold text-charcoal-900">No {activeTab} Slides Configured</h3>
+            <p className="text-xs text-charcoal-500">Click &quot;Add {activeTab === 'desktop' ? 'Desktop' : 'Mobile'} Slide&quot; above to upload your banner image.</p>
           </div>
         ) : (
           filteredSlides.map((slide, index) => (
             <div
               key={slide.id || index}
-              className={`bg-white dark:bg-[#191917] rounded-2xl border transition-all p-4 sm:p-5 flex flex-col md:flex-row gap-5 items-start md:items-center justify-between ${
-                slide.isActive ? 'border-light-border dark:border-[#34322D] shadow-sm hover:border-[#B89555]/60 dark:hover:border-[#C9A96A]/60' : 'border-light-border dark:border-[#34322D] opacity-60'
+              className={`bg-white rounded-2xl border transition-all p-4 sm:p-5 flex flex-col md:flex-row gap-5 items-start md:items-center justify-between ${
+                slide.isActive ? 'border-light-border shadow-sm hover:border-[#B89555]/60' : 'border-light-border opacity-60'
               }`}
             >
               {/* Preview Thumbnail */}
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <div
-                  className={`relative rounded-xl overflow-hidden flex-shrink-0 border border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] p-1 ${
+                  className={`relative rounded-xl overflow-hidden flex-shrink-0 border border-light-border bg-light-elevated p-1 ${
                     activeTab === 'desktop' ? 'w-36 h-20' : 'w-20 h-24'
                   }`}
                 >
@@ -257,24 +257,24 @@ export default function AdminHeroPage() {
                 {/* Details */}
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8]">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-light-elevated border border-light-border text-charcoal-700">
                       Order #{slide.displayOrder}
                     </span>
                     {slide.isActive ? (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-300">
                         Live on {activeTab}
                       </span>
                     ) : (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-light-elevated dark:bg-[#22211E] text-charcoal-500 dark:text-[#8E8A80] border border-light-border dark:border-[#34322D]">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-light-elevated text-charcoal-500 border border-light-border">
                         Hidden
                       </span>
                     )}
                   </div>
-                  <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9] line-clamp-1">
+                  <h3 className="font-bold text-sm text-charcoal-900 line-clamp-1">
                     {slide.title || `Campaign Slide #${index + 1}`}
                   </h3>
-                  <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] font-mono truncate">
-                    Destination: <span className="text-[#B89555] dark:text-[#C9A96A]">{slide.link || slide.buttonLink || '/shop'}</span>
+                  <p className="text-xs text-charcoal-500 font-mono truncate">
+                    Destination: <span className="text-[#B89555]">{slide.link || slide.buttonLink || '/shop'}</span>
                   </p>
                 </div>
               </div>
@@ -286,8 +286,8 @@ export default function AdminHeroPage() {
                   onClick={() => handleToggleActive(slide)}
                   className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors ${
                     slide.isActive
-                      ? 'border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] text-charcoal-700 dark:text-[#B8B3A8] hover:text-charcoal-900 dark:hover:text-[#F4F1E9]'
-                      : 'border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400'
+                      ? 'border-light-border bg-light-elevated text-charcoal-700 hover:text-charcoal-900'
+                      : 'border-emerald-300 bg-emerald-50 text-emerald-700'
                   }`}
                   title={slide.isActive ? 'Hide from store' : 'Show on store'}
                 >
@@ -298,16 +298,16 @@ export default function AdminHeroPage() {
                 <button
                   type="button"
                   onClick={() => handleOpenEditModal(slide)}
-                  className="p-2 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] hover:border-[#B89555] rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  className="p-2 bg-light-elevated hover:bg-light-hover text-charcoal-900 border border-light-border hover:border-[#B89555] rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
-                  <Edit2 className="w-4 h-4 text-[#B89555] dark:text-[#C9A96A]" />
+                  <Edit2 className="w-4 h-4 text-[#B89555]" />
                   <span>Edit</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setDeleteSlideModal({ isOpen: true, slideId: slide.id, title: slide.title || '' })}
-                  className="p-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Delete</span>
@@ -320,20 +320,20 @@ export default function AdminHeroPage() {
 
       {/* Add / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-[#191917] rounded-2xl shadow-elevation w-full max-w-xl overflow-hidden border border-light-border dark:border-[#34322D] my-8">
-            <div className="p-4 sm:p-5 border-b border-light-border dark:border-[#34322D] flex items-center justify-between bg-light-elevated dark:bg-[#22211E]">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-elevation w-full max-w-xl overflow-hidden border border-light-border my-8">
+            <div className="p-4 sm:p-5 border-b border-light-border flex items-center justify-between bg-light-elevated">
               <div>
-                <h3 className="font-bold text-base text-charcoal-900 dark:text-[#F4F1E9]">
+                <h3 className="font-bold text-base text-charcoal-900">
                   {editingSlide ? `Edit ${activeTab.toUpperCase()} Slide` : `Add New ${activeTab.toUpperCase()} Slide`}
                 </h3>
-                <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
+                <p className="text-xs text-charcoal-500">
                   {activeTab === 'desktop' ? 'Landscape banner: 1920x800 px recommended' : 'Portrait banner: 1080x1350 px recommended'}
                 </p>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 text-charcoal-400 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] rounded"
+                className="p-1 text-charcoal-400 hover:text-charcoal-900 rounded"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -342,25 +342,25 @@ export default function AdminHeroPage() {
             <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
               {/* Image Upload Area */}
               <div className="space-y-2">
-                <label className="block font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                <label className="block font-bold text-charcoal-900">
                   Banner Image <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                   <div
-                    className={`relative rounded-xl overflow-hidden border border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] flex items-center justify-center p-1 ${
+                    className={`relative rounded-xl overflow-hidden border border-light-border bg-light-elevated flex items-center justify-center p-1 ${
                       activeTab === 'desktop' ? 'w-36 h-20' : 'w-20 h-24'
                     }`}
                   >
                     {image ? (
                       <Image src={image} alt="Preview" fill className="object-contain" />
                     ) : (
-                      <ImageIcon className="w-6 h-6 text-charcoal-400 dark:text-[#8E8A80]" />
+                      <ImageIcon className="w-6 h-6 text-charcoal-400" />
                     )}
                   </div>
 
                   <div className="space-y-1.5 flex-1">
-                    <label className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] border border-light-border dark:border-[#34322D] text-xs font-semibold rounded-xl cursor-pointer transition-colors">
-                      <Upload className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                    <label className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-light-elevated hover:bg-light-hover text-charcoal-900 border border-light-border text-xs font-semibold rounded-xl cursor-pointer transition-colors">
+                      <Upload className="w-3.5 h-3.5 text-[#B89555]" />
                       <span>{isUploading ? 'Uploading Image to Supabase...' : 'Choose File from Computer'}</span>
                       <input
                         type="file"
@@ -370,13 +370,13 @@ export default function AdminHeroPage() {
                         className="hidden"
                       />
                     </label>
-                    <p className="text-[10px] text-charcoal-500 dark:text-[#8E8A80]">Or enter image URL below:</p>
+                    <p className="text-[10px] text-charcoal-500">Or enter image URL below:</p>
                     <input
                       type="text"
                       value={image}
                       onChange={(e) => setImage(e.target.value)}
                       placeholder="/slider 1.png or https://..."
-                      className="w-full px-3 py-1.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-lg font-mono text-[11px] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                      className="w-full px-3 py-1.5 bg-light-elevated border border-light-border text-charcoal-900 rounded-lg font-mono text-[11px] focus:border-[#B89555] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -384,36 +384,36 @@ export default function AdminHeroPage() {
 
               {/* Title & Link */}
               <div>
-                <label className="block font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Slide Label / Campaign Title</label>
+                <label className="block font-semibold text-charcoal-700 mb-1">Slide Label / Campaign Title</label>
                 <input
                   type="text"
                   placeholder="e.g. Pure Combed Cotton Vest Campaign"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Click Link / Destination</label>
+                <label className="block font-semibold text-charcoal-700 mb-1">Click Link / Destination</label>
                 <input
                   type="text"
                   placeholder="/shop or /category/men"
                   value={buttonLink}
                   onChange={(e) => setButtonLink(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold text-charcoal-700 dark:text-[#B8B3A8] mb-1">Display Order</label>
+                  <label className="block font-semibold text-charcoal-700 mb-1">Display Order</label>
                   <input
                     type="number"
                     min={1}
                     value={displayOrder}
                     onChange={(e) => setDisplayOrder(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] rounded-xl focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                    className="w-full px-3.5 py-2.5 bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
                   />
                 </div>
 
@@ -425,17 +425,17 @@ export default function AdminHeroPage() {
                     onChange={(e) => setIsActive(e.target.checked)}
                     className="w-4 h-4 rounded accent-[#B89555]"
                   />
-                  <label htmlFor="slideActiveToggle" className="font-semibold text-charcoal-900 dark:text-[#F4F1E9] cursor-pointer">
+                  <label htmlFor="slideActiveToggle" className="font-semibold text-charcoal-900 cursor-pointer">
                     Active on Store
                   </label>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-light-border dark:border-[#34322D] flex justify-end gap-3">
+              <div className="pt-4 border-t border-light-border flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="py-2.5 px-4 bg-light-elevated dark:bg-[#22211E] text-charcoal-600 dark:text-[#8E8A80] hover:bg-light-hover dark:hover:bg-[#2A2925] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] rounded-xl font-semibold border border-light-border dark:border-[#34322D]"
+                  className="py-2.5 px-4 bg-light-elevated text-charcoal-600 hover:bg-light-hover hover:text-charcoal-900 rounded-xl font-semibold border border-light-border"
                 >
                   Cancel
                 </button>

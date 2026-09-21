@@ -159,27 +159,27 @@ export default function AdminStockPage() {
     : [];
 
   return (
-    <div className="space-y-6 max-w-7xl text-charcoal-900 dark:text-[#F4F1E9]">
+    <div className="space-y-6 max-w-7xl text-charcoal-900">
       {/* Toast Notification Banner */}
       {saveSuccessMsg && (
-        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white dark:bg-[#191917] text-charcoal-900 dark:text-[#F4F1E9] border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
-          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 p-4 bg-white text-charcoal-900 border border-emerald-500/40 rounded-xl shadow-elevation flex items-center gap-2.5 text-xs font-semibold animate-in fade-in">
+          <Check className="w-4 h-4 text-emerald-600" />
           <span>{saveSuccessMsg}</span>
         </div>
       )}
 
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#191917] p-6 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-light-border shadow-sm">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+            <h1 className="text-xl font-bold text-charcoal-900">
               Inventory &amp; Stock Control
             </h1>
-            <span className="text-xs font-bold bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D] px-2.5 py-0.5 rounded-lg">
+            <span className="text-xs font-bold bg-light-elevated text-[#B89555] border border-light-border px-2.5 py-0.5 rounded-lg">
               {catalogSummary.totalStockUnits.toLocaleString()} Pcs Total
             </span>
           </div>
-          <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] mt-1">
+          <p className="text-xs text-charcoal-500 mt-1">
             Real-time live inventory levels. Update quantities per garment variant or perform bulk stock allocations.
           </p>
         </div>
@@ -187,54 +187,54 @@ export default function AdminStockPage() {
 
       {/* Summary KPI Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Total Inventory
           </span>
-          <div className="text-lg sm:text-xl font-bold text-[#B89555] dark:text-[#C9A96A] mt-1">
+          <div className="text-lg sm:text-xl font-bold text-[#B89555] mt-1">
             {catalogSummary.totalStockUnits.toLocaleString()}
           </div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">
             {catalogSummary.totalVariantsCount} Variant Matrixes
           </span>
         </div>
 
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Live Garments
           </span>
-          <div className="text-lg sm:text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9] mt-1">
+          <div className="text-lg sm:text-xl font-bold text-charcoal-900 mt-1">
             {catalogSummary.totalProductsCount}
           </div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">Master Product Lines</span>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">Master Product Lines</span>
         </div>
 
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Low Stock Alerts
           </span>
-          <div className={`text-lg sm:text-xl font-bold mt-1 ${catalogSummary.lowStockCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-charcoal-900 dark:text-[#F4F1E9]'}`}>
+          <div className={`text-lg sm:text-xl font-bold mt-1 ${catalogSummary.lowStockCount > 0 ? 'text-amber-600' : 'text-charcoal-900'}`}>
             {catalogSummary.lowStockCount}
           </div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">&le; 10 Units Remaining</span>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">&le; 10 Units Remaining</span>
         </div>
 
-        <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
-          <span className="text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase tracking-wider block whitespace-nowrap">
+        <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
+          <span className="text-[10px] font-bold text-charcoal-500 uppercase tracking-wider block whitespace-nowrap">
             Out of Stock
           </span>
-          <div className={`text-lg sm:text-xl font-bold mt-1 ${catalogSummary.outOfStockCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-charcoal-900 dark:text-[#F4F1E9]'}`}>
+          <div className={`text-lg sm:text-xl font-bold mt-1 ${catalogSummary.outOfStockCount > 0 ? 'text-rose-600' : 'text-charcoal-900'}`}>
             {catalogSummary.outOfStockCount}
           </div>
-          <span className="text-[10px] text-charcoal-400 dark:text-[#8E8A80] mt-0.5 block whitespace-nowrap">0 Units Remaining</span>
+          <span className="text-[10px] text-charcoal-400 mt-0.5 block whitespace-nowrap">0 Units Remaining</span>
         </div>
       </div>
 
       {/* Filters Bar */}
-      <div className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm">
+      <div className="bg-white p-4 rounded-2xl border border-light-border shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
-            <label className="block text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase mb-1">
+            <label className="block text-[10px] font-bold text-charcoal-500 uppercase mb-1">
               Category
             </label>
             <select
@@ -243,7 +243,7 @@ export default function AdminStockPage() {
                 setSelectedCategoryId(e.target.value);
                 setSelectedSubcatId('all');
               }}
-              className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+              className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:border-[#B89555] focus:outline-none"
             >
               <option value="all">All Categories ({categories.length})</option>
               {categories.map((cat) => (
@@ -255,13 +255,13 @@ export default function AdminStockPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase mb-1">
+            <label className="block text-[10px] font-bold text-charcoal-500 uppercase mb-1">
               Subcategory
             </label>
             <select
               value={selectedSubcatId}
               onChange={(e) => setSelectedSubcatId(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+              className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:border-[#B89555] focus:outline-none"
             >
               <option value="all">All Subcategories</option>
               {availableSubcategories.map((sub) => (
@@ -273,13 +273,13 @@ export default function AdminStockPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase mb-1">
+            <label className="block text-[10px] font-bold text-charcoal-500 uppercase mb-1">
               Stock Status
             </label>
             <select
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value as any)}
-              className="w-full px-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+              className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:border-[#B89555] focus:outline-none"
             >
               <option value="all">All Statuses</option>
               <option value="in-stock">In Stock (&gt; 10)</option>
@@ -289,7 +289,7 @@ export default function AdminStockPage() {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-charcoal-500 dark:text-[#8E8A80] uppercase mb-1">
+            <label className="block text-[10px] font-bold text-charcoal-500 uppercase mb-1">
               Search Garment
             </label>
             <div className="relative">
@@ -298,9 +298,9 @@ export default function AdminStockPage() {
                 placeholder="Product name, SKU..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] rounded-xl text-charcoal-900 dark:text-[#F4F1E9] placeholder-charcoal-400 dark:placeholder-[#8E8A80] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                className="w-full pl-8 pr-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl text-charcoal-900 placeholder-charcoal-400 focus:border-[#B89555] focus:outline-none"
               />
-              <Search className="w-3.5 h-3.5 text-charcoal-400 dark:text-[#8E8A80] absolute left-2.5 top-2.5" />
+              <Search className="w-3.5 h-3.5 text-charcoal-400 absolute left-2.5 top-2.5" />
             </div>
           </div>
         </div>
@@ -308,10 +308,10 @@ export default function AdminStockPage() {
 
       {/* Main Inventory Overview List */}
       {filteredProducts.length === 0 ? (
-        <div className="bg-white dark:bg-[#191917] rounded-2xl p-12 text-center border border-light-border dark:border-[#34322D] space-y-3 shadow-sm">
-          <Package className="w-10 h-10 text-charcoal-400 dark:text-[#8E8A80] mx-auto" />
-          <h3 className="font-bold text-base text-charcoal-900 dark:text-[#F4F1E9]">No products match your filter</h3>
-          <p className="text-xs text-charcoal-500 dark:text-[#8E8A80] max-w-sm mx-auto">
+        <div className="bg-white rounded-2xl p-12 text-center border border-light-border space-y-3 shadow-sm">
+          <Package className="w-10 h-10 text-charcoal-400 mx-auto" />
+          <h3 className="font-bold text-base text-charcoal-900">No products match your filter</h3>
+          <p className="text-xs text-charcoal-500 max-w-sm mx-auto">
             Try adjusting your search criteria or add new garments from the Product Manager.
           </p>
         </div>
@@ -320,10 +320,10 @@ export default function AdminStockPage() {
           {/* ========================================================================= */}
           {/* 1. DESKTOP DATA TABLE (hidden on mobile < md) */}
           {/* ========================================================================= */}
-          <div className="hidden md:block bg-white dark:bg-[#191917] rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm overflow-hidden">
+          <div className="hidden md:block bg-white rounded-2xl border border-light-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
-                <thead className="bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] uppercase font-bold text-[11px] border-b border-light-border dark:border-[#34322D]">
+                <thead className="bg-light-elevated text-[#B89555] uppercase font-bold text-[11px] border-b border-light-border">
                   <tr>
                     <th className="p-4 min-w-[280px]">Product &amp; Category</th>
                     <th className="p-4 w-32 text-center whitespace-nowrap">Total In Stock</th>
@@ -333,7 +333,7 @@ export default function AdminStockPage() {
                     <th className="p-4 w-36 text-right whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-light-border dark:divide-[#282723] font-medium text-charcoal-700 dark:text-[#B8B3A8]">
+                <tbody className="divide-y divide-light-border font-medium text-charcoal-700">
                   {filteredProducts.map((product) => {
                     const category = categories.find((c) => c.id === product.categoryId);
                     const subcategory = subcategories.find((s) => s.id === product.subcategoryId);
@@ -352,12 +352,12 @@ export default function AdminStockPage() {
                     return (
                       <tr
                         key={product.id}
-                        className="hover:bg-light-hover dark:hover:bg-[#22211E]/60 transition-colors"
+                        className="hover:bg-light-hover transition-colors"
                       >
                         {/* Product & Category */}
                         <td className="p-4 min-w-[280px]">
                           <div className="flex items-center gap-3.5">
-                            <div className="relative w-12 h-14 bg-light-elevated dark:bg-[#22211E] rounded-xl overflow-hidden border border-light-border dark:border-[#34322D] flex-shrink-0 p-0.5">
+                            <div className="relative w-12 h-14 bg-light-elevated rounded-xl overflow-hidden border border-light-border flex-shrink-0 p-0.5">
                               <Image
                                 src={primaryImage}
                                 alt={product.name}
@@ -368,35 +368,35 @@ export default function AdminStockPage() {
                             </div>
 
                             <div className="space-y-0.5">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#B89555] dark:text-[#C9A96A] block whitespace-nowrap">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#B89555] block whitespace-nowrap">
                                 {category?.name || 'Category'} {subcategory ? `• ${subcategory.name}` : ''}
                               </span>
-                              <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9] leading-snug">
+                              <h3 className="font-bold text-sm text-charcoal-900 leading-snug">
                                 {product.name}
                               </h3>
-                              <p className="text-[11px] text-charcoal-500 dark:text-[#8E8A80] line-clamp-1">{product.subtitle}</p>
+                              <p className="text-[11px] text-charcoal-500 line-clamp-1">{product.subtitle}</p>
                             </div>
                           </div>
                         </td>
 
                         {/* Total In Stock */}
                         <td className="p-4 w-32 text-center whitespace-nowrap">
-                          <span className="font-bold text-sm text-[#B89555] dark:text-[#C9A96A]">
+                          <span className="font-bold text-sm text-[#B89555]">
                             {totalStock.toLocaleString()}
                           </span>
-                          <span className="text-[10px] text-charcoal-500 dark:text-[#8E8A80] block">Pieces</span>
+                          <span className="text-[10px] text-charcoal-500 block">Pieces</span>
                         </td>
 
                         {/* Variants Count */}
                         <td className="p-4 w-36 text-center whitespace-nowrap">
-                          <span className="inline-flex items-center justify-center font-bold text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] px-3 py-1 rounded-lg whitespace-nowrap">
+                          <span className="inline-flex items-center justify-center font-bold text-xs bg-light-elevated border border-light-border text-charcoal-700 px-3 py-1 rounded-lg whitespace-nowrap">
                             {variants.length} Variants
                           </span>
                         </td>
 
                         {/* Price Range */}
                         <td className="p-4 w-44 whitespace-nowrap">
-                          <span className="font-bold text-xs text-charcoal-900 dark:text-[#F4F1E9] whitespace-nowrap">
+                          <span className="font-bold text-xs text-charcoal-900 whitespace-nowrap">
                             {minPrice === maxPrice ? `Rs. ${minPrice}` : `Rs. ${minPrice} – Rs. ${maxPrice}`}
                           </span>
                         </td>
@@ -404,15 +404,15 @@ export default function AdminStockPage() {
                         {/* Stock Status */}
                         <td className="p-4 w-36 whitespace-nowrap">
                           {totalStock <= 0 ? (
-                            <span className="inline-flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-bold text-xs bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 px-2.5 py-1 rounded-lg whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5 text-rose-600 font-bold text-xs bg-rose-50 border border-rose-300 px-2.5 py-1 rounded-lg whitespace-nowrap">
                               <XCircle className="w-3.5 h-3.5 text-rose-500" /> Out of Stock
                             </span>
                           ) : lowStockVarsCount > 0 ? (
-                            <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-xs bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-2.5 py-1 rounded-lg whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5 text-amber-600 font-bold text-xs bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-lg whitespace-nowrap">
                               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> {lowStockVarsCount} Low
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-semibold text-xs bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-2.5 py-1 rounded-lg whitespace-nowrap">
+                            <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold text-xs bg-emerald-50 border border-emerald-300 px-2.5 py-1 rounded-lg whitespace-nowrap">
                               <Check className="w-3.5 h-3.5 text-emerald-500" /> In Stock
                             </span>
                           )}
@@ -423,9 +423,9 @@ export default function AdminStockPage() {
                           <button
                             type="button"
                             onClick={() => setActiveDetailProductId(product.id)}
-                            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] border border-light-border dark:border-[#34322D] hover:border-[#B89555] rounded-xl text-xs font-semibold whitespace-nowrap transition-colors"
+                            className="inline-flex items-center justify-center gap-1.5 h-10 px-4 bg-light-elevated hover:bg-light-hover text-charcoal-900 hover:text-[#B89555] border border-light-border hover:border-[#B89555] rounded-xl text-xs font-semibold whitespace-nowrap transition-colors"
                           >
-                            <Eye className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                            <Eye className="w-3.5 h-3.5 text-[#B89555]" />
                             <span>View Matrix</span>
                           </button>
                         </td>
@@ -459,10 +459,10 @@ export default function AdminStockPage() {
               return (
                 <div
                   key={product.id}
-                  className="bg-white dark:bg-[#191917] p-4 rounded-2xl border border-light-border dark:border-[#34322D] shadow-sm space-y-3"
+                  className="bg-white p-4 rounded-2xl border border-light-border shadow-sm space-y-3"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="relative w-14 h-16 bg-light-elevated dark:bg-[#22211E] rounded-xl overflow-hidden border border-light-border dark:border-[#34322D] flex-shrink-0 p-0.5">
+                    <div className="relative w-14 h-16 bg-light-elevated rounded-xl overflow-hidden border border-light-border flex-shrink-0 p-0.5">
                       <Image
                         src={primaryImage}
                         alt={product.name}
@@ -473,34 +473,34 @@ export default function AdminStockPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[#B89555] dark:text-[#C9A96A] block truncate">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[#B89555] block truncate">
                         {category?.name || 'Category'} {subcategory ? `• ${subcategory.name}` : ''}
                       </span>
-                      <h3 className="font-bold text-sm text-charcoal-900 dark:text-[#F4F1E9] leading-snug">
+                      <h3 className="font-bold text-sm text-charcoal-900 leading-snug">
                         {product.name}
                       </h3>
-                      <span className="font-bold text-xs text-[#B89555] dark:text-[#C9A96A] block mt-0.5 whitespace-nowrap">
+                      <span className="font-bold text-xs text-[#B89555] block mt-0.5 whitespace-nowrap">
                         {minPrice === maxPrice ? `Rs. ${minPrice}` : `Rs. ${minPrice} – Rs. ${maxPrice}`}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2.5 border-t border-light-border dark:border-[#34322D]/60 flex-wrap gap-2 text-xs">
+                  <div className="flex items-center justify-between pt-2.5 border-t border-light-border flex-wrap gap-2 text-xs">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center font-bold text-xs bg-light-elevated dark:bg-[#22211E] border border-light-border dark:border-[#34322D] text-charcoal-700 dark:text-[#B8B3A8] px-2.5 py-1 rounded-lg whitespace-nowrap">
+                      <span className="inline-flex items-center font-bold text-xs bg-light-elevated border border-light-border text-charcoal-700 px-2.5 py-1 rounded-lg whitespace-nowrap">
                         {totalStock.toLocaleString()} Pcs ({variants.length} Vars)
                       </span>
 
                       {totalStock <= 0 ? (
-                        <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold text-[11px] bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-rose-600 font-bold text-[11px] bg-rose-50 border border-rose-300 px-2 py-0.5 rounded-lg whitespace-nowrap">
                           <XCircle className="w-3 h-3" /> Out
                         </span>
                       ) : lowStockVarsCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold text-[11px] bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-amber-600 font-bold text-[11px] bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-lg whitespace-nowrap">
                           <AlertTriangle className="w-3 h-3" /> {lowStockVarsCount} Low
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold text-[11px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px] bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-lg whitespace-nowrap">
                           <Check className="w-3 h-3" /> In Stock
                         </span>
                       )}
@@ -509,9 +509,9 @@ export default function AdminStockPage() {
                     <button
                       type="button"
                       onClick={() => setActiveDetailProductId(product.id)}
-                      className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-900 dark:text-[#F4F1E9] hover:text-[#B89555] dark:hover:text-[#C9A96A] border border-light-border dark:border-[#34322D] rounded-xl text-xs font-semibold whitespace-nowrap"
+                      className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 bg-light-elevated hover:bg-light-hover text-charcoal-900 hover:text-[#B89555] border border-light-border rounded-xl text-xs font-semibold whitespace-nowrap"
                     >
-                      <Eye className="w-3.5 h-3.5 text-[#B89555] dark:text-[#C9A96A]" />
+                      <Eye className="w-3.5 h-3.5 text-[#B89555]" />
                       <span>View Matrix</span>
                     </button>
                   </div>
@@ -526,11 +526,11 @@ export default function AdminStockPage() {
       {/* 3. VARIANT DETAILS MODAL */}
       {/* ========================================================================= */}
       {activeDetailProduct && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 dark:bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
-          <div className="bg-white dark:bg-[#191917] rounded-2xl w-full max-w-5xl shadow-elevation border border-light-border dark:border-[#34322D] overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="p-4 sm:p-6 border-b border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-5xl shadow-elevation border border-light-border overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="p-4 sm:p-6 border-b border-light-border bg-light-elevated flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="relative w-14 h-16 sm:w-16 sm:h-20 bg-white dark:bg-[#191917] rounded-xl overflow-hidden border border-light-border dark:border-[#34322D] flex-shrink-0 p-1">
+                <div className="relative w-14 h-16 sm:w-16 sm:h-20 bg-white rounded-xl overflow-hidden border border-light-border flex-shrink-0 p-1">
                   <Image
                     src={
                       activeDetailProduct.media?.[0]?.url ||
@@ -544,11 +544,11 @@ export default function AdminStockPage() {
                 </div>
 
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-charcoal-900 dark:text-[#F4F1E9]">
+                  <h2 className="text-lg sm:text-xl font-bold text-charcoal-900">
                     {activeDetailProduct.name}
                   </h2>
-                  <p className="text-xs text-charcoal-500 dark:text-[#8E8A80]">
-                    Total Stock: <strong className="text-[#B89555] dark:text-[#C9A96A]">{activeProductVariants.reduce((sum, v) => sum + (v.stock || 0), 0)} pcs</strong>
+                  <p className="text-xs text-charcoal-500">
+                    Total Stock: <strong className="text-[#B89555]">{activeProductVariants.reduce((sum, v) => sum + (v.stock || 0), 0)} pcs</strong>
                   </p>
                 </div>
               </div>
@@ -556,7 +556,7 @@ export default function AdminStockPage() {
               <button
                 type="button"
                 onClick={() => setActiveDetailProductId(null)}
-                className="p-1.5 text-charcoal-400 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] rounded-lg hover:bg-light-hover dark:hover:bg-[#2A2925] transition-colors"
+                className="p-1.5 text-charcoal-400 hover:text-charcoal-900 rounded-lg hover:bg-light-hover transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -564,10 +564,10 @@ export default function AdminStockPage() {
 
             {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-              <div className="border border-light-border dark:border-[#34322D] rounded-xl overflow-hidden shadow-sm">
+              <div className="border border-light-border rounded-xl overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-left">
-                    <thead className="bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] uppercase font-bold text-[10px] border-b border-light-border dark:border-[#34322D]">
+                    <thead className="bg-light-elevated text-[#B89555] uppercase font-bold text-[10px] border-b border-light-border">
                       <tr>
                         <th className="p-3">Style</th>
                         <th className="p-3 text-center">Size</th>
@@ -578,7 +578,7 @@ export default function AdminStockPage() {
                         <th className="p-3">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-light-border dark:divide-[#282723] font-medium text-charcoal-700 dark:text-[#B8B3A8]">
+                    <tbody className="divide-y divide-light-border font-medium text-charcoal-700">
                       {activeProductVariants.map((variant) => {
                         const isLow = variant.stock > 0 && variant.stock <= 10;
                         const isOut = variant.stock <= 0;
@@ -586,20 +586,20 @@ export default function AdminStockPage() {
                         return (
                           <tr
                             key={variant.id}
-                            className={`hover:bg-light-hover dark:hover:bg-[#22211E]/60 transition-colors ${
-                              isOut ? 'bg-rose-50/50 dark:bg-rose-950/20' : isLow ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''
+                            className={`hover:bg-light-hover transition-colors ${
+                              isOut ? 'bg-rose-50/50' : isLow ? 'bg-amber-50/50' : ''
                             }`}
                           >
-                            <td className="p-3 text-charcoal-900 dark:text-[#F4F1E9] font-semibold">{variant.sleeve}</td>
+                            <td className="p-3 text-charcoal-900 font-semibold">{variant.sleeve}</td>
                             <td className="p-3 text-center">
-                              <span className="font-bold bg-light-elevated dark:bg-[#22211E] text-[#B89555] dark:text-[#C9A96A] border border-light-border dark:border-[#34322D] px-2 py-0.5 rounded-md text-xs whitespace-nowrap">
+                              <span className="font-bold bg-light-elevated text-[#B89555] border border-light-border px-2 py-0.5 rounded-md text-xs whitespace-nowrap">
                                 {variant.size}
                               </span>
                             </td>
-                            <td className="p-3 text-charcoal-500 dark:text-[#8E8A80] font-mono text-[11px]">
+                            <td className="p-3 text-charcoal-500 font-mono text-[11px]">
                               {variant.sku || '—'}
                             </td>
-                            <td className="p-3 font-bold text-[#B89555] dark:text-[#C9A96A] whitespace-nowrap">Rs. {variant.price}</td>
+                            <td className="p-3 font-bold text-[#B89555] whitespace-nowrap">Rs. {variant.price}</td>
                             <td className="p-3">
                               <input
                                 type="number"
@@ -612,7 +612,7 @@ export default function AdminStockPage() {
                                     Number(e.target.value)
                                   )
                                 }
-                                className="w-20 sm:w-24 px-2.5 py-1.5 text-xs font-bold rounded-xl border bg-light-elevated dark:bg-[#22211E] border-light-border dark:border-[#34322D] text-charcoal-900 dark:text-[#F4F1E9] focus:border-[#B89555] dark:focus:border-[#C9A96A] focus:outline-none"
+                                className="w-20 sm:w-24 px-2.5 py-1.5 text-xs font-bold rounded-xl border bg-light-elevated border-light-border text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                               />
                             </td>
                             <td className="p-3">
@@ -622,7 +622,7 @@ export default function AdminStockPage() {
                                   onClick={() =>
                                     handleQuickAdjust(activeDetailProduct.id, variant.id, -5)
                                   }
-                                  className="px-2 py-1 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-700 dark:text-[#B8B3A8] rounded-lg text-[11px] border border-light-border dark:border-[#34322D]"
+                                  className="px-2 py-1 bg-light-elevated hover:bg-light-hover text-charcoal-700 rounded-lg text-[11px] border border-light-border"
                                 >
                                   -5
                                 </button>
@@ -631,7 +631,7 @@ export default function AdminStockPage() {
                                   onClick={() =>
                                     handleQuickAdjust(activeDetailProduct.id, variant.id, 10)
                                   }
-                                  className="px-2 py-1 bg-light-elevated dark:bg-[#22211E] hover:bg-light-hover dark:hover:bg-[#2A2925] text-charcoal-700 dark:text-[#B8B3A8] rounded-lg text-[11px] border border-light-border dark:border-[#34322D]"
+                                  className="px-2 py-1 bg-light-elevated hover:bg-light-hover text-charcoal-700 rounded-lg text-[11px] border border-light-border"
                                 >
                                   +10
                                 </button>
@@ -648,15 +648,15 @@ export default function AdminStockPage() {
                             </td>
                             <td className="p-3">
                               {isOut ? (
-                                <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold text-[10px] bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1 text-rose-600 font-bold text-[10px] bg-rose-50 border border-rose-300 px-2 py-0.5 rounded-md whitespace-nowrap">
                                   <XCircle className="w-3 h-3" /> Out
                                 </span>
                               ) : isLow ? (
-                                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold text-[10px] bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1 text-amber-600 font-bold text-[10px] bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md whitespace-nowrap">
                                   <AlertTriangle className="w-3 h-3" /> Low ({variant.stock})
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 px-2 py-0.5 rounded-md whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[10px] bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-md whitespace-nowrap">
                                   <Check className="w-3 h-3" /> Ready ({variant.stock})
                                 </span>
                               )}
@@ -671,11 +671,11 @@ export default function AdminStockPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 sm:p-5 border-t border-light-border dark:border-[#34322D] bg-light-elevated dark:bg-[#22211E] flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-t border-light-border bg-light-elevated flex items-center justify-between">
               <button
                 type="button"
                 onClick={() => setActiveDetailProductId(null)}
-                className="px-4 py-2 text-xs font-semibold text-charcoal-500 dark:text-[#8E8A80] hover:text-charcoal-900 dark:hover:text-[#F4F1E9] rounded-xl"
+                className="px-4 py-2 text-xs font-semibold text-charcoal-500 hover:text-charcoal-900 rounded-xl"
               >
                 Close
               </button>
