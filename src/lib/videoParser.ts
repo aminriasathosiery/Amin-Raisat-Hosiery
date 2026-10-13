@@ -1,11 +1,11 @@
 /**
  * Centralized Video URL Parser & Normalizer for Amin Raisat Hosiery
  * Supports:
- * - YouTube: watch?v=, youtu.be/, shorts/, embed/
- * - Vimeo: vimeo.com/{id}, player.vimeo.com/video/{id}
- * - Facebook: facebook.com/.../videos/, fb.watch/
- * - Instagram: instagram.com/p/{id}, instagram.com/reel/{id}, instagram.com/tv/{id}
- * - TikTok: tiktok.com/@user/video/{id}, tiktok.com/v/{id}
+ * - YouTube: watch?v=, youtu.be/, shorts/, embed/, live/, v/
+ * - Vimeo: vimeo.com/{id}, player.vimeo.com/video/{id}, channels, unlisted
+ * - Facebook: facebook.com/.../videos/, facebook.com/watch/?v=, fb.watch/
+ * - Instagram: instagram.com/p/{id}, instagram.com/reel/{id}, instagram.com/tv/{id}, instagr.am/
+ * - TikTok: tiktok.com/@user/video/{id}, tiktok.com/v/{id}, tiktok.com/embed/v2/{id}
  * - Direct Video Files: .mp4, .webm, .ogg
  */
 
@@ -50,12 +50,12 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
     };
   }
 
-  // Validate URL format
+  // 1. Strict Protocol & URL Validation (Reject unsafe schemes like javascript:, data:, file:)
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(rawUrl.startsWith('//') ? `https:${rawUrl}` : rawUrl);
   } catch {
-    // If not a valid URL protocol, try prepending https://
+    // If not a full URL protocol, try prepending https://
     try {
       parsedUrl = new URL(`https://${rawUrl}`);
     } catch {
@@ -71,12 +71,26 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
     }
   }
 
+  // Only permit standard HTTP and HTTPS schemes
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    return {
+      isValid: false,
+      isSupported: false,
+      provider: 'unsupported',
+      type: 'unsupported',
+      rawUrl,
+      providerDisplayName: 'Unsafe URL',
+      errorMessage: 'Only HTTP and HTTPS URLs are permitted.',
+    };
+  }
+
   const hostname = parsedUrl.hostname.toLowerCase().replace(/^www\./, '');
   const pathname = parsedUrl.pathname;
   const searchParams = parsedUrl.searchParams;
 
-  // 1. DIRECT VIDEO FILES (.mp4, .webm, .ogg)
-  const isDirectVideo = /\.(mp4|webm|ogg)($|\?)/i.test(pathname) || /\.(mp4|webm|ogg)($|\?)/i.test(rawUrl);
+  // 2. DIRECT VIDEO FILES (.mp4, .webm, .ogg)
+  const isDirectVideo =
+    /\.(mp4|webm|ogg)($|\?|#)/i.test(pathname) || /\.(mp4|webm|ogg)($|\?|#)/i.test(rawUrl);
   if (isDirectVideo) {
     return {
       isValid: true,
@@ -85,13 +99,18 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
       type: 'video',
       rawUrl,
       directSrc: parsedUrl.toString(),
-      providerDisplayName: 'Direct Video File (HTML5)',
+      providerDisplayName: 'Direct Video File',
     };
   }
 
-  // 2. YOUTUBE
+  // 3. YOUTUBE
   // Domains: youtube.com, m.youtube.com, youtu.be, youtube-nocookie.com
-  if (hostname === 'youtube.com' || hostname === 'm.youtube.com' || hostname === 'youtu.be' || hostname === 'youtube-nocookie.com') {
+  if (
+    hostname === 'youtube.com' ||
+    hostname === 'm.youtube.com' ||
+    hostname === 'youtu.be' ||
+    hostname === 'youtube-nocookie.com'
+  ) {
     let videoId: string | null = null;
 
     if (hostname === 'youtu.be') {
@@ -112,12 +131,27 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
       if (segments.length >= 2) {
         videoId = segments[1];
       }
-    } else if (pathname === '/watch') {
+    } else if (pathname.startsWith('/live/')) {
+      // youtube.com/live/VIDEO_ID
+      const segments = pathname.split('/').filter(Boolean);
+      if (segments.length >= 2) {
+        videoId = segments[1];
+      }
+    } else if (pathname.startsWith('/v/')) {
+      // youtube.com/v/VIDEO_ID
+      const segments = pathname.split('/').filter(Boolean);
+      if (segments.length >= 2) {
+        videoId = segments[1];
+      }
+    } else if (pathname === '/watch' || pathname === '/watch/') {
       // youtube.com/watch?v=VIDEO_ID
+      videoId = searchParams.get('v');
+    } else {
+      // Fallback: check query parameter v
       videoId = searchParams.get('v');
     }
 
-    if (videoId && /^[\w-]{11}$/.test(videoId)) {
+    if (videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
       return {
         isValid: true,
         isSupported: true,
@@ -125,7 +159,7 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
         type: 'iframe',
         rawUrl,
         videoId,
-        embedUrl: `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`,
+        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`,
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
         providerDisplayName: 'YouTube',
       };
@@ -142,7 +176,7 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
     };
   }
 
-  // 3. VIMEO
+  // 4. VIMEO
   // Domains: vimeo.com, player.vimeo.com
   if (hostname === 'vimeo.com' || hostname === 'player.vimeo.com') {
     let videoId: string | null = null;
@@ -151,7 +185,15 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
       videoId = vimeoMatch[1];
     }
 
+    // Check for unlisted video privacy hash
+    const segments = pathname.split('/').filter(Boolean);
+    let unlistedHash: string | null = null;
+    if (segments.length >= 2 && /^[a-zA-Z0-9]+$/.test(segments[1])) {
+      unlistedHash = segments[1];
+    }
+
     if (videoId) {
+      const hParam = unlistedHash ? `&h=${unlistedHash}` : '';
       return {
         isValid: true,
         isSupported: true,
@@ -159,7 +201,7 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
         type: 'iframe',
         rawUrl,
         videoId,
-        embedUrl: `https://player.vimeo.com/video/${videoId}?autoplay=1&dnt=1&playsinline=1`,
+        embedUrl: `https://player.vimeo.com/video/${videoId}?autoplay=1&dnt=1&playsinline=1${hParam}`,
         providerDisplayName: 'Vimeo',
       };
     }
@@ -175,9 +217,14 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
     };
   }
 
-  // 4. FACEBOOK
-  // Domains: facebook.com, web.facebook.com, fb.watch
-  if (hostname === 'facebook.com' || hostname === 'web.facebook.com' || hostname === 'fb.watch') {
+  // 5. FACEBOOK
+  // Domains: facebook.com, web.facebook.com, m.facebook.com, fb.watch
+  if (
+    hostname === 'facebook.com' ||
+    hostname === 'web.facebook.com' ||
+    hostname === 'm.facebook.com' ||
+    hostname === 'fb.watch'
+  ) {
     const encodedUrl = encodeURIComponent(parsedUrl.toString());
     return {
       isValid: true,
@@ -191,14 +238,14 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
     };
   }
 
-  // 5. INSTAGRAM
-  // Domains: instagram.com
-  if (hostname === 'instagram.com') {
-    // Matches /p/CODE/, /reel/CODE/, /tv/CODE/
-    const instaMatch = pathname.match(/\/(p|reel|tv)\/([a-zA-Z0-9_-]+)/);
+  // 6. INSTAGRAM
+  // Domains: instagram.com, instagr.am
+  if (hostname === 'instagram.com' || hostname === 'instagr.am') {
+    // Matches /p/CODE/, /reel/CODE/, /reels/CODE/, /tv/CODE/
+    const instaMatch = pathname.match(/\/(p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
     if (instaMatch && instaMatch[2]) {
       const code = instaMatch[2];
-      const kind = instaMatch[1];
+      const kind = instaMatch[1].toLowerCase().startsWith('reel') ? 'reel' : 'p';
       return {
         isValid: true,
         isSupported: true,
@@ -207,7 +254,7 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
         rawUrl,
         videoId: code,
         embedUrl: `https://www.instagram.com/${kind}/${code}/embed/`,
-        providerDisplayName: 'Instagram ' + (kind === 'reel' ? 'Reel' : 'Video'),
+        providerDisplayName: 'Instagram ' + (kind === 'reel' ? 'Reel' : 'Post'),
         warningMessage: 'Instagram embeds require public post permissions.',
       };
     }
@@ -219,15 +266,15 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
       type: 'unsupported',
       rawUrl,
       providerDisplayName: 'Instagram',
-      errorMessage: 'Instagram URL must be a public post, reel, or TV video link (e.g. /reel/CODE/).',
+      errorMessage: 'Instagram URL must be a public post or reel link (e.g. /reel/CODE/).',
     };
   }
 
-  // 6. TIKTOK
-  // Domains: tiktok.com, vm.tiktok.com
-  if (hostname === 'tiktok.com' || hostname === 'vm.tiktok.com') {
-    // Standard: tiktok.com/@user/video/1234567890123456789
-    const tiktokMatch = pathname.match(/\/video\/([0-9]+)/);
+  // 7. TIKTOK
+  // Domains: tiktok.com, vm.tiktok.com, m.tiktok.com
+  if (hostname === 'tiktok.com' || hostname === 'vm.tiktok.com' || hostname === 'm.tiktok.com') {
+    // Standard: tiktok.com/@user/video/1234567890123456789 or /v/ID or /embed/v2/ID
+    const tiktokMatch = pathname.match(/\/(?:video|v|embed\/v2)\/([0-9]+)/i);
     if (tiktokMatch && tiktokMatch[1]) {
       const videoId = tiktokMatch[1];
       return {
@@ -242,6 +289,18 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
       };
     }
 
+    if (hostname === 'vm.tiktok.com' || pathname.startsWith('/t/')) {
+      return {
+        isValid: true,
+        isSupported: false,
+        provider: 'tiktok',
+        type: 'unsupported',
+        rawUrl,
+        providerDisplayName: 'TikTok',
+        errorMessage: 'TikTok shortlink detected. Please open the link and paste the full web URL containing /video/ID.',
+      };
+    }
+
     return {
       isValid: true,
       isSupported: false,
@@ -249,7 +308,7 @@ export function parseVideoUrl(inputUrl?: string | null): ParsedVideo {
       type: 'unsupported',
       rawUrl,
       providerDisplayName: 'TikTok',
-      errorMessage: 'TikTok URL must be a direct video link containing /video/ID.',
+      errorMessage: 'TikTok URL must be a video link containing /video/ID.',
     };
   }
 

@@ -235,7 +235,9 @@ export async function POST(req: Request) {
       productPayload.short_description = body.shortDescription.trim();
     }
     if (body.videoUrl !== undefined) {
-      productPayload.video_url = body.videoUrl.trim();
+      productPayload.video_url = body.videoUrl?.trim() || null;
+    } else {
+      productPayload.video_url = null;
     }
     if (body.sizeGuideUrl !== undefined) {
       productPayload.size_guide_url = body.sizeGuideUrl.trim();
@@ -418,8 +420,8 @@ export async function POST(req: Request) {
       careInstructions: savedProd.care_instructions || [],
       shippingInfo: savedProd.shipping_info || '',
       returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
-      videoUrl: savedProd.video_url || body.videoUrl || undefined,
-      sizeGuideUrl: savedProd.size_guide_url || body.sizeGuideUrl || undefined,
+      videoUrl: savedProd?.video_url || (body.videoUrl?.trim() ? body.videoUrl.trim() : undefined),
+      sizeGuideUrl: savedProd?.size_guide_url || body.sizeGuideUrl || undefined,
       isPublished: savedProd.is_published,
       createdAt: savedProd.created_at,
       variants: savedVariants.map((v: any) => {
@@ -439,7 +441,7 @@ export async function POST(req: Request) {
         };
       }),
       media: savedMedia
-        .filter((m: any) => m.media_type !== 'size_guide')
+        .filter((m: any) => m.media_type !== 'size_guide' && m.media_type !== 'video')
         .map((m: any) => ({
           id: m.id,
           productId: m.product_id,
