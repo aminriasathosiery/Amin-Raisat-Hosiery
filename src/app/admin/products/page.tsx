@@ -1954,6 +1954,7 @@ function AdminProductsContent() {
                       <div
                         key={m.id}
                         className="relative group aspect-square rounded-xl overflow-hidden bg-light-elevated border border-light-border"
+                        title={m.title ? `Filename: ${m.title}` : m.alt || 'Product Image'}
                       >
                         {m.type === 'video' ? (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-charcoal-900 text-charcoal-50 p-2 text-center">
@@ -1975,8 +1976,17 @@ function AdminProductsContent() {
                         </div>
 
                         {m.variantSleeve && (
-                          <div className="absolute bottom-1 left-1 bg-champagne-500/90 text-black text-[9px] px-1 rounded font-bold">
+                          <div className="absolute top-1 left-8 bg-champagne-500/90 text-black text-[9px] px-1 rounded font-bold">
                             {m.variantSleeve}
+                          </div>
+                        )}
+
+                        {m.title && (
+                          <div
+                            className="absolute bottom-0 inset-x-0 bg-black/80 backdrop-blur-xs text-white text-[8px] px-1 py-0.5 truncate font-mono"
+                            title={m.title}
+                          >
+                            {m.title}
                           </div>
                         )}
 
