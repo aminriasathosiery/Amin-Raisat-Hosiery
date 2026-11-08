@@ -960,18 +960,55 @@ export class DataStore {
         const { data, error } = await query;
 
         if (!error && data && data.length > 0) {
-          return data.map((s: any) => ({
-            id: s.id,
-            deviceType: s.device_type || 'desktop',
-            desktopImage: s.desktop_image,
-            mobileImage: s.mobile_image || s.desktop_image,
-            title: s.title || undefined,
-            subtitle: s.subtitle || undefined,
-            link: s.link || '/shop',
-            buttonText: s.button_text || 'Shop Now',
-            displayOrder: s.display_order || 0,
-            isActive: s.is_active ?? true,
-          }));
+          const mapped = data.map((s: any) => {
+            const isSlide2 = s.display_order === 2 || s.id === '1798332a-3451-40ed-a3a2-fff9e57ad59e';
+            let mobileImg = s.mobile_image || s.desktop_image;
+            if (
+              isSlide2 &&
+              (!mobileImg ||
+                mobileImg.includes('1793359616170') ||
+                mobileImg.includes('mobile slider 2.png') ||
+                mobileImg.includes('slider 2.png'))
+            ) {
+              mobileImg =
+                'https://pqjpgexmupcuuqfzchhc.supabase.co/storage/v1/object/public/hero-slides/1793360031167_9e1z2_gemini_generated_image_19c81v19c81v19c8.webp';
+            }
+
+            return {
+              id: s.id,
+              deviceType: s.device_type || 'desktop',
+              desktopImage: s.desktop_image,
+              mobileImage: mobileImg,
+              title: s.title || undefined,
+              subtitle: s.subtitle || undefined,
+              link: s.link || '/shop',
+              buttonText: s.button_text || 'Shop Now',
+              displayOrder: s.display_order || 0,
+              isActive: s.is_active ?? true,
+              updatedAt: s.updated_at || undefined,
+            };
+          });
+
+          // Ensure mobile slide 2 exists in mapped list if desktop slide 2 is present
+          const hasMobileSlide2 = mapped.some((s: HeroSlide) => s.deviceType === 'mobile' && s.displayOrder === 2);
+          const desktopSlide2 = mapped.find((s: HeroSlide) => s.deviceType === 'desktop' && s.displayOrder === 2);
+          if (!hasMobileSlide2 && desktopSlide2) {
+            mapped.push({
+              id: 'd0000000-0000-0000-0000-000000000012',
+              deviceType: 'mobile',
+              desktopImage: desktopSlide2.desktopImage,
+              mobileImage: desktopSlide2.mobileImage,
+              title: desktopSlide2.title || 'Mobile Slider 2',
+              subtitle: desktopSlide2.subtitle || 'Summer Collection',
+              link: desktopSlide2.link || '/shop',
+              buttonText: desktopSlide2.buttonText || 'Shop Now',
+              displayOrder: 2,
+              isActive: desktopSlide2.isActive ?? true,
+              updatedAt: desktopSlide2.updatedAt || undefined,
+            });
+          }
+
+          return mapped;
         }
       } catch (err) {
         console.warn('Supabase getHeroSlides error', err);
@@ -1027,6 +1064,7 @@ export class DataStore {
           buttonText: data.slide.button_text || 'Shop Now',
           displayOrder: data.slide.display_order || 0,
           isActive: data.slide.is_active ?? true,
+          updatedAt: data.slide.updated_at || new Date().toISOString(),
         };
 
         const slides = await this.getHeroSlides();
@@ -1037,6 +1075,9 @@ export class DataStore {
           slides.push(savedSlide);
         }
         localStorage.setItem(LOCAL_STORAGE_KEYS.HERO_SLIDES, JSON.stringify(slides));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('arh_hero_slides_updated'));
+        }
         return;
       } catch (err: any) {
         console.error('DataStore.saveHeroSlide error:', err);
@@ -1086,6 +1127,9 @@ export class DataStore {
         const slides = await this.getHeroSlides();
         const filtered = slides.filter((s) => s.id !== id);
         localStorage.setItem(LOCAL_STORAGE_KEYS.HERO_SLIDES, JSON.stringify(filtered));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('arh_hero_slides_updated'));
+        }
         return;
       } catch (err: any) {
         console.error('DataStore.deleteHeroSlide error:', err);

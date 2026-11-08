@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { SleeveType, ProductSize, Product, ProductVariant } from '@/types';
 import { useCart } from '@/context/CartContext';
@@ -277,42 +278,86 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
         </div>
       </div>
 
-      {/* 2. Color Selector (if colors exist) */}
+      {/* 2. Color Selector (Daraz-style Image Thumbnails) */}
       {availableColors.length > 0 && (
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold uppercase tracking-wider text-[#1D2730] flex items-center gap-1.5">
-              <span>Select Color</span>
+              <span>Color:</span>
+              {selectedColor && (
+                <span className="text-[#C99A3D] font-extrabold capitalize text-xs tracking-normal">
+                  {selectedColor}
+                </span>
+              )}
             </label>
-            {selectedColor && (
-              <span className="text-[#C99A3D] font-bold text-xs capitalize">
-                {selectedColor}
-              </span>
-            )}
+            <span className="text-[11px] text-[#66717C]">
+              {availableColors.length} color{availableColors.length > 1 ? 's' : ''} available
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             {availableColors.map((col) => {
               const isSelected = selectedColor === col.name;
+              const colorMatchingPhoto = product.media?.find(
+                (m) => m.color === col.name && (m.type === 'photo' || (m as any).media_type === 'photo')
+              )?.url;
+              const displayImg = (col as any).image || colorMatchingPhoto || product.media?.find((m) => m.type === 'photo')?.url;
+
+              // Check if color has any available stock in any size
+              const colorVariants = product.variants.filter((v) => v.color === col.name);
+              const totalColorStock = colorVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
+              const isColorOutOfStock = colorVariants.length > 0 && totalColorStock <= 0;
+
               return (
                 <button
                   key={col.name}
                   type="button"
+                  disabled={isColorOutOfStock}
                   onClick={() => setSelectedColor && setSelectedColor(col.name)}
-                  className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
+                  className={`group relative flex items-center gap-2.5 p-1.5 pr-3 rounded-xl border-2 transition-all ${
                     isSelected
-                      ? 'border-[#23384D] bg-[#23384D] text-white shadow-xs scale-105'
-                      : 'border-[#D8D0C3] bg-white text-[#1D2730] hover:border-[#C99A3D]'
-                  }`}
-                  title={col.name}
+                      ? 'border-[#23384D] bg-[#23384D]/5 shadow-sm scale-102 ring-1 ring-[#23384D]'
+                      : 'border-[#D8D0C3] bg-white hover:border-[#C99A3D]'
+                  } ${isColorOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  title={`${col.name}${isColorOutOfStock ? ' (Out of stock)' : ''}`}
                 >
-                  <span
-                    className={`w-3.5 h-3.5 rounded-full border shadow-inner flex-shrink-0 ${
-                      isSelected ? 'border-white' : 'border-charcoal-300'
-                    }`}
-                    style={{ backgroundColor: col.hex }}
-                  />
-                  <span>{col.name}</span>
+                  {/* Miniature Product Image Thumbnail */}
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg overflow-hidden bg-[#F7F3EA] border border-black/10 flex-shrink-0 relative">
+                    {displayImg ? (
+                      <Image
+                        src={displayImg}
+                        alt={col.name}
+                        fill
+                        sizes="48px"
+                        className="object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full"
+                        style={{ backgroundColor: col.hex || '#E5E7EB' }}
+                      />
+                    )}
+                    {/* Selected Checkmark Badge */}
+                    {isSelected && (
+                      <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-[#23384D] text-white rounded-full flex items-center justify-center shadow-xs">
+                        <Check className="w-2.5 h-2.5 stroke-[3]" />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Color Label */}
+                  <div className="text-left">
+                    <span
+                      className={`block text-xs font-bold leading-tight ${
+                        isSelected ? 'text-[#23384D]' : 'text-[#1D2730]'
+                      }`}
+                    >
+                      {col.name}
+                    </span>
+                    {isColorOutOfStock && (
+                      <span className="text-[10px] text-rose-600 font-semibold">Out of Stock</span>
+                    )}
+                  </div>
                 </button>
               );
             })}

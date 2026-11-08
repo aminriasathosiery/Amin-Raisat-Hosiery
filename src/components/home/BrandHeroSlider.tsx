@@ -12,13 +12,15 @@ const DESKTOP_BANNER_HEIGHT = 800;
 const MOBILE_BANNER_WIDTH = 1080;
 const MOBILE_BANNER_HEIGHT = 1350;
 
-const SLIDER_ASSET_VERSION = '20260922_v2';
-
-const getVersionedSrc = (src: string): string => {
+const getVersionedSrc = (src: string, updatedAt?: string): string => {
   if (!src) return src;
   if (src.startsWith('data:') || src.startsWith('blob:')) return src;
   const separator = src.includes('?') ? '&' : '?';
-  return `${src}${separator}v=${SLIDER_ASSET_VERSION}`;
+  // Use updatedAt timestamp if available, or generate from filename
+  const versionToken = updatedAt
+    ? encodeURIComponent(updatedAt)
+    : '20261108_v5';
+  return `${src}${separator}v=${versionToken}`;
 };
 
 export const BrandHeroSlider: React.FC = () => {
@@ -44,10 +46,20 @@ export const BrandHeroSlider: React.FC = () => {
     const list = allSlides.filter(
       (s) => s.isActive !== false && s.deviceType === 'mobile'
     );
-    return list.length > 0
-      ? list
-      : INITIAL_HERO_SLIDES.filter((s) => s.deviceType === 'mobile');
-  }, [allSlides]);
+    if (list.length >= desktopSlides.length) {
+      return list;
+    }
+    // If mobile slides list is incomplete, synthesize from desktopSlides using their mobileImage
+    return desktopSlides.map((dSlide) => {
+      const explicitMobile = list.find((m) => m.displayOrder === dSlide.displayOrder);
+      if (explicitMobile) return explicitMobile;
+      return {
+        ...dSlide,
+        deviceType: 'mobile',
+        mobileImage: dSlide.mobileImage || dSlide.desktopImage,
+      };
+    });
+  }, [allSlides, desktopSlides]);
 
   const maxSlidesCount = Math.max(desktopSlides.length, mobileSlides.length, 1);
 
@@ -116,7 +128,7 @@ export const BrandHeroSlider: React.FC = () => {
           {desktopSlides.map((slide, idx) => {
             const isCurrent = (currentSlide % desktopSlides.length) === idx;
             const rawSrc = slide.desktopImage || `/slider ${idx + 1}.png`;
-            const imageSrc = getVersionedSrc(rawSrc);
+            const imageSrc = getVersionedSrc(rawSrc, slide.updatedAt);
 
             return (
               <div
@@ -210,7 +222,7 @@ export const BrandHeroSlider: React.FC = () => {
           {mobileSlides.map((slide, idx) => {
             const isCurrent = (currentSlide % mobileSlides.length) === idx;
             const rawSrc = slide.mobileImage || slide.desktopImage || `/mobile slider ${idx + 1}.png`;
-            const imageSrc = getVersionedSrc(rawSrc);
+            const imageSrc = getVersionedSrc(rawSrc, slide.updatedAt);
 
             return (
               <div

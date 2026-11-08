@@ -6,7 +6,7 @@ import { StoreProvider } from '@/context/StoreContext';
 import { CartProvider } from '@/context/CartContext';
 import { PublicLayoutShell } from '@/components/layout/PublicLayoutShell';
 import { DataStore } from '@/lib/store';
-import { Product } from '@/types';
+import { Product, HeroSlide } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -49,10 +49,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   let initialProducts: Product[] = [];
+  let initialHeroSlides: HeroSlide[] = [];
   try {
-    initialProducts = await DataStore.getProducts();
+    const [prods, slides] = await Promise.all([
+      DataStore.getProducts(),
+      DataStore.getHeroSlides(),
+    ]);
+    initialProducts = prods;
+    initialHeroSlides = slides;
   } catch (err) {
-    console.warn('RootLayout initial products fetch notice:', err);
+    console.warn('RootLayout initial data fetch notice:', err);
   }
 
   return (
@@ -60,7 +66,7 @@ export default async function RootLayout({
       <body className="min-h-screen flex flex-col bg-[#F7F3EA] text-[#1D2730] antialiased selection:bg-[#C99A3D] selection:text-white">
         <ThemeProvider>
           <AuthProvider>
-            <StoreProvider initialProducts={initialProducts}>
+            <StoreProvider initialProducts={initialProducts} initialHeroSlides={initialHeroSlides}>
               <CartProvider>
                   <PublicLayoutShell>{children}</PublicLayoutShell>
               </CartProvider>

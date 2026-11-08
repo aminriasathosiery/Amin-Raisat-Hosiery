@@ -47,9 +47,10 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 interface StoreProviderProps {
   children: React.ReactNode;
   initialProducts?: Product[];
+  initialHeroSlides?: HeroSlide[];
 }
 
-export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialProducts }) => {
+export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialProducts, initialHeroSlides }) => {
   const [products, setProducts] = useState<Product[]>(() => {
     if (initialProducts && initialProducts.length > 0) {
       return initialProducts;
@@ -61,7 +62,23 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
   const [settings, setSettings] = useState<SiteSettings>(INITIAL_SITE_SETTINGS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(INITIAL_HERO_SLIDES);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
+    if (initialHeroSlides && initialHeroSlides.length > 0) {
+      return initialHeroSlides;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('arh_hero_slides_v5');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return INITIAL_HERO_SLIDES;
+  });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -69,6 +86,60 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
       setProducts(initialProducts);
     }
   }, [initialProducts]);
+
+  useEffect(() => {
+    if (initialHeroSlides && initialHeroSlides.length > 0) {
+      setHeroSlides(initialHeroSlides);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('arh_hero_slides_v5', JSON.stringify(initialHeroSlides));
+        } catch {}
+      }
+    }
+  }, [initialHeroSlides]);
+
+  // Fast independent hero slides sync & live event listener
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const syncHeroSlides = () => {
+      try {
+        const cached = localStorage.getItem('arh_hero_slides_v5');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setHeroSlides(parsed);
+          }
+        }
+      } catch {}
+    };
+
+    // Instant local storage check
+    syncHeroSlides();
+
+    // Fast background fetch from Supabase specifically for hero slides without waiting for products
+    DataStore.getHeroSlides().then((slides) => {
+      if (slides && slides.length > 0) {
+        setHeroSlides(slides);
+        try {
+          localStorage.setItem('arh_hero_slides_v5', JSON.stringify(slides));
+        } catch {}
+      }
+    }).catch((err) => console.warn('Fast hero fetch notice:', err));
+
+    // Listen for custom slide update events and cross-tab storage changes
+    const handleUpdate = () => syncHeroSlides();
+    window.addEventListener('arh_hero_slides_updated', handleUpdate);
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'arh_hero_slides_v5') {
+        syncHeroSlides();
+      }
+    });
+
+    return () => {
+      window.removeEventListener('arh_hero_slides_updated', handleUpdate);
+    };
+  }, []);
 
   const loadData = async () => {
     try {
@@ -219,13 +290,40 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
   };
 
   const saveHeroSlide = async (slide: HeroSlide) => {
+    // Optimistically update hero slides immediately in memory and local storage
+    setHeroSlides((prev) => {
+      const idx = prev.findIndex((s) => s.id === slide.id);
+      let updated: HeroSlide[];
+      if (idx !== -1) {
+        updated = [...prev];
+        updated[idx] = { ...updated[idx], ...slide, updatedAt: new Date().toISOString() };
+      } else {
+        updated = [...prev, { ...slide, updatedAt: new Date().toISOString() }];
+      }
+      try {
+        localStorage.setItem('arh_hero_slides_v5', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     await DataStore.saveHeroSlide(slide);
-    await loadData();
+    const freshSlides = await DataStore.getHeroSlides();
+    setHeroSlides(freshSlides);
   };
 
   const deleteHeroSlide = async (id: string) => {
+    // Optimistically remove hero slide immediately
+    setHeroSlides((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      try {
+        localStorage.setItem('arh_hero_slides_v5', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     await DataStore.deleteHeroSlide(id);
-    await loadData();
+    const freshSlides = await DataStore.getHeroSlides();
+    setHeroSlides(freshSlides);
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {

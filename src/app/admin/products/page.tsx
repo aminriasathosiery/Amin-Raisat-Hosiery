@@ -31,6 +31,9 @@ import {
   TrendingDown,
   Copy,
   Palette,
+  ChevronUp,
+  ChevronDown,
+  ImageIcon,
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/admin/ConfirmModal';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
@@ -112,11 +115,13 @@ function AdminProductsContent() {
   const [genDefaultDiscount, setGenDefaultDiscount] = useState<number>(0);
   const [genDefaultStock, setGenDefaultStock] = useState(50);
 
-  // Color Variants System State
+  // Color Variants System State (Daraz-style)
   const [prodColors, setProdColors] = useState<ProductColor[]>([]);
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#FFFFFF');
   const [isAddColorOpen, setIsAddColorOpen] = useState(false);
+  const [mediaPickerColorId, setMediaPickerColorId] = useState<string | null>(null);
+  const [isUploadingColorId, setIsUploadingColorId] = useState<string | null>(null);
 
   // Individual Variant Add State
   const [isAddSingleVarOpen, setIsAddSingleVarOpen] = useState(false);
@@ -278,18 +283,34 @@ function AdminProductsContent() {
         salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
       };
     });
-    // Load colors: either from prod.colors or reconstructed from variants
+    // Load colors: either from prod.colors or reconstructed from variants & media
     let loadedColors: ProductColor[] = [];
     if (prod.colors && prod.colors.length > 0) {
-      loadedColors = prod.colors;
+      loadedColors = prod.colors.map((c, i) => {
+        const colorMedia = (prod.media || []).filter((m) => m.color === c.name && m.type === 'photo');
+        return {
+          ...c,
+          id: c.id || `col-${i + 1}`,
+          image: c.image || colorMedia[0]?.url,
+          additionalImages: c.additionalImages || colorMedia.slice(1).map((m) => m.url),
+          displayOrder: c.displayOrder || i + 1,
+          isActive: c.isActive !== false,
+        };
+      });
     } else {
       const variantColors = Array.from(new Set(prod.variants.map((v) => v.color).filter(Boolean) as string[]));
-      loadedColors = variantColors.map((c, i) => ({
-        id: `col-${i + 1}`,
-        name: c,
-        hex: prod.variants.find((v) => v.color === c)?.colorHex || '#171717',
-        isActive: true,
-      }));
+      loadedColors = variantColors.map((c, i) => {
+        const colorMedia = (prod.media || []).filter((m) => m.color === c && m.type === 'photo');
+        return {
+          id: `col-${i + 1}`,
+          name: c,
+          hex: prod.variants.find((v) => v.color === c)?.colorHex || '#171717',
+          image: colorMedia[0]?.url,
+          additionalImages: colorMedia.slice(1).map((m) => m.url),
+          displayOrder: i + 1,
+          isActive: true,
+        };
+      });
     }
     setProdColors(loadedColors);
 
@@ -404,6 +425,46 @@ function AdminProductsContent() {
     } else {
       cleanMedia = cleanMedia.filter((m) => m.type !== 'size_guide' && m.variantSleeve !== 'size_guide');
     }
+
+    // Ensure all color images exist in cleanMedia with proper color tagging
+    prodColors.forEach((c) => {
+      if (c.image) {
+        const alreadyInMedia = cleanMedia.some((m) => m.url === c.image);
+        if (!alreadyInMedia) {
+          cleanMedia.push({
+            id: `med-${currentId}-col-${c.id}`,
+            productId: currentId,
+            type: 'photo',
+            url: c.image,
+            alt: `${prodName.trim()} in ${c.name}`,
+            title: `${c.name} Primary Photo`,
+            color: c.name,
+            displayOrder: cleanMedia.length + 1,
+          });
+        } else {
+          cleanMedia = cleanMedia.map((m) => (m.url === c.image ? { ...m, color: c.name } : m));
+        }
+      }
+      if (c.additionalImages && c.additionalImages.length > 0) {
+        c.additionalImages.forEach((imgUrl, addIdx) => {
+          const already = cleanMedia.some((m) => m.url === imgUrl);
+          if (!already) {
+            cleanMedia.push({
+              id: `med-${currentId}-col-${c.id}-add-${addIdx}`,
+              productId: currentId,
+              type: 'photo',
+              url: imgUrl,
+              alt: `${prodName.trim()} in ${c.name} extra view`,
+              title: `${c.name} Extra View`,
+              color: c.name,
+              displayOrder: cleanMedia.length + 1,
+            });
+          } else {
+            cleanMedia = cleanMedia.map((m) => (m.url === imgUrl ? { ...m, color: c.name } : m));
+          }
+        });
+      }
+    });
 
     const productToSave: Product = {
       id: currentId,
@@ -523,33 +584,153 @@ function AdminProductsContent() {
     setCustomSizes(customSizes.filter((s) => s !== sizeToRemove));
   };
 
-  // ------------------ COLOR ACTIONS ------------------
-  const handleAddColor = () => {
-    if (!newColorName.trim()) return;
-    const cleanName = newColorName.trim();
-    if (!prodColors.some((c) => c.name.toLowerCase() === cleanName.toLowerCase())) {
-      setProdColors([
-        ...prodColors,
-        {
-          id: `col-${Date.now()}`,
-          name: cleanName,
-          hex: newColorHex || '#FFFFFF',
-          isActive: true,
-        },
-      ]);
+  // ------------------ COLOR ACTIONS (DARAZ-STYLE COLOR VARIANT MANAGEMENT) ------------------
+  const handleAddAnotherColor = (presetName?: string, presetHex?: string) => {
+    const name = presetName || `Color ${prodColors.length + 1}`;
+    const hex = presetHex || '#FFFFFF';
+    const newCol: ProductColor = {
+      id: `col-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name,
+      hex,
+      image: undefined,
+      additionalImages: [],
+      displayOrder: prodColors.length + 1,
+      isActive: true,
+    };
+    setProdColors([...prodColors, newCol]);
+  };
+
+  const handleUpdateColorName = (colorId: string, newName: string) => {
+    const oldColor = prodColors.find((c) => c.id === colorId);
+    const oldName = oldColor?.name;
+    setProdColors((prev) =>
+      prev.map((c) => (c.id === colorId ? { ...c, name: newName } : c))
+    );
+    if (oldName && oldName !== newName) {
+      setVariantsList((prev) =>
+        prev.map((v) => (v.color === oldName ? { ...v, color: newName } : v))
+      );
+      setMediaList((prev) =>
+        prev.map((m) => (m.color === oldName ? { ...m, color: newName } : m))
+      );
     }
-    setNewColorName('');
-    setIsAddColorOpen(false);
   };
 
-  const handleRemoveColor = (colorName: string) => {
-    setProdColors(prodColors.filter((c) => c.name !== colorName));
+  const handleUploadColorPrimaryImage = async (colorId: string, file: File) => {
+    try {
+      setIsUploadingColorId(colorId);
+      const url = await uploadMediaFile(file);
+      const targetColor = prodColors.find((c) => c.id === colorId);
+
+      setProdColors((prev) =>
+        prev.map((c) => {
+          if (c.id === colorId) {
+            return { ...c, image: url };
+          }
+          return c;
+        })
+      );
+
+      if (targetColor) {
+        setMediaList((prev) => {
+          const exists = prev.find((m) => m.url === url);
+          if (exists) {
+            return prev.map((m) => (m.url === url ? { ...m, color: targetColor.name } : m));
+          }
+          return [
+            ...prev,
+            {
+              id: `med-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              type: 'photo',
+              url,
+              color: targetColor.name,
+              displayOrder: prev.length + 1,
+            },
+          ];
+        });
+      }
+      showNotice('Color image uploaded and assigned successfully!');
+    } catch (err: any) {
+      console.error('Upload color image error:', err);
+      showNotice(err?.message || 'Failed to upload color image.', 'error');
+    } finally {
+      setIsUploadingColorId(null);
+    }
+  };
+
+  const handleSelectMediaCenterImage = (colorId: string, imageUrl: string, asAdditional = false) => {
+    const targetColor = prodColors.find((c) => c.id === colorId);
+    if (!targetColor) return;
+
+    setProdColors((prev) =>
+      prev.map((c) => {
+        if (c.id === colorId) {
+          if (asAdditional) {
+            const currentAdd = c.additionalImages || [];
+            if (!currentAdd.includes(imageUrl)) {
+              return { ...c, additionalImages: [...currentAdd, imageUrl] };
+            }
+            return c;
+          }
+          return { ...c, image: imageUrl };
+        }
+        return c;
+      })
+    );
+
+    // Tag media in mediaList to this color
+    setMediaList((prev) =>
+      prev.map((m) => (m.url === imageUrl ? { ...m, color: targetColor.name } : m))
+    );
+    showNotice(`Image assigned to "${targetColor.name}"`);
+  };
+
+  const handleRemoveColorPrimaryImage = (colorId: string) => {
+    setProdColors((prev) =>
+      prev.map((c) => (c.id === colorId ? { ...c, image: undefined } : c))
+    );
+  };
+
+  const handleRemoveColorAdditionalImage = (colorId: string, imgUrl: string) => {
+    setProdColors((prev) =>
+      prev.map((c) => {
+        if (c.id === colorId) {
+          return {
+            ...c,
+            additionalImages: (c.additionalImages || []).filter((u) => u !== imgUrl),
+          };
+        }
+        return c;
+      })
+    );
+  };
+
+  const handleMoveColor = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= prodColors.length) return;
+    const updated = [...prodColors];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    setProdColors(updated.map((c, idx) => ({ ...c, displayOrder: idx + 1 })));
+  };
+
+  const handleRemoveColor = (colorIdentifier: string) => {
+    const target = prodColors.find((c) => c.id === colorIdentifier || c.name === colorIdentifier);
+    if (!target) return;
+    const colorName = target.name;
+    setProdColors(prodColors.filter((c) => c.id !== target.id));
     setVariantsList((prev) => prev.filter((v) => v.color !== colorName));
+    // Clear color tag in mediaList
+    setMediaList((prev) =>
+      prev.map((m) => (m.color === colorName ? { ...m, color: undefined } : m))
+    );
   };
 
-  const handleToggleColorActive = (colorName: string) => {
+  const handleToggleColorActive = (colorIdentifier: string) => {
     setProdColors(
-      prodColors.map((c) => (c.name === colorName ? { ...c, isActive: !c.isActive } : c))
+      prodColors.map((c) =>
+        c.id === colorIdentifier || c.name === colorIdentifier ? { ...c, isActive: !c.isActive } : c
+      )
     );
   };
 
@@ -1366,177 +1547,278 @@ function AdminProductsContent() {
           {/* ========================================================================= */}
           {editorTab === 'variants' && (
             <div className="space-y-6 animate-in fade-in">
-              {/* STEP 1: Color Options & Swatches */}
-              <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              {/* DEDICATED SECTION: PRODUCT COLORS (DARAZ STYLE) */}
+              <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-light-border pb-3">
                   <div>
                     <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Palette className="w-4 h-4 text-[#B89555]" />
-                      <span>Step 1: Color Options &amp; Swatches</span>
+                      <span>Product Colors</span>
                       <span className="text-charcoal-500 font-normal">({prodColors.length})</span>
                     </h3>
                     <p className="text-[11px] text-charcoal-500">
-                      Configure color choices for this product (e.g. White, Black, Grey, Navy Blue). Each color gets its own photos and stock matrix.
+                      Manage color options like Daraz with color-specific product photos, independent stock, and SKU combinations.
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => setIsAddColorOpen(true)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-light-elevated hover:bg-light-hover border border-light-border hover:border-[#B89555] text-charcoal-900 rounded-xl text-xs font-semibold transition-colors self-start sm:self-auto"
+                    onClick={() => handleAddAnotherColor()}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 rounded-xl text-xs font-bold transition-all shadow-xs self-start sm:self-auto active:scale-[0.99]"
                   >
-                    <Plus className="w-3.5 h-3.5 text-[#B89555]" />
-                    <span>Add Color</span>
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Another Color</span>
                   </button>
                 </div>
 
-                {/* Color List */}
-                <div className="flex flex-wrap gap-2 pt-1">
+                {/* Color Rows / Cards List */}
+                <div className="space-y-3">
                   {prodColors.length === 0 ? (
-                    <p className="text-xs text-charcoal-400 italic py-1">
-                      No colors added. Product will use single standard appearance without color selection.
-                    </p>
-                  ) : (
-                    prodColors.map((col) => (
-                      <div
-                        key={col.name}
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                          col.isActive !== false
-                            ? 'bg-light-elevated border-light-border text-charcoal-900 shadow-xs'
-                            : 'bg-charcoal-50 border-charcoal-200 text-charcoal-400 opacity-60'
-                        }`}
+                    <div className="p-6 text-center border-2 border-dashed border-light-border rounded-xl">
+                      <Palette className="w-8 h-8 text-charcoal-300 mx-auto mb-2" />
+                      <p className="text-xs text-charcoal-500 font-medium">No color options configured yet.</p>
+                      <p className="text-[11px] text-charcoal-400 mb-3">Product will be sold as a single default color.</p>
+                      <button
+                        type="button"
+                        onClick={() => handleAddAnotherColor('White', '#FFFFFF')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-light-elevated hover:bg-light-hover border border-light-border text-xs font-semibold rounded-xl text-charcoal-900"
                       >
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-charcoal-300 shadow-inner flex-shrink-0"
-                          style={{ backgroundColor: col.hex }}
-                          title={col.hex}
-                        />
-                        <span>{col.name}</span>
-                        <span className="text-[10px] font-mono text-charcoal-400">{col.hex}</span>
+                        <Plus className="w-3.5 h-3.5 text-[#B89555]" />
+                        <span>Add First Color (White)</span>
+                      </button>
+                    </div>
+                  ) : (
+                    prodColors.map((col, index) => {
+                      const displayImg = col.image || mediaList.find((m) => m.color === col.name && m.type === 'photo')?.url;
+                      const isUploadingThis = isUploadingColorId === col.id;
 
-                        <button
-                          type="button"
-                          onClick={() => handleToggleColorActive(col.name)}
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold transition-colors ${
+                      return (
+                        <div
+                          key={col.id}
+                          className={`p-3.5 sm:p-4 rounded-xl border transition-all ${
                             col.isActive !== false
-                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                              : 'bg-charcoal-200 text-charcoal-600 hover:bg-charcoal-300'
+                              ? 'bg-light-elevated/70 border-light-border shadow-xs'
+                              : 'bg-charcoal-50/70 border-charcoal-200 opacity-60'
                           }`}
-                          title={col.isActive !== false ? 'Active: click to disable' : 'Disabled: click to enable'}
                         >
-                          {col.isActive !== false ? 'Active' : 'Disabled'}
-                        </button>
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            {/* Left: Reorder + Color Name + Hex Swatch */}
+                            <div className="flex items-center gap-2.5 flex-1 min-w-[200px]">
+                              {/* Reorder Buttons */}
+                              <div className="flex flex-col gap-0.5 flex-shrink-0">
+                                <button
+                                  type="button"
+                                  disabled={index === 0}
+                                  onClick={() => handleMoveColor(index, 'up')}
+                                  className="p-1 text-charcoal-400 hover:text-charcoal-900 disabled:opacity-20 rounded hover:bg-white transition-colors"
+                                  title="Move Up"
+                                >
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={index === prodColors.length - 1}
+                                  onClick={() => handleMoveColor(index, 'down')}
+                                  className="p-1 text-charcoal-400 hover:text-charcoal-900 disabled:opacity-20 rounded hover:bg-white transition-colors"
+                                  title="Move Down"
+                                >
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveColor(col.name)}
-                          className="text-charcoal-400 hover:text-rose-600 transition-colors ml-1"
-                          title="Delete Color Option"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
+                              {/* Color Swatch Dot & Hex Picker */}
+                              <div className="relative group/hex flex-shrink-0">
+                                <label
+                                  className="w-7 h-7 rounded-lg border border-black/20 shadow-xs cursor-pointer block"
+                                  style={{ backgroundColor: col.hex || '#FFFFFF' }}
+                                  title="Click to pick swatch color"
+                                >
+                                  <input
+                                    type="color"
+                                    value={col.hex || '#FFFFFF'}
+                                    onChange={(e) => {
+                                      const hex = e.target.value;
+                                      setProdColors((prev) =>
+                                        prev.map((c) => (c.id === col.id ? { ...c, hex } : c))
+                                      );
+                                    }}
+                                    className="sr-only"
+                                  />
+                                </label>
+                              </div>
+
+                              {/* In-Place Color Name Input */}
+                              <div className="flex-1">
+                                <input
+                                  type="text"
+                                  value={col.name}
+                                  onChange={(e) => handleUpdateColorName(col.id, e.target.value)}
+                                  placeholder="e.g. Black, White, Navy Blue"
+                                  className="w-full px-3 py-1.5 bg-white border border-light-border rounded-xl font-bold text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none uppercase"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Middle: Color-Specific Product Image Thumbnail */}
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-12 h-12 rounded-xl border border-light-border bg-white overflow-hidden flex items-center justify-center flex-shrink-0 shadow-2xs group/thumb">
+                                {displayImg ? (
+                                  <>
+                                    <img
+                                      src={displayImg}
+                                      alt={col.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveColorPrimaryImage(col.id)}
+                                      className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center text-white transition-opacity text-[10px] font-bold"
+                                      title="Remove photo"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center text-charcoal-300">
+                                    <ImageIcon className="w-4 h-4" />
+                                    <span className="text-[8px] text-charcoal-400 font-semibold">No Image</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Additional images badge/count */}
+                              {col.additionalImages && col.additionalImages.length > 0 && (
+                                <div className="hidden sm:flex items-center gap-1">
+                                  {col.additionalImages.slice(0, 3).map((imgUrl, addIdx) => (
+                                    <div
+                                      key={addIdx}
+                                      className="relative w-8 h-8 rounded-lg border border-light-border bg-white overflow-hidden group/addthumb flex-shrink-0"
+                                    >
+                                      <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveColorAdditionalImage(col.id, imgUrl)}
+                                        className="absolute inset-0 bg-black/60 opacity-0 group-hover/addthumb:opacity-100 flex items-center justify-center text-white transition-opacity"
+                                        title="Remove photo"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  {col.additionalImages.length > 3 && (
+                                    <span className="text-[10px] font-bold text-charcoal-500">
+                                      +{col.additionalImages.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Right: Upload Button | Media Center Button | Active Toggle | Remove */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Upload Button */}
+                              <label
+                                className={`cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-light-hover border border-light-border hover:border-[#B89555] text-charcoal-800 text-xs font-semibold rounded-xl transition-colors shadow-2xs ${
+                                  isUploadingThis ? 'opacity-50 pointer-events-none' : ''
+                                }`}
+                                title="Upload product image for this color"
+                              >
+                                <Upload className="w-3.5 h-3.5 text-[#B89555]" />
+                                <span>{isUploadingThis ? 'Uploading...' : 'Upload'}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleUploadColorPrimaryImage(col.id, file);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+
+                              {/* Media Center Selection Button */}
+                              <button
+                                type="button"
+                                onClick={() => setMediaPickerColorId(col.id)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-light-hover border border-light-border hover:border-[#B89555] text-charcoal-800 text-xs font-semibold rounded-xl transition-colors shadow-2xs"
+                                title="Select from Media Center"
+                              >
+                                <Palette className="w-3.5 h-3.5 text-[#B89555]" />
+                                <span>Media Center</span>
+                              </button>
+
+                              {/* Active Status Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleColorActive(col.id)}
+                                className={`text-[10px] px-2 py-1.5 rounded-xl font-bold transition-colors ${
+                                  col.isActive !== false
+                                    ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                                    : 'bg-charcoal-200 text-charcoal-600 hover:bg-charcoal-300'
+                                }`}
+                                title={col.isActive !== false ? 'Active in store' : 'Disabled in store'}
+                              >
+                                {col.isActive !== false ? 'Active' : 'Disabled'}
+                              </button>
+
+                              {/* Remove Color Action */}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveColor(col.id)}
+                                className="p-1.5 text-charcoal-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                                title="Delete Color"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 
-                {/* Add Color Form */}
-                {isAddColorOpen && (
-                  <div className="p-4 bg-light-elevated rounded-xl border border-light-border space-y-3 max-w-lg animate-in fade-in">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#B89555] uppercase">Add New Color</span>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddColorOpen(false)}
-                        className="p-1 text-charcoal-400 hover:text-charcoal-900"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Presets */}
-                    <div>
-                      <span className="block text-[11px] font-semibold text-charcoal-600 mb-1.5">Quick Presets:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { name: 'White', hex: '#FFFFFF' },
-                          { name: 'Black', hex: '#171717' },
-                          { name: 'Grey', hex: '#808080' },
-                          { name: 'Navy Blue', hex: '#23384D' },
-                          { name: 'Off White', hex: '#F8F6F0' },
-                          { name: 'Charcoal', hex: '#36454F' },
-                          { name: 'Beige', hex: '#F5F5DC' },
-                          { name: 'Maroon', hex: '#800000' },
-                        ].map((preset) => (
+                {/* Quick Preset Buttons */}
+                <div className="pt-2 border-t border-light-border">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-[11px] font-semibold text-charcoal-500">Quick Color Presets:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { name: 'BLACK', hex: '#171717' },
+                        { name: 'WHITE', hex: '#FFFFFF' },
+                        { name: 'NAVY BLUE', hex: '#23384D' },
+                        { name: 'HEATHER GREY', hex: '#9CA3AF' },
+                        { name: 'CHARCOAL', hex: '#374151' },
+                        { name: 'BEIGE', hex: '#D2B48C' },
+                        { name: 'MAROON', hex: '#800000' },
+                      ].map((preset) => {
+                        const alreadyAdded = prodColors.some(
+                          (c) => c.name.toUpperCase() === preset.name
+                        );
+                        return (
                           <button
                             key={preset.name}
                             type="button"
-                            onClick={() => {
-                              setNewColorName(preset.name);
-                              setNewColorHex(preset.hex);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-medium text-charcoal-800 transition-colors"
+                            disabled={alreadyAdded}
+                            onClick={() => handleAddAnotherColor(preset.name, preset.hex)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors ${
+                              alreadyAdded
+                                ? 'opacity-40 bg-light-elevated border-light-border text-charcoal-400 cursor-not-allowed'
+                                : 'bg-white hover:bg-light-hover border-light-border text-charcoal-800 hover:border-[#B89555]'
+                            }`}
                           >
                             <span
-                              className="w-2.5 h-2.5 rounded-full border border-charcoal-300"
+                              className="w-2.5 h-2.5 rounded-full border border-black/20"
                               style={{ backgroundColor: preset.hex }}
                             />
-                            <span>{preset.name}</span>
+                            <span>+ {preset.name}</span>
                           </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Color Name</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Navy Blue"
-                          value={newColorName}
-                          onChange={(e) => setNewColorName(e.target.value)}
-                          className="w-full p-2 bg-white border border-light-border rounded-lg text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
-                          autoFocus
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Color Swatch (Hex)</label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            value={newColorHex}
-                            onChange={(e) => setNewColorHex(e.target.value)}
-                            className="w-9 h-9 p-0.5 border border-light-border rounded-lg cursor-pointer bg-white"
-                          />
-                          <input
-                            type="text"
-                            placeholder="#FFFFFF"
-                            value={newColorHex}
-                            onChange={(e) => setNewColorHex(e.target.value)}
-                            className="flex-1 p-2 bg-white border border-light-border rounded-lg text-xs font-mono text-charcoal-900 focus:border-[#B89555] focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddColorOpen(false)}
-                        className="px-3 py-1.5 bg-white text-charcoal-700 border border-light-border text-xs font-semibold rounded-lg"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAddColor}
-                        className="px-4 py-1.5 bg-champagne-500 text-charcoal-950 text-xs font-bold rounded-lg"
-                      >
-                        Add Color
-                      </button>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* STEP 2: Sleeve Styles */}
@@ -1579,6 +1861,49 @@ function AdminProductsContent() {
                       </button>
                     </div>
                   ))}
+                </div>
+
+                {/* Category Preset Quick Loaders */}
+                <div className="pt-2 border-t border-light-border">
+                  <span className="block text-[11px] font-semibold text-charcoal-500 mb-1.5">
+                    Category Sizing Presets:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['33', '34', '35', '36', '37', '38'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Blouse:</span>
+                      <span>33, 34, 35, 36, 37, 38</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['S', 'M', 'L', 'XL', 'XXL'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Vest:</span>
+                      <span>S, M, L, XL, XXL</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['28', '30', '32', '34', '36'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Trousers:</span>
+                      <span>28, 30, 32, 34, 36</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['Free Size'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Free Size</span>
+                    </button>
+                  </div>
                 </div>
 
                 {isAddStyleOpen && (
@@ -1649,6 +1974,49 @@ function AdminProductsContent() {
                       </button>
                     </div>
                   ))}
+                </div>
+
+                {/* Category Preset Quick Loaders */}
+                <div className="pt-2 border-t border-light-border">
+                  <span className="block text-[11px] font-semibold text-charcoal-500 mb-1.5">
+                    Category Sizing Presets:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['33', '34', '35', '36', '37', '38'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Blouse:</span>
+                      <span>33, 34, 35, 36, 37, 38</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['S', 'M', 'L', 'XL', 'XXL'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Vest:</span>
+                      <span>S, M, L, XL, XXL</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['28', '30', '32', '34', '36'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Trousers:</span>
+                      <span>28, 30, 32, 34, 36</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomSizes(['Free Size'])}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-semibold text-charcoal-800 hover:border-[#B89555] transition-colors"
+                    >
+                      <span className="font-bold text-[#B89555]">Free Size</span>
+                    </button>
+                  </div>
                 </div>
 
                 {isAddSizeOpen && (
@@ -1958,6 +2326,7 @@ function AdminProductsContent() {
                           <th className="p-3">Discount %</th>
                           <th className="p-3">Sale (PKR)</th>
                           <th className="p-3">Stock</th>
+                          <th className="p-3 text-center">Status</th>
                           <th className="p-3 text-center">Action</th>
                         </tr>
                       </thead>
@@ -1976,12 +2345,27 @@ function AdminProductsContent() {
                               {prodColors.length > 0 && (
                                 <td className="p-3">
                                   {v.color ? (
-                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-light-elevated text-charcoal-800 border border-light-border">
-                                      <span
-                                        className="w-2.5 h-2.5 rounded-full border border-charcoal-300 inline-block flex-shrink-0"
-                                        style={{ backgroundColor: v.colorHex || prodColors.find((c) => c.name === v.color)?.hex || '#ccc' }}
-                                      />
-                                      <span>{v.color}</span>
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-semibold bg-light-elevated text-charcoal-800 border border-light-border">
+                                      {(() => {
+                                        const cObj = prodColors.find((c) => c.name === v.color);
+                                        const cImg = cObj?.image || mediaList.find((m) => m.color === v.color && m.type === 'photo')?.url;
+                                        if (cImg) {
+                                          return (
+                                            <img
+                                              src={cImg}
+                                              alt={v.color}
+                                              className="w-5 h-5 rounded-md object-cover border border-black/10 flex-shrink-0"
+                                            />
+                                          );
+                                        }
+                                        return (
+                                          <span
+                                            className="w-2.5 h-2.5 rounded-full border border-charcoal-300 inline-block flex-shrink-0"
+                                            style={{ backgroundColor: v.colorHex || cObj?.hex || '#ccc' }}
+                                          />
+                                        );
+                                      })()}
+                                      <span className="font-bold">{v.color}</span>
                                     </span>
                                   ) : (
                                     <span className="text-[11px] text-charcoal-400 italic">None</span>
@@ -2048,6 +2432,20 @@ function AdminProductsContent() {
                                   }
                                   className="w-18 px-2 py-1 bg-light-elevated border border-light-border rounded-lg font-bold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                                 />
+                              </td>
+                              <td className="p-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateVariantField(v.id, 'isAvailable', !v.isAvailable)}
+                                  className={`text-[10px] px-2 py-0.5 rounded-md font-bold transition-colors ${
+                                    v.isAvailable !== false
+                                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                                      : 'bg-charcoal-200 text-charcoal-500 hover:bg-charcoal-300'
+                                  }`}
+                                  title={v.isAvailable !== false ? 'Active (Click to disable)' : 'Inactive (Click to enable)'}
+                                >
+                                  {v.isAvailable !== false ? 'Active' : 'Inactive'}
+                                </button>
                               </td>
                               <td className="p-3 text-center">
                                 <button
@@ -2487,6 +2885,169 @@ function AdminProductsContent() {
           )}
         </form>
       )}
+
+      {/* MEDIA CENTER SELECTION MODAL FOR PRODUCT COLORS */}
+      {mediaPickerColorId && (() => {
+        const activeColor = prodColors.find((c) => c.id === mediaPickerColorId);
+        if (!activeColor) return null;
+
+        const photosInMedia = mediaList.filter((m) => m.type === 'photo' || !m.type);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-light-border overflow-hidden">
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-light-border flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-charcoal-900 flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-[#B89555]" />
+                    <span>Media Center for &quot;{activeColor.name}&quot;</span>
+                  </h3>
+                  <p className="text-xs text-charcoal-500 mt-0.5">
+                    Select a photo from this product&apos;s gallery or upload a new photo specifically for this color.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMediaPickerColorId(null)}
+                  className="p-1.5 text-charcoal-400 hover:text-charcoal-900 rounded-lg hover:bg-light-hover"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+                {/* Upload New Directly */}
+                <div className="p-3 bg-light-elevated rounded-xl border border-light-border flex items-center justify-between gap-3">
+                  <div className="text-xs">
+                    <span className="font-bold text-charcoal-900 block">Upload new photo from computer</span>
+                    <span className="text-charcoal-500 text-[11px]">Uploads and assigns directly to {activeColor.name}</span>
+                  </div>
+                  <label
+                    className={`cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-colors ${
+                      isUploadingColorId === activeColor.id ? 'opacity-50 pointer-events-none' : ''
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingColorId === activeColor.id ? 'Uploading...' : 'Upload Photo'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUploadColorPrimaryImage(activeColor.id, file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {/* Existing Photos Grid */}
+                <div>
+                  <span className="block text-xs font-bold text-charcoal-800 uppercase tracking-wider mb-2">
+                    Gallery Photos ({photosInMedia.length})
+                  </span>
+                  {photosInMedia.length === 0 ? (
+                    <div className="p-8 text-center border-2 border-dashed border-light-border rounded-xl">
+                      <ImageIcon className="w-8 h-8 text-charcoal-300 mx-auto mb-2" />
+                      <p className="text-xs text-charcoal-500 font-medium">No gallery photos uploaded yet.</p>
+                      <p className="text-[11px] text-charcoal-400">Use the upload button above to add a photo.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {photosInMedia.map((photo) => {
+                        const isPrimary = activeColor.image === photo.url;
+                        const isAdditional = (activeColor.additionalImages || []).includes(photo.url);
+
+                        return (
+                          <div
+                            key={photo.id || photo.url}
+                            className={`group relative rounded-xl border-2 overflow-hidden bg-light-elevated transition-all flex flex-col ${
+                              isPrimary
+                                ? 'border-[#B89555] ring-2 ring-[#B89555]/30'
+                                : isAdditional
+                                ? 'border-emerald-500 ring-2 ring-emerald-500/20'
+                                : 'border-light-border hover:border-charcoal-400'
+                            }`}
+                          >
+                            <div className="aspect-square relative overflow-hidden bg-white">
+                              <img
+                                src={photo.url}
+                                alt={photo.alt || activeColor.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              {isPrimary && (
+                                <span className="absolute top-1.5 left-1.5 px-2 py-0.5 bg-[#B89555] text-charcoal-950 font-bold text-[9px] rounded-md shadow-xs">
+                                  Primary
+                                </span>
+                              )}
+                              {isAdditional && !isPrimary && (
+                                <span className="absolute top-1.5 left-1.5 px-2 py-0.5 bg-emerald-600 text-white font-bold text-[9px] rounded-md shadow-xs">
+                                  Additional
+                                </span>
+                              )}
+                              {photo.color && (
+                                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 bg-black/70 text-white font-semibold text-[9px] rounded">
+                                  {photo.color}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="p-2 bg-white flex flex-col gap-1 border-t border-light-border">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectMediaCenterImage(activeColor.id, photo.url, false)}
+                                className={`w-full py-1 px-1.5 text-[10px] font-bold rounded-lg transition-colors ${
+                                  isPrimary
+                                    ? 'bg-[#B89555] text-charcoal-950'
+                                    : 'bg-light-elevated hover:bg-light-hover text-charcoal-800 border border-light-border'
+                                }`}
+                              >
+                                {isPrimary ? '✓ Primary Photo' : 'Set as Primary'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isAdditional) {
+                                    handleRemoveColorAdditionalImage(activeColor.id, photo.url);
+                                  } else {
+                                    handleSelectMediaCenterImage(activeColor.id, photo.url, true);
+                                  }
+                                }}
+                                className={`w-full py-0.5 px-1.5 text-[9px] font-semibold rounded transition-colors ${
+                                  isAdditional
+                                    ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                                    : 'text-charcoal-600 hover:bg-light-hover'
+                                }`}
+                              >
+                                {isAdditional ? 'Remove Extra' : '+ Add Extra View'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-light-border bg-light-elevated/50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setMediaPickerColorId(null)}
+                  className="px-5 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Reorder Products Modal */}
       {isReorderModalOpen && (

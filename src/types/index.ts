@@ -42,7 +42,10 @@ export type ThemeMode = 'dark' | 'light';
 export interface ProductColor {
   id: string;
   name: string;
-  hex: string;
+  hex?: string;
+  image?: string; // Primary image URL / thumbnail for this color (Daraz style)
+  additionalImages?: string[]; // Additional gallery image URLs specific to this color
+  displayOrder?: number;
   isActive?: boolean;
 }
 
@@ -333,6 +336,7 @@ export interface HeroSlide {
   textColor?: 'light' | 'dark';
   displayOrder: number;
   isActive: boolean;
+  updatedAt?: string;
 }
 
 export interface CustomerProfile {

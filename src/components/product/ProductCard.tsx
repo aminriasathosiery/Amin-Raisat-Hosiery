@@ -272,21 +272,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               <div className="flex gap-1.5 flex-wrap items-center">
                 {productColors.map((col) => {
                   const isSelected = selectedColor === col.name;
+                  const colorImg = (col as any).image || photoMedia.find((m) => m.color === col.name)?.url;
                   return (
                     <button
                       key={col.name}
                       type="button"
                       onClick={() => setSelectedColor(col.name)}
-                      className={`group/swatch relative p-0.5 rounded-full transition-transform ${
-                        isSelected ? 'scale-110 ring-2 ring-[#C99A3D]' : 'hover:scale-105 ring-1 ring-[#D8D0C3]'
+                      className={`group/swatch relative p-0.5 rounded-lg transition-transform ${
+                        isSelected ? 'scale-105 ring-2 ring-[#23384D]' : 'hover:scale-102 ring-1 ring-[#D8D0C3]'
                       }`}
                       title={col.name}
                       aria-label={`Select color ${col.name}`}
                     >
-                      <span
-                        className="block w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full border border-black/15 shadow-2xs"
-                        style={{ backgroundColor: col.hex || '#FFFFFF' }}
-                      />
+                      {colorImg ? (
+                        <span className="block w-6 h-6 rounded-md overflow-hidden border border-black/15 shadow-2xs relative">
+                          <Image src={colorImg} alt={col.name} fill sizes="24px" className="object-cover" />
+                        </span>
+                      ) : (
+                        <span
+                          className="block w-5 h-5 rounded-md border border-black/15 shadow-2xs"
+                          style={{ backgroundColor: col.hex || '#FFFFFF' }}
+                        />
+                      )}
                     </button>
                   );
                 })}
