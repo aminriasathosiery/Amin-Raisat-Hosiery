@@ -322,6 +322,8 @@ export class DataStore {
             image: c.image_url,
             isActive: c.is_active ?? true,
             displayOrder: c.display_order || 0,
+            sizeType: c.size_type || 'alphabetic',
+            availableSizes: Array.isArray(c.available_sizes) ? c.available_sizes : (c.size_type === 'numeric' ? ['33', '34', '35', '36', '37', '38'] : ['S', 'M', 'L', 'XL', 'XXL']),
           }));
         }
       } catch (err) {
@@ -376,6 +378,8 @@ export class DataStore {
           image: data.category.image_url,
           isActive: data.category.is_active ?? true,
           displayOrder: data.category.display_order || 0,
+          sizeType: data.category.size_type || category.sizeType || 'alphabetic',
+          availableSizes: data.category.available_sizes || category.availableSizes || ['S', 'M', 'L', 'XL', 'XXL'],
         };
 
         const categories = await this.getCategories();
@@ -403,6 +407,8 @@ export class DataStore {
         image_url: category.image,
         is_active: category.isActive,
         display_order: category.displayOrder,
+        size_type: category.sizeType || 'alphabetic',
+        available_sizes: category.availableSizes || ['S', 'M', 'L', 'XL', 'XXL'],
         updated_at: new Date().toISOString(),
       };
       if (isUuid) {
@@ -515,6 +521,7 @@ export class DataStore {
               undefined,
             isPublished: p.is_published ?? true,
             createdAt: p.created_at,
+            colors: Array.isArray(p.colors) ? p.colors : [],
             variants: Array.isArray(p.product_variants)
               ? p.product_variants.map((v: any) => {
                   const pricing = resolveVariantPricing(v);
@@ -524,6 +531,8 @@ export class DataStore {
                     quality: v.quality,
                     sleeve: v.sleeve,
                     size: v.size,
+                    color: v.color || undefined,
+                    colorHex: v.color_hex || undefined,
                     price: pricing.originalPrice,
                     discountPercentage: pricing.discountPercentage,
                     salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
@@ -547,6 +556,7 @@ export class DataStore {
                     displayOrder: m.display_order || 0,
                     variantQuality: m.variant_quality || undefined,
                     variantSleeve: m.variant_sleeve || undefined,
+                    color: m.color || undefined,
                   }))
               : [],
           }));
@@ -645,6 +655,7 @@ export class DataStore {
         care_instructions: product.careInstructions || [],
         shipping_info: product.shippingInfo || '',
         is_published: product.isPublished,
+        colors: product.colors || [],
         updated_at: new Date().toISOString(),
       };
       if (isUuid) {
@@ -1145,7 +1156,7 @@ export class DataStore {
             market: siteData?.market || INITIAL_SITE_SETTINGS.market,
             currency: siteData?.currency || INITIAL_SITE_SETTINGS.currency,
             shipping: {
-              minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Math.min(1, Number(shipData.min_order_qty)) : 1,
+              minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Math.max(1, Number(shipData.min_order_qty)) : 1,
               maxOrderQty: shipData?.max_order_qty ?? INITIAL_SITE_SETTINGS.shipping.maxOrderQty,
               baseDeliveryCharge: shipData ? Number(shipData.base_delivery_charge) : INITIAL_SITE_SETTINGS.shipping.baseDeliveryCharge,
               freeDeliveryThreshold: shipData?.free_delivery_threshold ?? INITIAL_SITE_SETTINGS.shipping.freeDeliveryThreshold,

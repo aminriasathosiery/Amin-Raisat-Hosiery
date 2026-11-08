@@ -21,6 +21,8 @@ export interface Subcategory {
   productCount?: number;
 }
 
+export type CategorySizeType = 'numeric' | 'alphabetic' | 'waist' | 'free_size' | 'custom';
+
 export interface Category {
   id: string;
   name: string;
@@ -29,11 +31,20 @@ export interface Category {
   image?: string;
   isActive: boolean;
   displayOrder: number;
+  sizeType?: CategorySizeType;
+  availableSizes?: string[];
   subcategories?: Subcategory[];
   productCount?: number;
 }
 
 export type ThemeMode = 'dark' | 'light';
+
+export interface ProductColor {
+  id: string;
+  name: string;
+  hex: string;
+  isActive?: boolean;
+}
 
 export interface ProductVariant {
   id: string;
@@ -41,6 +52,8 @@ export interface ProductVariant {
   quality: QualityType;
   sleeve: SleeveType;
   size: ProductSize;
+  color?: string; // Color name or identifier (e.g. 'White', 'Black')
+  colorHex?: string; // Optional hex swatch (e.g. '#FFFFFF', '#171717')
   price: number; // Original retail reference price
   discountPercentage?: number; // Discount percentage (e.g. 10 for 10%)
   salePrice?: number; // Final sale price after discount
@@ -59,6 +72,7 @@ export interface ProductMedia {
   displayOrder?: number;
   variantQuality?: QualityType;
   variantSleeve?: SleeveType;
+  color?: string; // Tag image to specific color
 }
 
 export interface ProductReview {
@@ -98,6 +112,7 @@ export interface Product {
   isPublished: boolean;
   sortOrder?: number;
   createdAt: string;
+  colors?: ProductColor[];
   variants: ProductVariant[];
   media: ProductMedia[];
   reviews?: ProductReview[];
@@ -152,6 +167,8 @@ export interface ProductCartItem {
   quality: QualityType;
   sleeve: SleeveType;
   size: ProductSize;
+  color?: string;
+  colorHex?: string;
   unitPrice: number; // Authoritative final sale price
   originalPrice?: number; // Original price before discount
   discountPercentage?: number; // Discount percentage applied
@@ -189,6 +206,8 @@ export interface OrderItem {
   quality?: QualityType;
   sleeve?: SleeveType;
   size?: ProductSize;
+  color?: string;
+  colorHex?: string;
   // Deal fields
   dealId?: string;
   dealName?: string;

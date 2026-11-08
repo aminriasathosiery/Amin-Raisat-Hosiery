@@ -15,6 +15,8 @@ interface VariantSelectorProps {
   setSelectedSleeve: (s: SleeveType) => void;
   selectedSize: ProductSize;
   setSelectedSize: (size: ProductSize) => void;
+  selectedColor?: string;
+  setSelectedColor?: (color: string) => void;
 }
 
 const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -25,6 +27,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   setSelectedSleeve,
   selectedSize,
   setSelectedSize,
+  selectedColor,
+  setSelectedColor,
 }) => {
   const router = useRouter();
   const { addItem, openDrawer, setBuyNowItem } = useCart();
@@ -44,6 +48,33 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     return () => window.removeEventListener('keydown', handleKey);
   }, [isSizeGuideOpen]);
 
+  // Available colors for this product
+  const availableColors = React.useMemo(() => {
+    if (product.colors && product.colors.length > 0) {
+      return product.colors.filter((c) => c.isActive !== false);
+    }
+    const variantColors = Array.from(
+      new Set(product.variants.map((v) => v.color).filter(Boolean))
+    ) as string[];
+    return variantColors.map((name) => {
+      const matchedVar = product.variants.find((v) => v.color === name);
+      return {
+        name,
+        hex: matchedVar?.colorHex || '#171717',
+        isActive: true,
+      };
+    });
+  }, [product.colors, product.variants]);
+
+  // Auto-switch color if current is invalid
+  React.useEffect(() => {
+    if (availableColors.length > 0 && setSelectedColor) {
+      if (!selectedColor || !availableColors.some((c) => c.name === selectedColor)) {
+        setSelectedColor(availableColors[0].name);
+      }
+    }
+  }, [availableColors, selectedColor, setSelectedColor]);
+
   // Available sleeves specifically for this product
   const availableSleeves = React.useMemo(() => {
     const sleeves = Array.from(new Set(product.variants.map((v) => v.sleeve).filter(Boolean)));
@@ -51,10 +82,18 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   }, [product.variants]);
 
   const availableSizes = React.useMemo(() => {
-    const matchingVariants = product.variants.filter((v) => v.sleeve === selectedSleeve);
+    let matchingVariants = product.variants.filter((v) => v.sleeve === selectedSleeve);
+    if (selectedColor) {
+      const colorMatches = matchingVariants.filter((v) => v.color === selectedColor);
+      if (colorMatches.length > 0) {
+        matchingVariants = colorMatches;
+      }
+    }
     const sizes = Array.from(new Set(matchingVariants.map((v) => v.size).filter(Boolean)));
-    return sizes.length > 0 ? sizes : SIZES;
-  }, [product.variants, selectedSleeve]);
+    if (sizes.length > 0) return sizes;
+    const allVariantSizes = Array.from(new Set(product.variants.map((v) => v.size).filter(Boolean)));
+    return allVariantSizes.length > 0 ? allVariantSizes : SIZES;
+  }, [product.variants, selectedSleeve, selectedColor]);
 
   // Auto-switch sleeve if needed
   React.useEffect(() => {
@@ -73,7 +112,15 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   // Find exact matching variant dynamically from database data
   const currentVariant: ProductVariant | undefined =
     product.variants.find(
-      (v) => v.sleeve === selectedSleeve && v.size === selectedSize
+      (v) =>
+        v.sleeve === selectedSleeve &&
+        v.size === selectedSize &&
+        (!selectedColor || !v.color || v.color === selectedColor)
+    ) ||
+    product.variants.find(
+      (v) =>
+        v.sleeve === selectedSleeve &&
+        (!selectedColor || !v.color || v.color === selectedColor)
     ) ||
     product.variants.find((v) => v.sleeve === selectedSleeve) ||
     product.variants[0];
@@ -93,18 +140,31 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const isFreeDeliveryForThis = quantity >= freeDeliveryThreshold;
   const piecesNeededForFree = Math.max(0, freeDeliveryThreshold - quantity);
 
+  const matchedColor = availableColors.find((c) => c.name === selectedColor);
+
   const getVariantMediaUrl = () => {
+    if (selectedColor) {
+      const colorMatch = product.media?.find(
+        (m) =>
+          m.color === selectedColor &&
+          (!m.variantSleeve || m.variantSleeve === 'All' || m.variantSleeve === selectedSleeve)
+      );
+      if (colorMatch?.url) return colorMatch.url;
+    }
     const match = product.media?.find(
       (m) => !m.variantSleeve || m.variantSleeve === 'All' || m.variantSleeve === selectedSleeve
     );
     return match?.url || product.media?.[0]?.url || '/images/products/sleevless high.jpeg';
   };
 
+  const colorSuffix = selectedColor ? `_${selectedColor}` : '';
+  const cartItemId = `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}${colorSuffix}`;
+
   const handleBuyNow = () => {
     if (!isAvailable) return;
 
     setBuyNowItem({
-      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      id: cartItemId,
       type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
@@ -113,6 +173,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
+      color: selectedColor,
+      colorHex: matchedColor?.hex || currentVariant?.colorHex,
       unitPrice,
       originalPrice: regularPrice || unitPrice,
       discountPercentage: discountPercentage,
@@ -127,7 +189,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     if (!isAvailable) return;
 
     addItem({
-      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      id: cartItemId,
       type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
@@ -136,6 +198,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
+      color: selectedColor,
+      colorHex: matchedColor?.hex || currentVariant?.colorHex,
       unitPrice,
       originalPrice: regularPrice || unitPrice,
       discountPercentage: discountPercentage,
@@ -158,7 +222,8 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     quantity,
     unitPrice,
     totalPrice,
-    settings?.whatsapp || DISPLAY_WHATSAPP_NUMBER
+    settings?.whatsapp || DISPLAY_WHATSAPP_NUMBER,
+    selectedColor
   );
 
   return (
@@ -212,7 +277,50 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
         </div>
       </div>
 
-      {/* 2. Sleeve Style Selector (if multiple sleeve types exist) */}
+      {/* 2. Color Selector (if colors exist) */}
+      {availableColors.length > 0 && (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-[#1D2730] flex items-center gap-1.5">
+              <span>Select Color</span>
+            </label>
+            {selectedColor && (
+              <span className="text-[#C99A3D] font-bold text-xs capitalize">
+                {selectedColor}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+            {availableColors.map((col) => {
+              const isSelected = selectedColor === col.name;
+              return (
+                <button
+                  key={col.name}
+                  type="button"
+                  onClick={() => setSelectedColor && setSelectedColor(col.name)}
+                  className={`group relative flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-bold transition-all ${
+                    isSelected
+                      ? 'border-[#23384D] bg-[#23384D] text-white shadow-xs scale-105'
+                      : 'border-[#D8D0C3] bg-white text-[#1D2730] hover:border-[#C99A3D]'
+                  }`}
+                  title={col.name}
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full border shadow-inner flex-shrink-0 ${
+                      isSelected ? 'border-white' : 'border-charcoal-300'
+                    }`}
+                    style={{ backgroundColor: col.hex }}
+                  />
+                  <span>{col.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Sleeve Style Selector (if multiple sleeve types exist) */}
       {availableSleeves.length > 1 && (
         <div className="space-y-2.5">
           <label className="text-xs font-bold uppercase tracking-wider text-[#1D2730] flex items-center justify-between">
@@ -243,7 +351,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
         </div>
       )}
 
-      {/* 3. Size Selector Pills */}
+      {/* 4. Size Selector Pills */}
       {availableSizes.length > 0 && (
         <div className="space-y-2.5">
           <div className="flex items-center justify-between">
@@ -263,7 +371,10 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
             {availableSizes.map((s) => {
               const isSelected = selectedSize === s;
               const sizeVar = product.variants.find(
-                (v) => v.sleeve === selectedSleeve && v.size === s
+                (v) =>
+                  v.sleeve === selectedSleeve &&
+                  v.size === s &&
+                  (!selectedColor || !v.color || v.color === selectedColor)
               );
               const sizeStock = sizeVar ? sizeVar.stock : 1;
               const isOutOfStock = sizeStock <= 0;
@@ -290,7 +401,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
         </div>
       )}
 
-      {/* 4. QUANTITY STEPPER (Min 1 piece) */}
+      {/* 5. QUANTITY STEPPER (Min 1 piece) */}
       <div className="p-4 rounded-2xl bg-white border border-[#D8D0C3] shadow-sm space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -298,7 +409,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
               Quantity (Pieces)
             </label>
             <span className="text-[11px] text-[#66717C] font-normal">
-              1 piece is a valid order • Free delivery on 3+ pieces
+              1 piece is a valid order • Free delivery on {freeDeliveryThreshold}+ pieces
             </span>
           </div>
 

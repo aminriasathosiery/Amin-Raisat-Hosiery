@@ -74,6 +74,7 @@ export default function AdminCategoriesPage() {
   // Form states
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
   const [editingSubcategory, setEditingSubcategory] = useState<Partial<Subcategory> | null>(null);
+  const [newCategorySizeInput, setNewCategorySizeInput] = useState('');
 
   // Sorted categories by displayOrder
   const sortedCategories = useMemo(() => {
@@ -102,9 +103,12 @@ export default function AdminCategoriesPage() {
       name: '',
       slug: '',
       description: '',
+      sizeType: 'alphabetic',
+      availableSizes: ['S', 'M', 'L', 'XL', 'XXL'],
       isActive: true,
       displayOrder: categories.length + 1,
     });
+    setNewCategorySizeInput('');
     setIsCategoryModalOpen(true);
   };
 
@@ -364,10 +368,14 @@ export default function AdminCategoriesPage() {
                         {cat.isActive !== false ? 'Active' : 'Hidden'}
                       </button>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-charcoal-500">
+                    <div className="flex items-center gap-2 text-xs text-charcoal-500 flex-wrap">
                       <span>Order: #{cat.displayOrder || 1}</span>
                       <span>&bull;</span>
                       <span className="font-mono text-[11px] text-[#B89555]">/{cat.slug}</span>
+                      <span>&bull;</span>
+                      <span className="text-[10px] font-bold bg-[#23384D]/10 text-[#23384D] px-1.5 py-0.5 rounded capitalize">
+                        {cat.sizeType || 'alphabetic'}
+                      </span>
                       <span>&bull;</span>
                       <span>{catSubCount} subs ({catProdCount} pcs)</span>
                     </div>
@@ -709,6 +717,125 @@ export default function AdminCategoriesPage() {
                   onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
                   className="w-full px-3 py-2 bg-light-elevated border border-light-border rounded-xl text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                 />
+              </div>
+
+              {/* Category Size System Configuration */}
+              <div className="pt-2 border-t border-light-border space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-charcoal-800">
+                    Category Size System *
+                  </label>
+                  <span className="text-[10px] text-charcoal-500">
+                    Determines size options for products in this category
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {[
+                    { type: 'alphabetic', label: 'Alphabetic (S, M, L...)', defaultSizes: ['S', 'M', 'L', 'XL', 'XXL'] },
+                    { type: 'numeric', label: 'Numeric (33, 34, 35...)', defaultSizes: ['33', '34', '35', '36', '37', '38'] },
+                    { type: 'waist', label: 'Waist (28, 30, 32...)', defaultSizes: ['28', '30', '32', '34', '36', '38'] },
+                    { type: 'free_size', label: 'Free Size', defaultSizes: ['Free Size'] },
+                    { type: 'custom', label: 'Custom Sizes', defaultSizes: ['One Size'] },
+                  ].map((preset) => {
+                    const isSelected = (editingCategory.sizeType || 'alphabetic') === preset.type;
+                    return (
+                      <button
+                        key={preset.type}
+                        type="button"
+                        onClick={() => {
+                          setEditingCategory({
+                            ...editingCategory,
+                            sizeType: preset.type as any,
+                            availableSizes: preset.defaultSizes,
+                          });
+                        }}
+                        className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold text-left transition-all ${
+                          isSelected
+                            ? 'bg-[#23384D] text-white border-[#23384D] shadow-xs'
+                            : 'bg-light-elevated text-charcoal-700 border-light-border hover:border-[#B89555]'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Available Sizes List & Add/Remove */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-semibold text-charcoal-700">
+                    Available Sizes ({editingCategory.availableSizes?.length || 0})
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5 p-2 bg-light-elevated border border-light-border rounded-xl min-h-[42px]">
+                    {(editingCategory.availableSizes && editingCategory.availableSizes.length > 0
+                      ? editingCategory.availableSizes
+                      : ['S', 'M', 'L', 'XL', 'XXL']
+                    ).map((sz, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 bg-white border border-[#D8D0C3] text-charcoal-900 px-2 py-0.5 rounded-lg text-xs font-bold shadow-2xs"
+                      >
+                        {sz}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = (editingCategory.availableSizes || []).filter((_, i) => i !== idx);
+                            setEditingCategory({ ...editingCategory, availableSizes: updated });
+                          }}
+                          className="hover:text-rose-600 transition-colors ml-0.5 text-xs font-bold"
+                          title="Remove size"
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+
+                    {/* Quick Add Custom Size Pill Input */}
+                    <div className="flex items-center gap-1 ml-auto">
+                      <input
+                        type="text"
+                        placeholder="+ Add size"
+                        value={newCategorySizeInput}
+                        onChange={(e) => setNewCategorySizeInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (newCategorySizeInput.trim()) {
+                              const current = editingCategory.availableSizes || [];
+                              if (!current.includes(newCategorySizeInput.trim())) {
+                                setEditingCategory({
+                                  ...editingCategory,
+                                  availableSizes: [...current, newCategorySizeInput.trim()],
+                                });
+                              }
+                              setNewCategorySizeInput('');
+                            }
+                          }
+                        }}
+                        className="w-20 px-2 py-1 bg-white border border-light-border rounded-lg text-xs text-charcoal-900 focus:outline-none focus:border-[#B89555]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newCategorySizeInput.trim()) {
+                            const current = editingCategory.availableSizes || [];
+                            if (!current.includes(newCategorySizeInput.trim())) {
+                              setEditingCategory({
+                                ...editingCategory,
+                                availableSizes: [...current, newCategorySizeInput.trim()],
+                              });
+                            }
+                            setNewCategorySizeInput('');
+                          }
+                        }}
+                        className="px-2 py-1 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 rounded-lg text-xs font-bold"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1">

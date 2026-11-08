@@ -101,20 +101,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Dedicated Admin Sidebar for Desktop */}
       <aside className="hidden md:flex flex-col w-64 bg-white text-[#1D2730] border-r border-[#D8D0C3] p-5 justify-between flex-shrink-0 min-h-screen sticky top-0">
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between pb-4 border-b border-[#D8D0C3]">
+          {/* Header with Dark Navy Brand Background for Crisp Logo Contrast */}
+          <div className="bg-[#23384D] -mx-5 -mt-5 p-4 rounded-b-2xl border-b border-[#C99A3D]/30 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="relative w-[142px] lg:w-[150px] h-10 lg:h-11 overflow-hidden flex-shrink-0">
+              <div className="relative w-[150px] lg:w-[165px] h-11 lg:h-12 overflow-hidden flex-shrink-0">
                 <Image
                   src={logoSrc}
                   alt="Amin Raisat Hosiery"
                   fill
-                  sizes="160px"
+                  sizes="180px"
                   className="object-contain object-left"
                   priority
                 />
               </div>
             </div>
+            <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#C99A3D]/20 text-[#C99A3D] border border-[#C99A3D]/40 uppercase">
+              Admin
+            </span>
           </div>
 
           {/* Navigation Links */}
@@ -166,15 +169,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Mobile Top Header Bar for Admin */}
-      <div className="md:hidden bg-white text-[#1D2730] p-4 flex items-center justify-between sticky top-0 z-40 border-b border-[#D8D0C3]">
+      {/* Mobile Top Header Bar for Admin in Dark Navy Brand Color */}
+      <div className="md:hidden bg-[#23384D] text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 border-b border-[#C99A3D]/30 shadow-md">
         <div className="flex items-center gap-2.5">
-          <div className="relative w-[110px] sm:w-[120px] h-8 sm:h-9 overflow-hidden flex-shrink-0">
+          <div className="relative w-[130px] sm:w-[145px] h-9 sm:h-10 overflow-hidden flex-shrink-0">
             <Image
               src={logoSrc}
               alt="Amin Raisat Hosiery"
               fill
-              sizes="130px"
+              sizes="150px"
               className="object-contain object-left"
               priority
             />
@@ -185,9 +188,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <button
             type="button"
             onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="p-2 text-[#66717C] hover:text-[#1D2730] hover:bg-[#EEE8DC] rounded-xl"
+            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+            aria-label="Toggle navigation menu"
           >
-            {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileNavOpen ? <X className="w-5 h-5 text-[#C99A3D]" /> : <Menu className="w-5 h-5 text-[#C99A3D]" />}
           </button>
         </div>
       </div>

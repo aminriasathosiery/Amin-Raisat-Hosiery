@@ -38,15 +38,17 @@ export function createProductWhatsAppMessage(
   quantity: number,
   unitPrice: number,
   totalPrice: number,
-  customWhatsApp?: string
+  customWhatsApp?: string,
+  color?: string
 ): string {
   const targetNumber = formatWhatsAppNumber(customWhatsApp);
+  const colorLine = color ? `\n🎨 *Color:* ${color}` : '';
   const text = `Assalam-o-Alaikum Amin Raisat Hosiery,
 
 I would like to order:
 🛍️ *Product:* ${productName}
 ⭐ *Quality:* ${quality}
-👕 *Sleeve:* ${sleeve}
+👕 *Sleeve:* ${sleeve}${colorLine}
 📏 *Size:* ${size}
 🔢 *Quantity:* ${quantity} piece${quantity > 1 ? 's' : ''}
 💰 *Price:* Rs. ${totalPrice} (Rs. ${unitPrice} each)
@@ -69,7 +71,8 @@ export function createCartWhatsAppMessage(
       if (item.type === 'deal') {
         return `${idx + 1}. *${item.dealName}* (SPECIAL DEAL)\n   • Pieces: ${item.piecesCount}\n   • Discount: ${item.discountPercentage}% OFF\n   • Qty: ${item.quantity} x Rs. ${item.unitPrice} = Rs. ${item.quantity * item.unitPrice}`;
       }
-      return `${idx + 1}. *${item.productName}*\n   • Quality: ${item.quality}\n   • Sleeve: ${item.sleeve}\n   • Size: ${item.size}\n   • Qty: ${item.quantity} x Rs. ${item.unitPrice} = Rs. ${item.quantity * item.unitPrice}`;
+      const colorBullet = item.color ? `\n   • Color: ${item.color}` : '';
+      return `${idx + 1}. *${item.productName}*\n   • Quality: ${item.quality}\n   • Sleeve: ${item.sleeve}${colorBullet}\n   • Size: ${item.size}\n   • Qty: ${item.quantity} x Rs. ${item.unitPrice} = Rs. ${item.quantity * item.unitPrice}`;
     })
     .join('\n\n');
 
@@ -96,7 +99,7 @@ export function createOrderReceiptWhatsAppMessage(order: Order, customWhatsApp?:
   const itemsList = order.items
     .map(
       (item, idx) =>
-        `${idx + 1}. ${item.productName} (${item.quality}, ${item.sleeve}, ${item.size}) x ${item.quantity} = Rs. ${item.totalPrice}`
+        `${idx + 1}. ${item.productName} (${item.quality}, ${item.sleeve}, ${item.color ? `${item.color}, ` : ''}${item.size}) x ${item.quantity} = Rs. ${item.totalPrice}`
     )
     .join('\n');
 

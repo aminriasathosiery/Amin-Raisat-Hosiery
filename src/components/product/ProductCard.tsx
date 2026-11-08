@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -13,20 +13,34 @@ interface ProductCardProps {
   product: Product;
 }
 
-const AVAILABLE_SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
-
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const { addItem, openDrawer, setBuyNowItem } = useCart();
-  const { categories } = useStore();
+  const { categories, settings } = useStore();
 
+  // 1. Available Colors
+  const productColors = useMemo(() => {
+    if (product.colors && product.colors.length > 0) return product.colors;
+    const variantColors = Array.from(
+      new Set(product.variants.map((v) => v.color).filter(Boolean) as string[])
+    );
+    return variantColors.map((c) => ({
+      id: c,
+      name: c,
+      hex: product.variants.find((v) => v.color === c)?.colorHex || '#171717',
+    }));
+  }, [product.colors, product.variants]);
+
+  const [selectedColor, setSelectedColor] = useState<string>(() => {
+    return productColors[0]?.name || '';
+  });
+
+  // 2. Sleeve Style
   const [selectedSleeve, setSelectedSleeve] = useState<SleeveType>(() => {
     return product.variants?.[0]?.sleeve || 'Sleeveless';
   });
-  const [selectedSize, setSelectedSize] = useState<ProductSize>('L');
-  const [justAdded, setJustAdded] = useState(false);
 
-  // Dynamic category name
+  // 3. Category Name
   const productCategory = useMemo(() => {
     return categories.find(
       (c) =>
@@ -38,24 +52,58 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const categoryLabel = productCategory?.name
     ? `${productCategory.name}'s Collection`
-    : 'Cotton Essentials';
+    : 'Essentials';
 
-  // Compute available sleeves for this specific product listing
+  // 4. Compute available sleeves for this product
   const availableSleeves = useMemo(() => {
     const sleeves = Array.from(new Set(product.variants.map((v) => v.sleeve).filter(Boolean)));
     return sleeves.length > 0 ? sleeves : ['Sleeveless'];
   }, [product.variants]);
 
-  // Compute matched variant
+  // 5. Compute available sizes dynamically from product variants
+  const availableSizes = useMemo(() => {
+    const matchingVariants = product.variants.filter((v) => {
+      const matchCol = !selectedColor || !v.color || v.color === selectedColor;
+      const matchSlv = !selectedSleeve || !v.sleeve || v.sleeve === selectedSleeve;
+      return matchCol && matchSlv;
+    });
+    const sizes = Array.from(new Set(matchingVariants.map((v) => v.size).filter(Boolean)));
+    if (sizes.length > 0) return sizes;
+    const allSizes = Array.from(new Set(product.variants.map((v) => v.size).filter(Boolean)));
+    return allSizes.length > 0 ? allSizes : ['L'];
+  }, [product.variants, selectedColor, selectedSleeve]);
+
+  const [selectedSize, setSelectedSize] = useState<ProductSize>(() => {
+    return availableSizes[0] || 'L';
+  });
+
+  // Auto-switch size if selected size is no longer available in the active color/style
+  useEffect(() => {
+    if (availableSizes.length > 0 && !availableSizes.includes(selectedSize)) {
+      setSelectedSize(availableSizes[0]);
+    }
+  }, [availableSizes, selectedSize]);
+
+  const [justAdded, setJustAdded] = useState(false);
+
+  // 6. Compute matched variant
   const currentVariant = useMemo(() => {
     return (
       product.variants.find(
-        (v) => v.sleeve === selectedSleeve && v.size === selectedSize
+        (v) =>
+          (!selectedColor || !v.color || v.color === selectedColor) &&
+          v.sleeve === selectedSleeve &&
+          v.size === selectedSize
       ) ||
-      product.variants.find((v) => v.sleeve === selectedSleeve) ||
+      product.variants.find(
+        (v) =>
+          (!selectedColor || !v.color || v.color === selectedColor) &&
+          v.sleeve === selectedSleeve
+      ) ||
+      product.variants.find((v) => (!selectedColor || !v.color || v.color === selectedColor)) ||
       product.variants[0]
     );
-  }, [product.variants, selectedSleeve, selectedSize]);
+  }, [product.variants, selectedColor, selectedSleeve, selectedSize]);
 
   const price = currentVariant?.salePrice || currentVariant?.price || 480;
   const comparePrice = currentVariant?.price && currentVariant.price > price ? currentVariant.price : undefined;
@@ -66,21 +114,30 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     return (product.media || []).filter((m) => m.type !== 'video' && m.type !== 'size_guide');
   }, [product.media]);
 
-  // Resolve matching photo for chosen sleeve
+  // Resolve matching photo for chosen color and sleeve
   const currentPhoto = useMemo(() => {
+    if (selectedColor) {
+      const colorMatch = photoMedia.find((m) => m.color === selectedColor);
+      if (colorMatch?.url) return colorMatch.url;
+    }
     const match = photoMedia.find(
       (m) => !m.variantSleeve || m.variantSleeve === 'All' || m.variantSleeve === selectedSleeve
     );
     return match?.url || photoMedia[0]?.url || '/images/products/sleevless high.jpeg';
-  }, [photoMedia, selectedSleeve]);
+  }, [photoMedia, selectedColor, selectedSleeve]);
+
+  const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAvailable) return;
 
+    const variantColor = currentVariant?.color || selectedColor || undefined;
+    const variantColorHex = currentVariant?.colorHex || productColors.find((c) => c.name === variantColor)?.hex;
+
     setBuyNowItem({
-      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${variantColor || ''}_${selectedSize}`,
       type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
@@ -89,6 +146,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
+      color: variantColor,
+      colorHex: variantColorHex,
       unitPrice: price,
       originalPrice: comparePrice || price,
       discountPercentage: discountPercentage,
@@ -103,8 +162,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.stopPropagation();
     if (!isAvailable) return;
 
+    const variantColor = currentVariant?.color || selectedColor || undefined;
+    const variantColorHex = currentVariant?.colorHex || productColors.find((c) => c.name === variantColor)?.hex;
+
     addItem({
-      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}`,
+      id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${variantColor || ''}_${selectedSize}`,
       type: 'product',
       productId: product.id,
       variantId: currentVariant?.id,
@@ -113,6 +175,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
+      color: variantColor,
+      colorHex: variantColorHex,
       unitPrice: price,
       originalPrice: comparePrice || price,
       discountPercentage: discountPercentage,
@@ -131,15 +195,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <div className="group bg-white rounded-2xl border border-[#D8D0C3] overflow-hidden flex flex-col justify-between shadow-sm hover:border-[#C99A3D] hover:shadow-md transition-all duration-300 relative w-full h-full text-[#1D2730]">
       <div className="flex-1 flex flex-col">
-        {/* 1. Product Image Area */}
+        {/* 1. Product Image Area - Clean & Uncluttered (No Cotton Badge Overlay) */}
         <div className="relative w-full aspect-square bg-[#EEE8DC] overflow-hidden border-b border-[#D8D0C3]">
-          {/* Badge */}
-          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
-            <span className="bg-white/90 backdrop-blur-xs text-[#C99A3D] border border-[#D8D0C3] text-[10px] font-semibold px-2.5 py-0.5 rounded-md shadow-2xs uppercase tracking-wider whitespace-nowrap">
-              100% Combed Cotton
-            </span>
-          </div>
-
           <Link
             href={detailUrl}
             className="relative block w-full h-full cursor-pointer group"
@@ -156,7 +213,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             />
           </Link>
 
-          {/* Subtle Video Indicator Badge */}
+          {/* Subtle Video Indicator Badge (Preserved) */}
           {(product.videoUrl || product.media?.some((m) => m.type === 'video')) && (
             <div
               className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#182B3D]/90 text-white text-[11px] font-bold shadow-md backdrop-blur-xs border border-white/20 pointer-events-none"
@@ -205,6 +262,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             )}
           </div>
 
+          {/* Color Swatches (if multiple colors configured) */}
+          {productColors.length > 1 && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-[#66717C]">Color:</span>
+                <span className="text-[#1D2730] font-medium whitespace-nowrap">{selectedColor}</span>
+              </div>
+              <div className="flex gap-1.5 flex-wrap items-center">
+                {productColors.map((col) => {
+                  const isSelected = selectedColor === col.name;
+                  return (
+                    <button
+                      key={col.name}
+                      type="button"
+                      onClick={() => setSelectedColor(col.name)}
+                      className={`group/swatch relative p-0.5 rounded-full transition-transform ${
+                        isSelected ? 'scale-110 ring-2 ring-[#C99A3D]' : 'hover:scale-105 ring-1 ring-[#D8D0C3]'
+                      }`}
+                      title={col.name}
+                      aria-label={`Select color ${col.name}`}
+                    >
+                      <span
+                        className="block w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full border border-black/15 shadow-2xs"
+                        style={{ backgroundColor: col.hex || '#FFFFFF' }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Sleeve Style Selector */}
           {availableSleeves.length > 1 && (
             <div className="space-y-1">
@@ -231,19 +320,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </div>
           )}
 
-          {/* Size Pills */}
+          {/* Dynamic Size Pills (Category-aware sizes) */}
           <div className="space-y-1.5 mt-auto pt-1">
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-semibold text-[#66717C]">Size:</span>
               <span className="text-[#1D2730] font-medium whitespace-nowrap">Fit {selectedSize}</span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {AVAILABLE_SIZES.map((sz) => (
+              {availableSizes.map((sz) => (
                 <button
                   key={sz}
                   type="button"
                   onClick={() => setSelectedSize(sz)}
-                  className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg text-xs font-bold flex items-center justify-center transition-all ${
+                  className={`min-w-8 h-8 px-2 rounded-lg text-xs font-bold flex items-center justify-center transition-all ${
                     selectedSize === sz
                       ? 'bg-[#23384D] text-white font-extrabold shadow-xs scale-105'
                       : 'bg-[#EEE8DC] text-[#1D2730] hover:bg-[#E8E1D3] border border-[#D8D0C3]'
@@ -278,7 +367,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             )}
           </div>
           <span className="text-[10.5px] font-semibold text-[#2F7D5A] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap">
-            Free Delivery 3+ pcs
+            Free Delivery {freeDeliveryThreshold}+ pcs
           </span>
         </div>
 

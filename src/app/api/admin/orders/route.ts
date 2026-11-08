@@ -82,6 +82,8 @@ export async function GET(req: Request) {
             quality: it.quality,
             sleeve: it.sleeve,
             size: it.size,
+            color: it.color || undefined,
+            colorHex: it.color_hex || undefined,
             unitPrice: Number(it.unit_price) || 0,
             quantity: Number(it.quantity) || 1,
             totalPrice: Number(it.total_price) || 0,

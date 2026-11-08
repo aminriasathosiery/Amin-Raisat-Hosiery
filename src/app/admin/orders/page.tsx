@@ -979,7 +979,7 @@ export default function AdminOrdersPage() {
                     <div>
                       <div className="font-bold text-charcoal-900">{it.productName}</div>
                       <div className="text-[11px] text-charcoal-500">
-                        {it.quality} • {it.sleeve} • Size {it.size}
+                        {it.color ? `${it.color} • ` : ''}{it.quality} • {it.sleeve} • Size {it.size}
                       </div>
                     </div>
                     <div className="text-right">

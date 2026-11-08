@@ -89,6 +89,7 @@ export async function GET(req: Request) {
         isPublished: p.is_published ?? true,
         sortOrder: Number(p.sort_order) || 9999,
         createdAt: p.created_at,
+        colors: Array.isArray(p.colors) ? p.colors : [],
         variants: Array.isArray(p.product_variants)
           ? p.product_variants.map((v: any) => {
               const pricing = resolveVariantPricing(v);
@@ -98,6 +99,8 @@ export async function GET(req: Request) {
                 quality: v.quality,
                 sleeve: v.sleeve,
                 size: v.size,
+                color: v.color || undefined,
+                colorHex: v.color_hex || undefined,
                 price: pricing.originalPrice,
                 discountPercentage: pricing.discountPercentage,
                 salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
@@ -120,6 +123,7 @@ export async function GET(req: Request) {
             displayOrder: m.display_order || 0,
             variantQuality: m.variant_quality || undefined,
             variantSleeve: m.variant_sleeve || undefined,
+            color: m.color || undefined,
           })),
       };
     });
@@ -228,6 +232,7 @@ export async function POST(req: Request) {
       care_instructions: body.careInstructions || [],
       shipping_info: body.shippingInfo || '',
       is_published: body.isPublished ?? true,
+      colors: Array.isArray(body.colors) ? body.colors : [],
       updated_at: new Date().toISOString(),
     };
 
@@ -255,10 +260,11 @@ export async function POST(req: Request) {
     savedProd = res1.data;
     prodErr = res1.error;
 
-    if (prodErr && (prodErr.code === 'PGRST204' || prodErr.code === '42703' || prodErr.message?.includes('does not exist'))) {
+    if (prodErr && (prodErr.code === 'PGRST204' || prodErr.code === '42703' || prodErr.message?.includes('does not exist') || prodErr.message?.includes('colors'))) {
       delete productPayload.short_description;
       delete productPayload.video_url;
       delete productPayload.size_guide_url;
+      delete productPayload.colors;
 
       const res2 = await adminDb
         .from('products')
@@ -297,6 +303,8 @@ export async function POST(req: Request) {
           quality: v.quality || 'High Quality',
           sleeve: v.sleeve || 'Sleeveless',
           size: v.size || 'L',
+          color: v.color || null,
+          color_hex: v.colorHex || null,
           price: pricing.originalPrice,
           sale_price: pricing.isOnSale ? pricing.salePrice : null,
           discount_percentage: pricing.discountPercentage,
@@ -312,8 +320,8 @@ export async function POST(req: Request) {
         .insert(variantsPayload)
         .select();
 
-      if (varErr && (varErr.message?.includes('discount_percentage') || varErr.code === '42703')) {
-        const fallbackPayload = variantsPayload.map(({ discount_percentage, ...rest }) => rest);
+      if (varErr && (varErr.message?.includes('color') || varErr.message?.includes('discount_percentage') || varErr.code === '42703')) {
+        const fallbackPayload = variantsPayload.map(({ color, color_hex, discount_percentage, ...rest }) => rest);
         const retryRes = await adminDb
           .from('product_variants')
           .insert(fallbackPayload)
@@ -352,6 +360,7 @@ export async function POST(req: Request) {
         display_order: m.displayOrder ?? idx + 1,
         variant_quality: m.variantQuality || null,
         variant_sleeve: m.variantSleeve || null,
+        color: m.color || null,
       }));
 
     // Attach Video URL into media
@@ -366,6 +375,7 @@ export async function POST(req: Request) {
         display_order: 98,
         variant_quality: null,
         variant_sleeve: null,
+        color: null,
       });
     }
 
@@ -381,15 +391,23 @@ export async function POST(req: Request) {
         display_order: 99,
         variant_quality: null,
         variant_sleeve: null,
+        color: null,
       });
     }
 
     let savedMedia: any[] = [];
     if (mediaPayload.length > 0) {
-      const { data: insertedMedia, error: mediaErr } = await adminDb
+      let { data: insertedMedia, error: mediaErr } = await adminDb
         .from('product_media')
         .insert(mediaPayload)
         .select();
+
+      if (mediaErr && (mediaErr.message?.includes('color') || mediaErr.code === '42703')) {
+        const fallbackMedia = mediaPayload.map(({ color, ...rest }) => rest);
+        const retryRes = await adminDb.from('product_media').insert(fallbackMedia).select();
+        insertedMedia = retryRes.data;
+        mediaErr = retryRes.error;
+      }
 
       if (mediaErr) {
         console.error('FULL SUPABASE MEDIA INSERT ERROR:', mediaErr);

@@ -102,7 +102,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         (v) =>
           v.size === updates.size &&
           v.quality === buyNowItem.quality &&
-          v.sleeve === buyNowItem.sleeve
+          v.sleeve === buyNowItem.sleeve &&
+          (!buyNowItem.color || !v.color || v.color === buyNowItem.color)
       );
 
       const newUnitPrice = variant
@@ -114,7 +115,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         size: updates.size,
         variantId: variant?.id || updated.variantId,
         unitPrice: newUnitPrice,
-        id: `buynow_${buyNowItem.productId}_${buyNowItem.quality}_${buyNowItem.sleeve}_${updates.size}`,
+        id: `buynow_${buyNowItem.productId}_${buyNowItem.quality}_${buyNowItem.sleeve}_${buyNowItem.color || ''}_${updates.size}`,
       };
     }
 
@@ -209,14 +210,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         (v) =>
           v.size === newSize &&
           v.quality === target.quality &&
-          v.sleeve === target.sleeve
+          v.sleeve === target.sleeve &&
+          (!target.color || !v.color || v.color === target.color)
       );
 
       const newUnitPrice = variant
         ? (variant.salePrice || variant.price)
         : target.unitPrice;
 
-      const newId = `${target.productId}_${target.quality}_${target.sleeve}_${newSize}`;
+      const newId = `${target.productId}_${target.quality}_${target.sleeve}_${target.color || ''}_${newSize}`;
 
       // Check if another item with newId already exists in cart -> merge quantities
       const existingIndex = prevItems.findIndex((it) => it.id === newId);
@@ -257,20 +259,27 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
   };
 
-  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  // Authoritative physical pieces count: Deals count piecesCount * quantity; Products count quantity
+  const totalPhysicalPieces = items.reduce((sum, item) => {
+    if (isDealCartItem(item)) {
+      return sum + (item.quantity * (item.piecesCount || 1));
+    }
+    return sum + item.quantity;
+  }, 0);
+  const totalQuantity = totalPhysicalPieces;
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
   // Delivery fee rules:
   // If any deal has isFreeDelivery = true -> Free Delivery (Rs. 0)
-  // Else if retail totalQuantity >= freeDeliveryThreshold (default 3) -> Free Delivery (Rs. 0)
-  // Else if retail totalQuantity > 0 & < freeDeliveryThreshold -> Base Delivery Charge (Rs. 200)
+  // Else if totalPhysicalPieces >= freeDeliveryThreshold -> Free Delivery (Rs. 0)
+  // Else if totalPhysicalPieces > 0 & < freeDeliveryThreshold -> Base Delivery Charge (Rs. 200)
   const hasFreeDeliveryDeal = items.some(item => isDealCartItem(item) && item.isFreeDelivery);
   const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;
-  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalQuantity >= freeThreshold;
+  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalPhysicalPieces >= freeThreshold;
   const deliveryFee =
-    totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : (settings.shipping?.baseDeliveryCharge ?? 200);
+    totalPhysicalPieces === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : (settings.shipping?.baseDeliveryCharge ?? 200);
   const totalAmount = subtotal + deliveryFee;
-  const piecesNeededForFreeDelivery = hasFreeDeliveryDeal ? 0 : Math.max(0, freeThreshold - totalQuantity);
+  const piecesNeededForFreeDelivery = hasFreeDeliveryDeal ? 0 : Math.max(0, freeThreshold - totalPhysicalPieces);
 
   return (
     <CartContext.Provider

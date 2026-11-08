@@ -190,7 +190,7 @@ export default function CartPage() {
                   // Product item display
                   const matchingProd = products.find((p) => p.id === item.productId);
                   const availableItemSizes = matchingProd
-                    ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
+                    ? Array.from(new Set(matchingProd.variants.filter((v) => (!item.color || !v.color || v.color === item.color) && v.sleeve === item.sleeve).map((v) => v.size)))
                     : SIZES;
 
                   return (
@@ -219,7 +219,15 @@ export default function CartPage() {
                           </button>
                         </div>
 
-                        <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          {item.color && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-[#EEE8DC]/60 border border-[#D8D0C3] text-[#1D2730] px-2 py-0.5 rounded">
+                              {item.colorHex && (
+                                <span className="w-2 h-2 rounded-full border border-black/20" style={{ backgroundColor: item.colorHex }} />
+                              )}
+                              {item.color}
+                            </span>
+                          )}
                           <span className="text-[10px] font-semibold bg-[#EEE8DC]/60 border border-[#D8D0C3] text-[#66717C] px-2 py-0.5 rounded">
                             {item.quality}
                           </span>

@@ -24,6 +24,23 @@ export default function ProductDetailPage() {
     return product?.variants?.[0]?.sleeve || 'Sleeveless';
   });
   const [selectedSize, setSelectedSize] = useState<ProductSize>('L');
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(() => {
+    const colors = product?.colors?.filter((c) => c.isActive !== false) || [];
+    if (colors.length > 0) return colors[0].name;
+    const varColors = Array.from(new Set(product?.variants?.map((v) => v.color).filter(Boolean))) as string[];
+    return varColors.length > 0 ? varColors[0] : undefined;
+  });
+
+  // Reset selectedColor if product changes
+  React.useEffect(() => {
+    const colors = product?.colors?.filter((c) => c.isActive !== false) || [];
+    if (colors.length > 0) {
+      setSelectedColor(colors[0].name);
+    } else {
+      const varColors = Array.from(new Set(product?.variants?.map((v) => v.color).filter(Boolean))) as string[];
+      setSelectedColor(varColors.length > 0 ? varColors[0] : undefined);
+    }
+  }, [product]);
 
   // Accordion Sections State
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
@@ -112,6 +129,7 @@ export default function ProductDetailPage() {
               media={product.media}
               productName={product.name}
               selectedSleeve={selectedSleeve}
+              selectedColor={selectedColor}
               videoUrl={product.videoUrl}
             />
           </div>
@@ -173,6 +191,8 @@ export default function ProductDetailPage() {
               setSelectedSleeve={setSelectedSleeve}
               selectedSize={selectedSize}
               setSelectedSize={setSelectedSize}
+              selectedColor={selectedColor}
+              setSelectedColor={setSelectedColor}
             />
 
             {/* Clean Accordion Sections */}

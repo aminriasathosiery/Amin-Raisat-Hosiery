@@ -52,7 +52,7 @@ export async function GET(req: Request) {
       market: siteData?.market || INITIAL_SITE_SETTINGS.market,
       currency: siteData?.currency || INITIAL_SITE_SETTINGS.currency,
       shipping: {
-        minOrderQty: 1,
+        minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Number(shipData.min_order_qty) : INITIAL_SITE_SETTINGS.shipping.minOrderQty,
         maxOrderQty: shipData?.max_order_qty !== undefined && shipData?.max_order_qty !== null ? Number(shipData.max_order_qty) : INITIAL_SITE_SETTINGS.shipping.maxOrderQty,
         baseDeliveryCharge: shipData?.base_delivery_charge !== undefined && shipData?.base_delivery_charge !== null ? Number(shipData.base_delivery_charge) : INITIAL_SITE_SETTINGS.shipping.baseDeliveryCharge,
         freeDeliveryThreshold: shipData?.free_delivery_threshold !== undefined && shipData?.free_delivery_threshold !== null ? Number(shipData.free_delivery_threshold) : INITIAL_SITE_SETTINGS.shipping.freeDeliveryThreshold,
@@ -104,8 +104,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid settings body' }, { status: 400 });
     }
 
-    // 1. Update Shipping Settings (Retail minOrderQty is strictly 1)
-    const minQty = 1;
+    // 1. Update Shipping Settings
+    const minQty = Math.max(1, Number(body.shipping?.minOrderQty) || 1);
     const maxQty = Math.max(minQty, Number(body.shipping?.maxOrderQty) || 100);
     const baseFee = Math.max(0, Number(body.shipping?.baseDeliveryCharge) ?? 200);
     const threshold = Math.max(1, Number(body.shipping?.freeDeliveryThreshold) || 3);

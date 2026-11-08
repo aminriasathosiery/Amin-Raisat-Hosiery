@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
-import { Product, ProductVariant, ProductMedia } from '@/types';
+import { Product, ProductVariant, ProductMedia, ProductColor } from '@/types';
 import { calculateSalePrice, validateDiscountPercentage, resolveVariantPricing, formatPKR } from '@/lib/pricing';
 import {
   Package,
@@ -30,6 +30,7 @@ import {
   DollarSign,
   TrendingDown,
   Copy,
+  Palette,
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/admin/ConfirmModal';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
@@ -111,11 +112,18 @@ function AdminProductsContent() {
   const [genDefaultDiscount, setGenDefaultDiscount] = useState<number>(0);
   const [genDefaultStock, setGenDefaultStock] = useState(50);
 
+  // Color Variants System State
+  const [prodColors, setProdColors] = useState<ProductColor[]>([]);
+  const [newColorName, setNewColorName] = useState('');
+  const [newColorHex, setNewColorHex] = useState('#FFFFFF');
+  const [isAddColorOpen, setIsAddColorOpen] = useState(false);
+
   // Individual Variant Add State
   const [isAddSingleVarOpen, setIsAddSingleVarOpen] = useState(false);
   const [singleVarQuality, setSingleVarQuality] = useState('');
   const [singleVarStyle, setSingleVarStyle] = useState('');
   const [singleVarSize, setSingleVarSize] = useState('');
+  const [singleVarColor, setSingleVarColor] = useState('');
   const [singleVarPrice, setSingleVarPrice] = useState(480);
   const [singleVarDiscount, setSingleVarDiscount] = useState<number>(0);
   const [singleVarStock, setSingleVarStock] = useState(50);
@@ -128,6 +136,7 @@ function AdminProductsContent() {
   const [mediaList, setMediaList] = useState<ProductMedia[]>([]);
   const [uploadQualityTarget, setUploadQualityTarget] = useState<string>('All');
   const [uploadSleeveTarget, setUploadSleeveTarget] = useState<string>('All');
+  const [uploadColorTarget, setUploadColorTarget] = useState<string>('All');
   const [uploadMediaTitle, setUploadMediaTitle] = useState('');
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'uploaded' | 'failed'>('idle');
 
@@ -200,11 +209,15 @@ function AdminProductsContent() {
 
     const initialQualities = ['High Quality'];
     const initialStyles = ['Sleeveless', 'Full Sleeve'];
-    const initialSizes = ['S', 'M', 'L', 'XL', 'XXL'];
+    const catObj = categories.find((c) => c.id === defaultCat);
+    const initialSizes = catObj?.availableSizes && catObj.availableSizes.length > 0
+      ? catObj.availableSizes
+      : ['S', 'M', 'L', 'XL', 'XXL'];
 
     setCustomQualities(initialQualities);
     setCustomStyles(initialStyles);
     setCustomSizes(initialSizes);
+    setProdColors([]);
 
     setVariantsList([
       {
@@ -212,7 +225,7 @@ function AdminProductsContent() {
         productId: '',
         quality: 'High Quality',
         sleeve: 'Sleeveless',
-        size: 'L',
+        size: initialSizes[0] || 'L',
         price: 480,
         stock: 50,
         sku: 'ARH-HQ-SL-L',
@@ -265,6 +278,21 @@ function AdminProductsContent() {
         salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
       };
     });
+    // Load colors: either from prod.colors or reconstructed from variants
+    let loadedColors: ProductColor[] = [];
+    if (prod.colors && prod.colors.length > 0) {
+      loadedColors = prod.colors;
+    } else {
+      const variantColors = Array.from(new Set(prod.variants.map((v) => v.color).filter(Boolean) as string[]));
+      loadedColors = variantColors.map((c, i) => ({
+        id: `col-${i + 1}`,
+        name: c,
+        hex: prod.variants.find((v) => v.color === c)?.colorHex || '#171717',
+        isActive: true,
+      }));
+    }
+    setProdColors(loadedColors);
+
     setVariantsList(loadedVariants);
     setMediaList(prod.media || []);
     setEditorTab('basic');
@@ -343,6 +371,8 @@ function AdminProductsContent() {
         id: v.id || `var-${currentId}-${i + 1}`,
         productId: currentId,
         quality: v.quality || prodQualityGrade || 'High Quality',
+        color: v.color || undefined,
+        colorHex: v.colorHex || undefined,
         price: pricing.originalPrice,
         discountPercentage: pricing.discountPercentage,
         salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
@@ -405,6 +435,7 @@ function AdminProductsContent() {
       shippingInfo: prodShippingText.trim(),
       returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
       isPublished: prodIsPublished,
+      colors: prodColors,
       createdAt: editingProductId
         ? products.find((p) => p.id === editingProductId)?.createdAt || new Date().toISOString()
         : new Date().toISOString(),
@@ -492,6 +523,36 @@ function AdminProductsContent() {
     setCustomSizes(customSizes.filter((s) => s !== sizeToRemove));
   };
 
+  // ------------------ COLOR ACTIONS ------------------
+  const handleAddColor = () => {
+    if (!newColorName.trim()) return;
+    const cleanName = newColorName.trim();
+    if (!prodColors.some((c) => c.name.toLowerCase() === cleanName.toLowerCase())) {
+      setProdColors([
+        ...prodColors,
+        {
+          id: `col-${Date.now()}`,
+          name: cleanName,
+          hex: newColorHex || '#FFFFFF',
+          isActive: true,
+        },
+      ]);
+    }
+    setNewColorName('');
+    setIsAddColorOpen(false);
+  };
+
+  const handleRemoveColor = (colorName: string) => {
+    setProdColors(prodColors.filter((c) => c.name !== colorName));
+    setVariantsList((prev) => prev.filter((v) => v.color !== colorName));
+  };
+
+  const handleToggleColorActive = (colorName: string) => {
+    setProdColors(
+      prodColors.map((c) => (c.name === colorName ? { ...c, isActive: !c.isActive } : c))
+    );
+  };
+
   // ------------------ BULK GENERATE ALL COMBINATIONS ------------------
   const handleGenerateCombinations = () => {
     if (customQualities.length === 0 || customStyles.length === 0 || customSizes.length === 0) {
@@ -508,37 +569,73 @@ function AdminProductsContent() {
 
     const generated: ProductVariant[] = [];
     let count = 1;
+    const activeColors = prodColors.filter((c) => c.isActive !== false);
 
     for (const q of customQualities) {
       for (const st of customStyles) {
         for (const sz of customSizes) {
-          const qShort = q.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
-          const stShort = st.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
-          const skuCode = `${prodPrefix}-${qShort}-${stShort}-${sz}`;
+          if (activeColors.length > 0) {
+            for (const col of activeColors) {
+              const qShort = q.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+              const stShort = st.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+              const colShort = col.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase();
+              const skuCode = `${prodPrefix}-${colShort}-${qShort}-${stShort}-${sz}`;
 
-          const existing = variantsList.find(
-            (v) => v.quality === q && v.sleeve === st && v.size === sz
-          );
+              const existing = variantsList.find(
+                (v) => v.color === col.name && v.quality === q && v.sleeve === st && v.size === sz
+              );
 
-          const retail = existing ? existing.price : genDefaultPrice;
-          const discount = existing && existing.discountPercentage !== undefined
-            ? existing.discountPercentage
-            : genDefaultDiscount;
-          const sale = discount > 0 ? calculateSalePrice(retail, discount) : retail;
+              const retail = existing ? existing.price : genDefaultPrice;
+              const discount = existing && existing.discountPercentage !== undefined
+                ? existing.discountPercentage
+                : genDefaultDiscount;
+              const sale = discount > 0 ? calculateSalePrice(retail, discount) : retail;
 
-          generated.push({
-            id: existing ? existing.id : `var-gen-${Date.now()}-${count++}`,
-            productId: editingProductId || '',
-            quality: q,
-            sleeve: st,
-            size: sz,
-            price: retail,
-            discountPercentage: discount,
-            salePrice: sale,
-            stock: existing ? existing.stock : genDefaultStock,
-            sku: existing?.sku || skuCode,
-            isAvailable: existing ? existing.isAvailable : true,
-          });
+              generated.push({
+                id: existing ? existing.id : `var-gen-${Date.now()}-${count++}`,
+                productId: editingProductId || '',
+                quality: q,
+                sleeve: st,
+                size: sz,
+                color: col.name,
+                colorHex: col.hex,
+                price: retail,
+                discountPercentage: discount,
+                salePrice: sale,
+                stock: existing ? existing.stock : genDefaultStock,
+                sku: existing?.sku || skuCode,
+                isAvailable: existing ? existing.isAvailable : true,
+              });
+            }
+          } else {
+            const qShort = q.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+            const stShort = st.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+            const skuCode = `${prodPrefix}-${qShort}-${stShort}-${sz}`;
+
+            const existing = variantsList.find(
+              (v) => !v.color && v.quality === q && v.sleeve === st && v.size === sz
+            );
+
+            const retail = existing ? existing.price : genDefaultPrice;
+            const discount = existing && existing.discountPercentage !== undefined
+              ? existing.discountPercentage
+              : genDefaultDiscount;
+            const sale = discount > 0 ? calculateSalePrice(retail, discount) : retail;
+
+            generated.push({
+              id: existing ? existing.id : `var-gen-${Date.now()}-${count++}`,
+              productId: editingProductId || '',
+              quality: q,
+              sleeve: st,
+              size: sz,
+              price: retail,
+              discountPercentage: discount,
+              salePrice: sale,
+              stock: existing ? existing.stock : genDefaultStock,
+              sku: existing?.sku || skuCode,
+              isAvailable: existing ? existing.isAvailable : true,
+            });
+          }
         }
       }
     }
@@ -591,12 +688,15 @@ function AdminProductsContent() {
     const discount = validated.isValid ? validated.value : 0;
     const sale = discount > 0 ? calculateSalePrice(retail, discount) : retail;
 
+    const chosenColor = prodColors.find((c) => c.name === singleVarColor);
     const newVariant: ProductVariant = {
       id: `var-custom-${Date.now()}`,
       productId: editingProductId || '',
       quality: q,
       sleeve: st,
       size: sz,
+      color: singleVarColor || undefined,
+      colorHex: chosenColor?.hex || undefined,
       price: retail,
       discountPercentage: discount,
       salePrice: sale,
@@ -607,7 +707,7 @@ function AdminProductsContent() {
 
     setVariantsList([...variantsList, newVariant]);
     setIsAddSingleVarOpen(false);
-    showNotice(`Added custom variant: ${q} • ${st} • ${sz}`);
+    showNotice(`Added custom variant: ${singleVarColor ? `${singleVarColor} • ` : ''}${q} • ${st} • ${sz}`);
   };
 
   // ------------------ MATRIX ROW UPDATES ------------------
@@ -697,6 +797,7 @@ function AdminProductsContent() {
           displayOrder: mediaList.length + i + 1,
           variantQuality: uploadQualityTarget === 'All' ? undefined : uploadQualityTarget,
           variantSleeve: uploadSleeveTarget === 'All' ? undefined : uploadSleeveTarget,
+          color: uploadColorTarget === 'All' ? undefined : uploadColorTarget,
         });
       }
 
@@ -1156,7 +1257,14 @@ function AdminProductsContent() {
                   </label>
                   <select
                     value={prodCategoryId}
-                    onChange={(e) => setProdCategoryId(e.target.value)}
+                    onChange={(e) => {
+                      const newCatId = e.target.value;
+                      setProdCategoryId(newCatId);
+                      const matchedCat = categories.find((c) => c.id === newCatId);
+                      if (matchedCat && matchedCat.availableSizes && matchedCat.availableSizes.length > 0) {
+                        setCustomSizes(matchedCat.availableSizes);
+                      }
+                    }}
                     className="w-full p-2.5 bg-light-elevated border border-light-border rounded-xl text-xs font-semibold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
                   >
                     {categories.map((c) => (
@@ -1258,12 +1366,185 @@ function AdminProductsContent() {
           {/* ========================================================================= */}
           {editorTab === 'variants' && (
             <div className="space-y-6 animate-in fade-in">
-              {/* STEP 1: Sleeve Styles */}
+              {/* STEP 1: Color Options & Swatches */}
               <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>Step 1: Styles &amp; Sleeve Cuts</span>
+                      <Palette className="w-4 h-4 text-[#B89555]" />
+                      <span>Step 1: Color Options &amp; Swatches</span>
+                      <span className="text-charcoal-500 font-normal">({prodColors.length})</span>
+                    </h3>
+                    <p className="text-[11px] text-charcoal-500">
+                      Configure color choices for this product (e.g. White, Black, Grey, Navy Blue). Each color gets its own photos and stock matrix.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddColorOpen(true)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-light-elevated hover:bg-light-hover border border-light-border hover:border-[#B89555] text-charcoal-900 rounded-xl text-xs font-semibold transition-colors self-start sm:self-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#B89555]" />
+                    <span>Add Color</span>
+                  </button>
+                </div>
+
+                {/* Color List */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {prodColors.length === 0 ? (
+                    <p className="text-xs text-charcoal-400 italic py-1">
+                      No colors added. Product will use single standard appearance without color selection.
+                    </p>
+                  ) : (
+                    prodColors.map((col) => (
+                      <div
+                        key={col.name}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                          col.isActive !== false
+                            ? 'bg-light-elevated border-light-border text-charcoal-900 shadow-xs'
+                            : 'bg-charcoal-50 border-charcoal-200 text-charcoal-400 opacity-60'
+                        }`}
+                      >
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-charcoal-300 shadow-inner flex-shrink-0"
+                          style={{ backgroundColor: col.hex }}
+                          title={col.hex}
+                        />
+                        <span>{col.name}</span>
+                        <span className="text-[10px] font-mono text-charcoal-400">{col.hex}</span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleColorActive(col.name)}
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold transition-colors ${
+                            col.isActive !== false
+                              ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                              : 'bg-charcoal-200 text-charcoal-600 hover:bg-charcoal-300'
+                          }`}
+                          title={col.isActive !== false ? 'Active: click to disable' : 'Disabled: click to enable'}
+                        >
+                          {col.isActive !== false ? 'Active' : 'Disabled'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveColor(col.name)}
+                          className="text-charcoal-400 hover:text-rose-600 transition-colors ml-1"
+                          title="Delete Color Option"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add Color Form */}
+                {isAddColorOpen && (
+                  <div className="p-4 bg-light-elevated rounded-xl border border-light-border space-y-3 max-w-lg animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#B89555] uppercase">Add New Color</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddColorOpen(false)}
+                        className="p-1 text-charcoal-400 hover:text-charcoal-900"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Presets */}
+                    <div>
+                      <span className="block text-[11px] font-semibold text-charcoal-600 mb-1.5">Quick Presets:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { name: 'White', hex: '#FFFFFF' },
+                          { name: 'Black', hex: '#171717' },
+                          { name: 'Grey', hex: '#808080' },
+                          { name: 'Navy Blue', hex: '#23384D' },
+                          { name: 'Off White', hex: '#F8F6F0' },
+                          { name: 'Charcoal', hex: '#36454F' },
+                          { name: 'Beige', hex: '#F5F5DC' },
+                          { name: 'Maroon', hex: '#800000' },
+                        ].map((preset) => (
+                          <button
+                            key={preset.name}
+                            type="button"
+                            onClick={() => {
+                              setNewColorName(preset.name);
+                              setNewColorHex(preset.hex);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2 py-1 bg-white hover:bg-light-hover border border-light-border rounded-lg text-xs font-medium text-charcoal-800 transition-colors"
+                          >
+                            <span
+                              className="w-2.5 h-2.5 rounded-full border border-charcoal-300"
+                              style={{ backgroundColor: preset.hex }}
+                            />
+                            <span>{preset.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Color Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Navy Blue"
+                          value={newColorName}
+                          onChange={(e) => setNewColorName(e.target.value)}
+                          className="w-full p-2 bg-white border border-light-border rounded-lg text-xs text-charcoal-900 focus:border-[#B89555] focus:outline-none"
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Color Swatch (Hex)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={newColorHex}
+                            onChange={(e) => setNewColorHex(e.target.value)}
+                            className="w-9 h-9 p-0.5 border border-light-border rounded-lg cursor-pointer bg-white"
+                          />
+                          <input
+                            type="text"
+                            placeholder="#FFFFFF"
+                            value={newColorHex}
+                            onChange={(e) => setNewColorHex(e.target.value)}
+                            className="flex-1 p-2 bg-white border border-light-border rounded-lg text-xs font-mono text-charcoal-900 focus:border-[#B89555] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddColorOpen(false)}
+                        className="px-3 py-1.5 bg-white text-charcoal-700 border border-light-border text-xs font-semibold rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddColor}
+                        className="px-4 py-1.5 bg-champagne-500 text-charcoal-950 text-xs font-bold rounded-lg"
+                      >
+                        Add Color
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 2: Sleeve Styles */}
+              <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>Step 2: Styles &amp; Sleeve Cuts</span>
                       <span className="text-charcoal-500 font-normal">({customStyles.length})</span>
                     </h3>
                     <p className="text-[11px] text-charcoal-500">
@@ -1328,16 +1609,16 @@ function AdminProductsContent() {
                 )}
               </div>
 
-              {/* STEP 2: Sizes */}
+              {/* STEP 3: Sizes */}
               <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>Step 2: Size Options</span>
+                      <span>Step 3: Size Options</span>
                       <span className="text-charcoal-500 font-normal">({customSizes.length})</span>
                     </h3>
                     <p className="text-[11px] text-charcoal-500">
-                      Select sizes for this garment (e.g. S, M, L, XL, XXL).
+                      Select sizes for this garment (e.g. S, M, L, XL, XXL or Numeric 33, 34, 35 or Waist 28, 30, 32).
                     </p>
                   </div>
 
@@ -1398,16 +1679,16 @@ function AdminProductsContent() {
                 )}
               </div>
 
-              {/* STEP 3: Matrix Generator Settings & Action */}
+              {/* STEP 4: Matrix Generator Settings & Action */}
               <div className="bg-white p-5 rounded-2xl border border-light-border shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-xs text-charcoal-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Zap className="w-4 h-4 text-[#B89555]" />
-                      <span>Step 3: Generate Matrix Combinations</span>
+                      <span>Step 4: Generate Matrix Combinations</span>
                     </h3>
                     <p className="text-[11px] text-charcoal-500">
-                      Auto-generate combination rows for Styles ({customStyles.length}) &times; Sizes ({customSizes.length}).
+                      Auto-generate combination rows for {prodColors.filter((c) => c.isActive !== false).length > 0 ? `Colors (${prodColors.filter((c) => c.isActive !== false).length}) \u00D7 ` : ''}Styles ({customStyles.length}) &times; Sizes ({customSizes.length}).
                     </p>
                   </div>
 
@@ -1427,7 +1708,7 @@ function AdminProductsContent() {
                       className="inline-flex items-center gap-1.5 px-4 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-[0.99]"
                     >
                       <Zap className="w-3.5 h-3.5" />
-                      <span>Generate Matrix ({customStyles.length * customSizes.length} items)</span>
+                      <span>Generate Matrix ({(prodColors.filter((c) => c.isActive !== false).length || 1) * customStyles.length * customSizes.length} items)</span>
                     </button>
                   </div>
                 </div>
@@ -1520,7 +1801,7 @@ function AdminProductsContent() {
                     <h4 className="font-bold text-xs text-[#B89555] uppercase">
                       Add Specific Variant Combination
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                    <div className={`grid grid-cols-1 ${prodColors.length > 0 ? 'sm:grid-cols-6' : 'sm:grid-cols-5'} gap-3`}>
                       <div>
                         <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Quality</label>
                         <input
@@ -1545,6 +1826,23 @@ function AdminProductsContent() {
                           ))}
                         </select>
                       </div>
+
+                      {prodColors.length > 0 && (
+                        <div>
+                          <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Color</label>
+                          <select
+                            value={singleVarColor || prodColors[0]?.name || ''}
+                            onChange={(e) => setSingleVarColor(e.target.value)}
+                            className="w-full p-2 bg-white border border-light-border rounded-xl text-xs font-semibold text-charcoal-900"
+                          >
+                            {prodColors.map((c) => (
+                              <option key={c.name} value={c.name} className="bg-white text-charcoal-900">
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
 
                       <div>
                         <label className="block text-[11px] font-semibold text-charcoal-700 mb-1">Size</label>
@@ -1613,7 +1911,7 @@ function AdminProductsContent() {
                 )}
               </div>
 
-              {/* STEP 4: Full Variant Matrix Table */}
+              {/* STEP 5: Full Variant Matrix Table */}
               <div className="bg-white rounded-2xl border border-light-border shadow-sm overflow-hidden">
                 <div className="p-4 sm:p-5 border-b border-light-border flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   <div>
@@ -1621,7 +1919,7 @@ function AdminProductsContent() {
                       <span>Active Variant Matrix ({variantsList.length} combinations)</span>
                     </h3>
                     <p className="text-xs text-charcoal-500">
-                      Configure exact retail price and inventory stock per variant size.
+                      Configure exact retail price and inventory stock per variant size{prodColors.length > 0 ? ' and color' : ''}.
                     </p>
                   </div>
 
@@ -1653,6 +1951,7 @@ function AdminProductsContent() {
                         <tr>
                           <th className="p-3">Quality</th>
                           <th className="p-3">Style / Sleeve</th>
+                          {prodColors.length > 0 && <th className="p-3">Color</th>}
                           <th className="p-3 text-center">Size</th>
                           <th className="p-3">SKU</th>
                           <th className="p-3">Original (PKR)</th>
@@ -1674,6 +1973,21 @@ function AdminProductsContent() {
                                 </span>
                               </td>
                               <td className="p-3 font-semibold text-charcoal-900">{v.sleeve}</td>
+                              {prodColors.length > 0 && (
+                                <td className="p-3">
+                                  {v.color ? (
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-light-elevated text-charcoal-800 border border-light-border">
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full border border-charcoal-300 inline-block flex-shrink-0"
+                                        style={{ backgroundColor: v.colorHex || prodColors.find((c) => c.name === v.color)?.hex || '#ccc' }}
+                                      />
+                                      <span>{v.color}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] text-charcoal-400 italic">None</span>
+                                  )}
+                                </td>
+                              )}
                               <td className="p-3 text-center">
                                 <span className="font-bold bg-champagne-100 text-[#96763D] border border-[#B89555]/30 px-2 py-0.5 rounded-md text-xs">
                                   {v.size}
@@ -1772,7 +2086,7 @@ function AdminProductsContent() {
 
               {/* Upload Box */}
               <div className="p-5 bg-light-elevated rounded-2xl border border-dashed border-light-border space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-charcoal-700 mb-1">
                       1. Quality Target:
@@ -1811,7 +2125,25 @@ function AdminProductsContent() {
 
                   <div>
                     <label className="block text-xs font-semibold text-charcoal-700 mb-1">
-                      3. Photo Caption / Title:
+                      3. Color Target:
+                    </label>
+                    <select
+                      value={uploadColorTarget}
+                      onChange={(e) => setUploadColorTarget(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-light-border rounded-xl text-xs font-semibold text-charcoal-900 focus:border-[#B89555] focus:outline-none"
+                    >
+                      <option value="All" className="bg-white text-charcoal-900">All Colors / General</option>
+                      {prodColors.map((c) => (
+                        <option key={c.name} value={c.name} className="bg-white text-charcoal-900">
+                          For &quot;{c.name}&quot;
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-charcoal-700 mb-1">
+                      4. Photo Caption / Title:
                     </label>
                     <input
                       type="text"
@@ -1975,8 +2307,18 @@ function AdminProductsContent() {
                           #{idx + 1}
                         </div>
 
+                        {m.color && (
+                          <div className="absolute top-1 left-8 bg-[#23384D] text-white text-[9px] px-1.5 py-0.5 rounded font-bold flex items-center gap-1 shadow-xs">
+                            <span
+                              className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0"
+                              style={{ backgroundColor: prodColors.find((c) => c.name === m.color)?.hex || '#ffffff' }}
+                            />
+                            <span>{m.color}</span>
+                          </div>
+                        )}
+
                         {m.variantSleeve && (
-                          <div className="absolute top-1 left-8 bg-champagne-500/90 text-black text-[9px] px-1 rounded font-bold">
+                          <div className={`absolute top-1 ${m.color ? 'left-24' : 'left-8'} bg-champagne-500/90 text-black text-[9px] px-1 rounded font-bold`}>
                             {m.variantSleeve}
                           </div>
                         )}

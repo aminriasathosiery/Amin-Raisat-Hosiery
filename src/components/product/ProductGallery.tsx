@@ -11,6 +11,7 @@ interface ProductGalleryProps {
   media: ProductMedia[];
   productName: string;
   selectedSleeve?: string;
+  selectedColor?: string;
   videoUrl?: string;
 }
 
@@ -18,6 +19,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
   media,
   productName,
   selectedSleeve,
+  selectedColor,
   videoUrl,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -34,30 +36,43 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
 
   // Gallery items strictly contains PHOTOS (videos are never gallery items or thumbnails)
   const photoMediaList = useMemo(() => {
-    let list: ProductMedia[] = (media || []).filter(
+    const list: ProductMedia[] = (media || []).filter(
       (m) => m.type !== 'video' && (m as any).media_type !== 'video' && m.type !== 'size_guide' && (m as any).media_type !== 'size_guide'
     );
 
     if (list.length === 0) return [];
 
-    const exactMatch = list.filter(
-      (m) => !selectedSleeve || !m.variantSleeve || m.variantSleeve === 'All' || m.variantSleeve === selectedSleeve
+    // Prioritize photos matching selectedColor and selectedSleeve
+    const colorAndSleeve = selectedColor && selectedSleeve
+      ? list.filter((m) => m.color === selectedColor && (m.variantSleeve === selectedSleeve || m.variantSleeve === 'All'))
+      : [];
+
+    const colorOnly = selectedColor
+      ? list.filter((m) => m.color === selectedColor && !colorAndSleeve.includes(m))
+      : [];
+
+    const sleeveOnly = selectedSleeve
+      ? list.filter((m) => !m.color && (m.variantSleeve === selectedSleeve || m.variantSleeve === 'All'))
+      : [];
+
+    const generalPhotos = list.filter(
+      (m) => !colorAndSleeve.includes(m) && !colorOnly.includes(m) && !sleeveOnly.includes(m) && !m.color
     );
 
-    if (exactMatch.length > 0) {
-      const others = list.filter((m) => !exactMatch.includes(m));
-      return [...exactMatch, ...others];
-    }
+    const otherPhotos = list.filter(
+      (m) => !colorAndSleeve.includes(m) && !colorOnly.includes(m) && !sleeveOnly.includes(m) && !generalPhotos.includes(m)
+    );
 
-    return list;
-  }, [media, selectedSleeve]);
+    const combined = [...colorAndSleeve, ...colorOnly, ...sleeveOnly, ...generalPhotos, ...otherPhotos];
+    return combined.length > 0 ? combined : list;
+  }, [media, selectedSleeve, selectedColor]);
 
-  // When sleeve switches, reset photo selection and return to photo view
+  // When sleeve or color switches, reset photo selection and return to photo view
   useEffect(() => {
     setSelectedIndex(0);
     setIsVideoPlaying(false);
     setHasPlaybackError(false);
-  }, [selectedSleeve]);
+  }, [selectedSleeve, selectedColor]);
 
   const handlePrev = useCallback(() => {
     setIsVideoPlaying(false);

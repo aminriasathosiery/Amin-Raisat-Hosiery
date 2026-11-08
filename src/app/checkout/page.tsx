@@ -79,7 +79,13 @@ export default function CheckoutPage() {
   const isBuyNow = isBuyNowParam && Boolean(buyNowItem);
   const items = isBuyNow && buyNowItem ? [buyNowItem] : cartItems;
 
-  const totalQuantity = isBuyNow && buyNowItem ? buyNowItem.quantity : cartTotalQuantity;
+  const totalPhysicalPieces = items.reduce((sum, it) => {
+    if (it.type === 'deal') {
+      return sum + (it.quantity * (it.piecesCount || 1));
+    }
+    return sum + it.quantity;
+  }, 0);
+  const totalQuantity = totalPhysicalPieces;
   const subtotal = isBuyNow && buyNowItem ? buyNowItem.unitPrice * buyNowItem.quantity : cartSubtotal;
 
   const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
@@ -87,10 +93,10 @@ export default function CheckoutPage() {
 
   // Check if any deal has free delivery
   const hasFreeDeliveryDeal = items.some((it) => it.type === 'deal' && it.isFreeDelivery);
-  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalQuantity >= freeDeliveryThreshold;
-  const deliveryFee = totalQuantity === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : baseDeliveryCharge;
+  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalPhysicalPieces >= freeDeliveryThreshold;
+  const deliveryFee = totalPhysicalPieces === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : baseDeliveryCharge;
   const totalAmount = subtotal + deliveryFee;
-  const piecesNeededForFree = hasFreeDeliveryDeal ? 0 : Math.max(0, freeDeliveryThreshold - totalQuantity);
+  const piecesNeededForFree = hasFreeDeliveryDeal ? 0 : Math.max(0, freeDeliveryThreshold - totalPhysicalPieces);
 
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState('');
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
@@ -216,6 +222,8 @@ export default function CheckoutPage() {
               quality: it.quality,
               sleeve: it.sleeve,
               size: it.size,
+              color: it.color || undefined,
+              colorHex: it.colorHex || undefined,
               unitPrice: it.unitPrice,
               originalPrice: it.originalPrice || it.unitPrice,
               discountPercentage: it.discountPercentage || 0,
@@ -825,7 +833,7 @@ export default function CheckoutPage() {
                     } else {
                       const matchingProd = products.find((p) => p.id === item.productId);
                       const availableSizes = matchingProd
-                        ? Array.from(new Set(matchingProd.variants.filter((v) => v.sleeve === item.sleeve).map((v) => v.size)))
+                        ? Array.from(new Set(matchingProd.variants.filter((v) => (!item.color || !v.color || v.color === item.color) && (!item.sleeve || v.sleeve === item.sleeve)).map((v) => v.size)))
                         : SIZES;
 
                       return (
@@ -833,9 +841,17 @@ export default function CheckoutPage() {
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <p className="font-bold text-[#1D2730]">{item.productName}</p>
-                              <p className="text-[11px] text-[#66717C]">
-                                {item.quality} • {item.sleeve}
-                              </p>
+                              <div className="text-[11px] text-[#66717C] flex items-center gap-1.5 flex-wrap mt-0.5">
+                                {item.color && (
+                                  <span className="inline-flex items-center gap-1 font-semibold text-[#1D2730] bg-[#EEE8DC] border border-[#D8D0C3] px-1.5 py-0.5 rounded text-[10px]">
+                                    {item.colorHex && (
+                                      <span className="w-2.5 h-2.5 rounded-full border border-black/20" style={{ backgroundColor: item.colorHex }} />
+                                    )}
+                                    {item.color}
+                                  </span>
+                                )}
+                                <span>{item.quality} • {item.sleeve}</span>
+                              </div>
                             </div>
                             <div className="text-right flex-shrink-0">
                               <span className="font-bold text-[#C99A3D] text-sm">

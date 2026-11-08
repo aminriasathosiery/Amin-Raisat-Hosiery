@@ -51,6 +51,8 @@ export async function GET(req: Request) {
       image: c.image_url,
       isActive: c.is_active ?? true,
       displayOrder: c.display_order || 0,
+      sizeType: c.size_type || 'alphabetic',
+      availableSizes: Array.isArray(c.available_sizes) ? c.available_sizes : (c.size_type === 'numeric' ? ['33', '34', '35', '36', '37', '38'] : ['S', 'M', 'L', 'XL', 'XXL']),
     }));
 
     const formattedSubcats: Subcategory[] = (subcats && subcats.length > 0 ? subcats : INITIAL_SUBCATEGORIES).map((s: any) => ({
@@ -99,7 +101,7 @@ export async function POST(req: Request) {
         ? cat.slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
         : cat.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
-      const payload = {
+      const payload: any = {
         id: catId,
         name: cat.name.trim(),
         slug: slug,
@@ -107,14 +109,24 @@ export async function POST(req: Request) {
         image_url: cat.image || null,
         is_active: cat.isActive ?? true,
         display_order: Number(cat.displayOrder) || 0,
+        size_type: cat.sizeType || 'alphabetic',
+        available_sizes: Array.isArray(cat.availableSizes) && cat.availableSizes.length > 0 ? cat.availableSizes : ['S', 'M', 'L', 'XL', 'XXL'],
         updated_at: new Date().toISOString(),
       };
 
-      const { data: savedCat, error } = await adminDb
+      let { data: savedCat, error } = await adminDb
         .from('categories')
         .upsert(payload)
         .select()
         .single();
+
+      if (error && (error.code === '42703' || error.message?.includes('size_type') || error.message?.includes('available_sizes'))) {
+        delete payload.size_type;
+        delete payload.available_sizes;
+        const retryRes = await adminDb.from('categories').upsert(payload).select().single();
+        savedCat = retryRes.data;
+        error = retryRes.error;
+      }
 
       if (error || !savedCat) {
         console.error('FULL SUPABASE CATEGORY SAVE ERROR:', error);

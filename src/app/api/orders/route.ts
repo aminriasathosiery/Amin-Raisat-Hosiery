@@ -150,7 +150,8 @@ export async function POST(req: Request) {
           (v.product_id === clientItem.productId &&
             v.quality === clientItem.quality &&
             v.sleeve === clientItem.sleeve &&
-            v.size === clientItem.size)
+            v.size === clientItem.size &&
+            (!clientItem.color || !v.color || v.color === clientItem.color))
       );
 
       if (!variant) {
@@ -173,6 +174,8 @@ export async function POST(req: Request) {
         quality: clientItem.quality || variant?.quality || 'High Quality',
         sleeve: clientItem.sleeve || variant?.sleeve || 'Sleeveless',
         size: clientItem.size || variant?.size || 'L',
+        color: clientItem.color || variant?.color || null,
+        colorHex: clientItem.colorHex || variant?.color_hex || null,
         unitPrice,
         originalPrice: pricing.originalPrice,
         discountPercentage: pricing.discountPercentage,
@@ -182,10 +185,19 @@ export async function POST(req: Request) {
       };
     });
 
-    // Determine final delivery fee: Free delivery if any VERIFIED deal grants free delivery OR total pieces >= freeDeliveryThreshold.
-    // SECURITY: Use verifiedItems (server-validated) NOT raw client items to prevent tampering.
+    // Authoritative physical piece count:
+    // Deals count piecesCount * quantity; Products count quantity.
+    const totalPhysicalPieces = verifiedItems.reduce((sum: number, it: any) => {
+      if (it.dealId) {
+        return sum + (it.quantity * (Number(it.piecesCount) || 1));
+      }
+      return sum + it.quantity;
+    }, 0);
+
+    // Determine final delivery fee: Free delivery if any VERIFIED deal grants free delivery OR physical pieces >= freeDeliveryThreshold.
+    // SECURITY: Server-calculated delivery fee prevents client tampering.
     const hasFreeDeliveryDeal = verifiedItems.some((it: any) => it.dealId && it.isFreeDelivery);
-    const deliveryFee = hasFreeDeliveryDeal || totalItemCount >= freeDeliveryThreshold ? 0 : baseDeliveryCharge;
+    const deliveryFee = hasFreeDeliveryDeal || totalPhysicalPieces >= freeDeliveryThreshold ? 0 : baseDeliveryCharge;
     const totalAmount = subtotal + deliveryFee;
     const orderNumber = `ARH-${Date.now().toString().slice(-6)}`;
     let orderId = `ord-${Date.now()}`;
@@ -300,6 +312,8 @@ export async function POST(req: Request) {
                 quality: it.quality,
                 sleeve: it.sleeve,
                 size: it.size,
+                color: it.color || null,
+                color_hex: it.colorHex || null,
                 unit_price: it.unitPrice,
                 original_price: it.originalPrice,
                 discount_percentage: it.discountPercentage,
@@ -311,9 +325,9 @@ export async function POST(req: Request) {
           });
 
           let { error: itemsErr } = await dbClient.from('order_items').insert(itemsPayload);
-          if (itemsErr && (itemsErr.message?.includes('deal_') || itemsErr.message?.includes('original_price') || itemsErr.message?.includes('is_deal_item') || itemsErr.code === '42703')) {
-            // Fallback: strip optional deal fields that might not exist in schema if migration v10 is pending
-            const fallbackItemsPayload = itemsPayload.map(({ deal_id, deal_name, deal_slug, deal_pieces_count, deal_original_price, deal_discount_percentage, deal_is_free_delivery, is_deal_item, original_price, discount_percentage, ...rest }) => rest);
+          if (itemsErr && (itemsErr.message?.includes('deal_') || itemsErr.message?.includes('color') || itemsErr.message?.includes('original_price') || itemsErr.message?.includes('is_deal_item') || itemsErr.code === '42703')) {
+            // Fallback: strip optional columns that might not exist in schema if migration v11 is pending
+            const fallbackItemsPayload = itemsPayload.map(({ deal_id, deal_name, deal_slug, deal_pieces_count, deal_original_price, deal_discount_percentage, deal_is_free_delivery, is_deal_item, original_price, discount_percentage, color, color_hex, ...rest }) => rest);
             const retryRes = await dbClient.from('order_items').insert(fallbackItemsPayload);
             itemsErr = retryRes.error;
           }
