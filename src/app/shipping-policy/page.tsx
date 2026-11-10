@@ -4,9 +4,15 @@ import React from 'react';
 import Link from 'next/link';
 import { useStore } from '@/context/StoreContext';
 import { ChevronRight, Truck, CheckCircle2 } from 'lucide-react';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 export default function ShippingPolicyPage() {
   const { settings } = useStore();
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const freeThreshold = shipping.freeDeliveryThreshold;
+  const baseDelivery = shipping.baseDeliveryCharge;
+  const minQty = shipping.minOrderQty;
+  const maxQty = shipping.maxOrderQty;
 
   return (
     <div className="min-h-[85vh] py-12 bg-[#F7F3EA] text-[#1D2730]">
@@ -44,25 +50,32 @@ export default function ShippingPolicyPage() {
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#2F7D5A] flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>1 Piece is a Valid Order:</strong> No minimum order quantity restrictions (minimum 1 piece).
+                  <strong>{minQty} {minQty === 1 ? 'Piece is a Valid Order' : 'Pieces Minimum Order'}:</strong> Minimum order quantity is {minQty} {minQty === 1 ? 'piece' : 'pieces'}.
                 </span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#2F7D5A] flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Standard Delivery Fee:</strong> Flat Rs. {settings.shipping.baseDeliveryCharge || 200} across Pakistan for orders of 1 or 2 pieces.
+                  <strong>Standard Delivery Fee:</strong>{' '}
+                  {freeThreshold > 1
+                    ? `Flat Rs. ${baseDelivery} across Pakistan for orders under ${freeThreshold} pieces.`
+                    : freeThreshold === 1 || baseDelivery === 0
+                    ? 'Rs. 0 — Free nationwide shipping.'
+                    : `Flat Rs. ${baseDelivery} nationwide delivery fee per order.`}
                 </span>
               </li>
+              {freeThreshold > 0 && (
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#2F7D5A] flex-shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Free Delivery on {freeThreshold}+ Pieces:</strong> Orders containing {freeThreshold} or more physical pieces automatically qualify for <strong className="text-[#2F7D5A]">100% Free Delivery</strong>.
+                  </span>
+                </li>
+              )}
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#2F7D5A] flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Free Delivery on {settings.shipping.freeDeliveryThreshold || 3}+ Pieces:</strong> Orders containing {settings.shipping.freeDeliveryThreshold || 3} or more pieces automatically qualify for <strong className="text-[#2F7D5A]">100% Free Delivery</strong>.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#2F7D5A] flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong>Maximum Order Quantity:</strong> Up to {settings.shipping.maxOrderQty || 100} pieces per order online.
+                  <strong>Maximum Order Quantity:</strong> Up to {maxQty} pieces per order online.
                 </span>
               </li>
             </ul>

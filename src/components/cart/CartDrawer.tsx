@@ -10,6 +10,7 @@ import { useStore } from '@/context/StoreContext';
 import { createCartWhatsAppMessage, DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
 import { CartItem, ProductSize } from '@/types';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
@@ -76,7 +77,8 @@ export const CartDrawer: React.FC = () => {
 
   if (!isDrawerOpen) return null;
 
-  const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const freeThreshold = shipping.freeDeliveryThreshold;
   const whatsappUrl = createCartWhatsAppMessage(items, subtotal, deliveryFee, totalAmount, settings?.whatsapp || DISPLAY_WHATSAPP_NUMBER);
 
   return (
@@ -127,27 +129,37 @@ export const CartDrawer: React.FC = () => {
                   <span className="text-[#2F7D5A] font-bold">
                     ✓ Free Delivery Unlocked across Pakistan!
                   </span>
-                ) : (
+                ) : freeThreshold > 0 ? (
                   <span className="text-[#1D2730]">
                     Add <strong className="text-[#C99A3D]">{piecesNeededForFreeDelivery} more piece{piecesNeededForFreeDelivery > 1 ? 's' : ''}</strong> for Free Delivery
                   </span>
+                ) : (
+                  <span className="text-[#1D2730]">
+                    Flat Nationwide Delivery: <strong className="text-[#C99A3D]">Rs. {shipping.baseDeliveryCharge}</strong>
+                  </span>
                 )}
               </span>
-              <span className="text-[11px] font-bold text-[#66717C] flex-shrink-0">
-                {Math.min(totalQuantity, freeThreshold)}/{freeThreshold} pcs
-              </span>
+              {freeThreshold > 0 && (
+                <span className="text-[11px] font-bold text-[#66717C] flex-shrink-0">
+                  {Math.min(totalQuantity, freeThreshold)}/{freeThreshold} pcs
+                </span>
+              )}
             </div>
-            <div className="w-full bg-[#D8D0C3] rounded-full h-2 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  isFreeDeliveryUnlocked ? 'bg-[#2F7D5A]' : 'bg-[#C99A3D]'
-                }`}
-                style={{ width: `${Math.min(100, (totalQuantity / freeThreshold) * 100)}%` }}
-              />
-            </div>
+            {freeThreshold > 0 && (
+              <div className="w-full bg-[#D8D0C3] rounded-full h-2 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    isFreeDeliveryUnlocked ? 'bg-[#2F7D5A]' : 'bg-[#C99A3D]'
+                  }`}
+                  style={{ width: `${Math.min(100, (totalQuantity / freeThreshold) * 100)}%` }}
+                />
+              </div>
+            )}
             <div className="flex justify-between text-[10.5px] text-[#66717C] mt-1.5 font-medium">
-              <span>1 pc is a valid order</span>
-              <span className="text-[#C99A3D] font-semibold">{freeThreshold}+ pcs: Free Delivery</span>
+              <span>{shipping.minOrderQty} {shipping.minOrderQty === 1 ? 'pc is a valid order' : 'pcs min order'}</span>
+              <span className="text-[#C99A3D] font-semibold">
+                {freeThreshold > 0 ? `${freeThreshold}+ pcs: Free Delivery` : `Standard Rs. ${shipping.baseDeliveryCharge}`}
+              </span>
             </div>
           </div>
 

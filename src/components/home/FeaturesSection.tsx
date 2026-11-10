@@ -3,11 +3,14 @@
 import React from 'react';
 import { Truck, ShieldCheck, PhoneCall } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 export const FeaturesSection: React.FC = () => {
   const { settings } = useStore();
-  const freeThreshold = settings.shipping?.freeDeliveryThreshold ?? 3;
-  const minOrder = settings.shipping?.minOrderQty ?? 1;
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const freeThreshold = shipping.freeDeliveryThreshold;
+  const baseDelivery = shipping.baseDeliveryCharge;
+  const minOrder = shipping.minOrderQty;
 
   return (
     <section className="py-14 bg-[#EEE8DC] border-b border-[#D8D0C3]">
@@ -31,13 +34,31 @@ export const FeaturesSection: React.FC = () => {
               <div className="w-11 h-11 rounded-xl bg-[#EEE8DC] border border-[#D8D0C3] text-[#C99A3D] flex items-center justify-center shadow-xs">
                 <Truck className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-[#1D2730]">Nationwide Free Delivery</h3>
+              <h3 className="text-base font-bold text-[#1D2730]">
+                {freeThreshold > 0 || baseDelivery === 0 ? 'Nationwide Free Delivery' : 'Nationwide Courier Delivery'}
+              </h3>
               <p className="text-xs text-[#66717C] leading-relaxed font-normal">
-                Order from {minOrder} piece. Orders of <strong className="text-[#C99A3D]">{freeThreshold} or more pieces</strong> unlock <strong className="text-[#2F7D5A]">100% FREE DELIVERY</strong> anywhere in Pakistan.
+                {freeThreshold > 0 ? (
+                  <>
+                    Order from {minOrder} {minOrder === 1 ? 'piece' : 'pieces'}. Orders of{' '}
+                    <strong className="text-[#C99A3D]">
+                      {freeThreshold} or more pieces
+                    </strong>{' '}
+                    unlock <strong className="text-[#2F7D5A]">100% FREE DELIVERY</strong> across Pakistan
+                    {freeThreshold > 1 ? ` (Rs. ${baseDelivery} standard delivery below ${freeThreshold} pcs).` : '.'}
+                  </>
+                ) : (
+                  <>
+                    Order from {minOrder} {minOrder === 1 ? 'piece' : 'pieces'}. Flat{' '}
+                    <strong className="text-[#C99A3D]">Rs. {baseDelivery}</strong> delivery anywhere in Pakistan.
+                  </>
+                )}
               </p>
             </div>
             <div className="mt-5 pt-3.5 border-t border-[#D8D0C3] flex items-center justify-between text-xs font-semibold text-[#1D2730]">
-              <span className="text-[#C99A3D]">Free at {freeThreshold}+ Pieces</span>
+              <span className="text-[#C99A3D]">
+                {freeThreshold > 0 ? `Free at ${freeThreshold}+ Pieces` : `Standard Fee: Rs. ${baseDelivery}`}
+              </span>
               <span>Cash on Delivery</span>
             </div>
           </div>

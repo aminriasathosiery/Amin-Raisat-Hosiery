@@ -185,7 +185,7 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="number"
-                min={1}
+                min={0}
                 max={500}
                 required
                 value={formState.shipping?.freeDeliveryThreshold ?? 3}
@@ -194,14 +194,16 @@ export default function AdminSettingsPage() {
                     ...formState,
                     shipping: {
                       ...formState.shipping,
-                      freeDeliveryThreshold: Number(e.target.value),
+                      freeDeliveryThreshold: Math.max(0, Number(e.target.value)),
                     },
                   })
                 }
                 className="w-full px-3 py-2 text-xs bg-light-elevated border border-light-border rounded-xl font-bold text-[#B89555] focus:border-[#B89555] focus:outline-none"
               />
               <span className="text-[10px] text-charcoal-500 mt-1 block">
-                Store policy: 3+ pieces = FREE DELIVERY
+                {(formState.shipping?.freeDeliveryThreshold ?? 3) > 0
+                  ? `${formState.shipping?.freeDeliveryThreshold}+ physical pieces = FREE DELIVERY (0 to disable)`
+                  : 'Piece-based Free Delivery is currently disabled'}
               </span>
             </div>
 

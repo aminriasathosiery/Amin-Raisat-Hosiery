@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { INITIAL_SITE_SETTINGS } from '@/data/initialData';
 import { SiteSettings } from '@/types';
+import { fetchAuthoritativeSettings } from '@/lib/settingsServer';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -33,51 +35,16 @@ export async function GET(req: Request) {
 
   try {
     const db = getDbClient();
+    const mergedSettings = await fetchAuthoritativeSettings(db);
 
-    const [siteRes, shipRes] = await Promise.all([
-      db.from('site_settings').select('*').limit(1).maybeSingle(),
-      db.from('shipping_settings').select('*').limit(1).maybeSingle(),
-    ]);
-
-    const siteData = siteRes.data;
-    const shipData = shipRes.data;
-
-    const mergedSettings: SiteSettings = {
-      ...INITIAL_SITE_SETTINGS,
-      brandName: siteData?.brand_name || INITIAL_SITE_SETTINGS.brandName,
-      ownerName: siteData?.owner_name || INITIAL_SITE_SETTINGS.ownerName,
-      phone: siteData?.phone || INITIAL_SITE_SETTINGS.phone,
-      whatsapp: siteData?.whatsapp || INITIAL_SITE_SETTINGS.whatsapp,
-      email: siteData?.email || INITIAL_SITE_SETTINGS.email,
-      market: siteData?.market || INITIAL_SITE_SETTINGS.market,
-      currency: siteData?.currency || INITIAL_SITE_SETTINGS.currency,
-      shipping: {
-        minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Number(shipData.min_order_qty) : INITIAL_SITE_SETTINGS.shipping.minOrderQty,
-        maxOrderQty: shipData?.max_order_qty !== undefined && shipData?.max_order_qty !== null ? Number(shipData.max_order_qty) : INITIAL_SITE_SETTINGS.shipping.maxOrderQty,
-        baseDeliveryCharge: shipData?.base_delivery_charge !== undefined && shipData?.base_delivery_charge !== null ? Number(shipData.base_delivery_charge) : INITIAL_SITE_SETTINGS.shipping.baseDeliveryCharge,
-        freeDeliveryThreshold: shipData?.free_delivery_threshold !== undefined && shipData?.free_delivery_threshold !== null ? Number(shipData.free_delivery_threshold) : INITIAL_SITE_SETTINGS.shipping.freeDeliveryThreshold,
-      },
-      bankDetails: {
-        bankName: siteData?.bank_name || INITIAL_SITE_SETTINGS.bankDetails.bankName,
-        accountTitle: siteData?.account_title || INITIAL_SITE_SETTINGS.bankDetails.accountTitle,
-        accountNumber: siteData?.account_number || INITIAL_SITE_SETTINGS.bankDetails.accountNumber,
-        iban: siteData?.iban || INITIAL_SITE_SETTINGS.bankDetails.iban,
-        instructions: siteData?.bank_instructions || INITIAL_SITE_SETTINGS.bankDetails.instructions,
-      },
-      paymentMethods: siteData?.payment_methods || INITIAL_SITE_SETTINGS.paymentMethods,
-      announcementStrips: Array.isArray(siteData?.announcement_strips) && siteData.announcement_strips.length > 0
-        ? siteData.announcement_strips
-        : INITIAL_SITE_SETTINGS.announcementStrips,
-      isStoreOpen: siteData?.is_store_open ?? true,
-      isCodEnabled: siteData?.payment_methods?.cod?.enabled ?? siteData?.is_cod_enabled ?? true,
-      isBankTransferEnabled: siteData?.payment_methods?.bank_transfer?.enabled ?? siteData?.is_bank_transfer_enabled ?? true,
-      isAnnouncementEnabled: siteData?.is_announcement_enabled ?? true,
-      announcementText: siteData?.announcement_text || INITIAL_SITE_SETTINGS.announcementText,
-      exchangeReturnDays: siteData?.exchange_return_days ? Number(siteData.exchange_return_days) : 7,
-      isWhatsAppFloatingEnabled: siteData?.is_whatsapp_floating_enabled ?? true,
-    };
-
-    return NextResponse.json({ settings: mergedSettings });
+    return NextResponse.json(
+      { settings: mergedSettings },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (err: any) {
     console.error('API /api/admin/settings GET error:', err);
     return NextResponse.json({ settings: INITIAL_SITE_SETTINGS });
@@ -104,11 +71,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid settings body' }, { status: 400 });
     }
 
-    // 1. Update Shipping Settings
-    const minQty = Math.max(1, Number(body.shipping?.minOrderQty) || 1);
-    const maxQty = Math.max(minQty, Number(body.shipping?.maxOrderQty) || 100);
-    const baseFee = Math.max(0, Number(body.shipping?.baseDeliveryCharge) ?? 200);
-    const threshold = Math.max(1, Number(body.shipping?.freeDeliveryThreshold) || 3);
+    // 1. Update Shipping Settings using normalized bounds (preserves explicit 0 for disabled threshold or free standard charge)
+    const normalizedShipping = normalizeShippingSettings(body.shipping);
+    const minQty = normalizedShipping.minOrderQty;
+    const maxQty = normalizedShipping.maxOrderQty;
+    const baseFee = normalizedShipping.baseDeliveryCharge;
+    const threshold = normalizedShipping.freeDeliveryThreshold;
 
     // Get all existing shipping_settings rows
     const { data: existingShipRows } = await db.from('shipping_settings').select('id');
@@ -129,6 +97,10 @@ export async function POST(req: Request) {
 
     if (shipErr) {
       console.error('API /api/admin/settings shipping_settings update error:', shipErr);
+      return NextResponse.json(
+        { error: `Failed to save delivery settings: ${shipErr.message}` },
+        { status: 400 }
+      );
     }
 
     // If there were duplicate shipping_settings rows, update them as well or clean up

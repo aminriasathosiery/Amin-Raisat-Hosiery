@@ -48,9 +48,15 @@ interface StoreProviderProps {
   children: React.ReactNode;
   initialProducts?: Product[];
   initialHeroSlides?: HeroSlide[];
+  initialSettings?: SiteSettings;
 }
 
-export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialProducts, initialHeroSlides }) => {
+export const StoreProvider: React.FC<StoreProviderProps> = ({
+  children,
+  initialProducts,
+  initialHeroSlides,
+  initialSettings,
+}) => {
   const [products, setProducts] = useState<Product[]>(() => {
     if (initialProducts && initialProducts.length > 0) {
       return initialProducts;
@@ -59,7 +65,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
   });
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [subcategories, setSubcategories] = useState<Subcategory[]>(INITIAL_SUBCATEGORIES);
-  const [settings, setSettings] = useState<SiteSettings>(INITIAL_SITE_SETTINGS);
+  const [settings, setSettings] = useState<SiteSettings>(() => initialSettings || INITIAL_SITE_SETTINGS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
@@ -278,9 +284,40 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children, initialP
     await loadReviews();
   };
 
+  useEffect(() => {
+    if (initialSettings) {
+      setSettings(initialSettings);
+    }
+  }, [initialSettings]);
+
+  // Listen for live settings updates (cross-tab & same-tab)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleSettingsUpdated = () => {
+      DataStore.getSettings()
+        .then((fresh) => setSettings(fresh))
+        .catch(() => {});
+    };
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'arh_settings_v3' && e.newValue) {
+        try {
+          setSettings(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('arh_settings_updated', handleSettingsUpdated);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('arh_settings_updated', handleSettingsUpdated);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
   const updateSettings = async (newSettings: SiteSettings) => {
     await DataStore.updateSettings(newSettings);
     setSettings(newSettings);
+    const fresh = await DataStore.getSettings();
+    setSettings(fresh);
   };
 
   const createOrder = async (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => {

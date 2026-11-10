@@ -9,6 +9,7 @@ import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck } from 'lucide-reac
 import { createCartWhatsAppMessage, DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
 import { CartItem, ProductSize } from '@/types';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
 
@@ -39,7 +40,8 @@ export default function CartPage() {
   } = useCart();
   const { settings, products } = useStore();
 
-  const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const freeThreshold = shipping.freeDeliveryThreshold;
   const whatsappUrl = createCartWhatsAppMessage(items, subtotal, deliveryFee, totalAmount, settings?.whatsapp || DISPLAY_WHATSAPP_NUMBER);
 
   if (items.length === 0) {
@@ -84,26 +86,36 @@ export default function CartPage() {
                   <Truck className="w-4 h-4 text-[#C99A3D]" />
                   {isFreeDeliveryUnlocked ? (
                     <span className="text-[#2F7D5A] font-bold">
-                      ✓ 100% FREE DELIVERY UNLOCKED ({freeThreshold}+ Pieces)
+                      {freeThreshold > 0
+                        ? `✓ 100% FREE DELIVERY UNLOCKED (${freeThreshold}+ Pieces)`
+                        : '✓ 100% FREE DELIVERY UNLOCKED'}
                     </span>
-                  ) : (
+                  ) : freeThreshold > 0 ? (
                     <span className="text-[#66717C]">
                       Add <strong className="text-[#C99A3D]">{piecesNeededForFreeDelivery} more piece{piecesNeededForFreeDelivery > 1 ? 's' : ''}</strong> for Free Delivery
                     </span>
+                  ) : (
+                    <span className="text-[#66717C]">
+                      Standard Nationwide Delivery: <strong className="text-[#C99A3D]">Rs. {shipping.baseDeliveryCharge}</strong>
+                    </span>
                   )}
                 </span>
-                <span className="text-xs font-bold text-[#66717C]">
-                  {Math.min(totalQuantity, freeThreshold)}/{freeThreshold} pcs
-                </span>
+                {freeThreshold > 0 && (
+                  <span className="text-xs font-bold text-[#66717C]">
+                    {Math.min(totalQuantity, freeThreshold)}/{freeThreshold} pcs
+                  </span>
+                )}
               </div>
-              <div className="w-full bg-[#EEE8DC] rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-500 rounded-full ${
-                    isFreeDeliveryUnlocked ? 'bg-[#2F7D5A]' : 'bg-[#C99A3D]'
-                  }`}
-                  style={{ width: `${Math.min(100, (totalQuantity / freeThreshold) * 100)}%` }}
-                />
-              </div>
+              {freeThreshold > 0 && (
+                <div className="w-full bg-[#EEE8DC] rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      isFreeDeliveryUnlocked ? 'bg-[#2F7D5A]' : 'bg-[#C99A3D]'
+                    }`}
+                    style={{ width: `${Math.min(100, (totalQuantity / freeThreshold) * 100)}%` }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Item rows with In-Place Size & Quantity Editing */}

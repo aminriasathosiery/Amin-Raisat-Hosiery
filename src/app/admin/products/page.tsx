@@ -7,6 +7,12 @@ import { useStore } from '@/context/StoreContext';
 import { Product, ProductVariant, ProductMedia, ProductColor } from '@/types';
 import { calculateSalePrice, validateDiscountPercentage, resolveVariantPricing, formatPKR } from '@/lib/pricing';
 import {
+  getVariantComboKey,
+  validateVariantCombinations,
+  ensureUniqueVariantSkus,
+  normalizeVariantText,
+} from '@/lib/variants';
+import {
   Package,
   Plus,
   Trash2,
@@ -58,6 +64,7 @@ function AdminProductsContent() {
   const [viewMode, setViewMode] = useState<'list' | 'editor'>('list');
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isDuplicatingId, setIsDuplicatingId] = useState<string | null>(null);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
 
   // Notification Toast
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -337,6 +344,8 @@ function AdminProductsContent() {
   // ------------------ SAVE PRODUCT ------------------
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingProduct) return;
+
     if (!prodName.trim()) {
       showNotice('Please enter a Product Name.', 'error');
       setEditorTab('basic');
@@ -354,6 +363,21 @@ function AdminProductsContent() {
       showNotice('Please generate or add at least 1 variant for this product.', 'error');
       setEditorTab('variants');
       return;
+    }
+
+    // Validate unique normalized color names
+    const normalizedColors = prodColors
+      .map((c) => ({ ...c, name: normalizeVariantText(c.name) }))
+      .filter((c) => c.name.length > 0);
+    const seenColorSet = new Set<string>();
+    for (const col of normalizedColors) {
+      const lowerCol = col.name.toLowerCase();
+      if (seenColorSet.has(lowerCol)) {
+        showNotice(`Duplicate color "${col.name}" detected. Please rename or remove the duplicate color.`, 'error');
+        setEditorTab('variants');
+        return;
+      }
+      seenColorSet.add(lowerCol);
     }
 
     const currentId = editingProductId || `prod-${Date.now()}`;
@@ -384,22 +408,44 @@ function AdminProductsContent() {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
 
-    const cleanVariants: ProductVariant[] = variantsList.map((v, i) => {
+    const prodPrefix =
+      prodName
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 4) || 'ARH';
+
+    const preparedVariants: ProductVariant[] = variantsList.map((v, i) => {
       const pricing = resolveVariantPricing(v);
 
       return {
         ...v,
         id: v.id || `var-${currentId}-${i + 1}`,
         productId: currentId,
-        quality: v.quality || prodQualityGrade || 'High Quality',
-        color: v.color || undefined,
+        quality: normalizeVariantText(v.quality || prodQualityGrade || 'High Quality') || 'High Quality',
+        sleeve: normalizeVariantText(v.sleeve || 'Sleeveless') || 'Sleeveless',
+        size: normalizeVariantText(v.size || 'L') || 'L',
+        color: normalizeVariantText(v.color) || undefined,
         colorHex: v.colorHex || undefined,
         price: pricing.originalPrice,
         discountPercentage: pricing.discountPercentage,
         salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
-        stock: Number(v.stock) || 0,
+        stock: Math.max(0, Number(v.stock) || 0),
       };
     });
+
+    // Check duplicate color + size + style + quality combinations BEFORE submitting
+    const comboCheck = validateVariantCombinations(preparedVariants);
+    if (!comboCheck.valid) {
+      showNotice(comboCheck.error || 'Duplicate color and size combination. Please check your variants.', 'error');
+      setEditorTab('variants');
+      return;
+    }
+
+    const cleanVariants: ProductVariant[] = ensureUniqueVariantSkus(preparedVariants, prodPrefix);
 
     let cleanMedia: ProductMedia[] = mediaList.map((m, i) => ({
       ...m,
@@ -496,7 +542,7 @@ function AdminProductsContent() {
       shippingInfo: prodShippingText.trim(),
       returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
       isPublished: prodIsPublished,
-      colors: prodColors,
+      colors: normalizedColors,
       createdAt: editingProductId
         ? products.find((p) => p.id === editingProductId)?.createdAt || new Date().toISOString()
         : new Date().toISOString(),
@@ -505,12 +551,15 @@ function AdminProductsContent() {
     };
 
     try {
+      setIsSavingProduct(true);
       await saveProduct(productToSave);
       showNotice(`Successfully saved "${productToSave.name}" with ${cleanVariants.length} variants!`);
       setViewMode('list');
     } catch (err: any) {
       console.error(err);
       showNotice(err?.message || 'Failed to save product.', 'error');
+    } finally {
+      setIsSavingProduct(false);
     }
   };
 
@@ -586,11 +635,15 @@ function AdminProductsContent() {
 
   // ------------------ COLOR ACTIONS (DARAZ-STYLE COLOR VARIANT MANAGEMENT) ------------------
   const handleAddAnotherColor = (presetName?: string, presetHex?: string) => {
-    const name = presetName || `Color ${prodColors.length + 1}`;
+    const candidateName = normalizeVariantText(presetName) || `Color ${prodColors.length + 1}`;
+    if (prodColors.some((c) => normalizeVariantText(c.name).toLowerCase() === candidateName.toLowerCase())) {
+      showNotice(`Color "${candidateName}" is already added.`, 'error');
+      return;
+    }
     const hex = presetHex || '#FFFFFF';
     const newCol: ProductColor = {
       id: `col-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      name,
+      name: candidateName,
       hex,
       image: undefined,
       additionalImages: [],
@@ -742,29 +795,40 @@ function AdminProductsContent() {
     }
 
     const prodPrefix = (prodName.trim() || 'ARH')
-      .split(' ')
+      .split(/\s+/)
+      .filter(Boolean)
       .map((w) => w[0])
       .join('')
       .toUpperCase()
-      .slice(0, 4);
+      .slice(0, 4) || 'ARH';
 
     const generated: ProductVariant[] = [];
+    const seenKeys = new Set<string>();
     let count = 1;
     const activeColors = prodColors.filter((c) => c.isActive !== false);
+
+    // Map existing variants by normalized combo key so existing IDs, SKUs, prices, and stock are never lost
+    const existingByCombo = new Map<string, ProductVariant>();
+    for (const v of variantsList) {
+      existingByCombo.set(getVariantComboKey(v), v);
+    }
 
     for (const q of customQualities) {
       for (const st of customStyles) {
         for (const sz of customSizes) {
           if (activeColors.length > 0) {
             for (const col of activeColors) {
-              const qShort = q.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
-              const stShort = st.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
-              const colShort = col.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase();
+              const colClean = normalizeVariantText(col.name);
+              const comboKey = getVariantComboKey({ quality: q, sleeve: st, size: sz, color: colClean });
+              if (seenKeys.has(comboKey)) continue;
+              seenKeys.add(comboKey);
+
+              const qShort = q.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+              const stShort = st.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+              const colShort = colClean.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase();
               const skuCode = `${prodPrefix}-${colShort}-${qShort}-${stShort}-${sz}`;
 
-              const existing = variantsList.find(
-                (v) => v.color === col.name && v.quality === q && v.sleeve === st && v.size === sz
-              );
+              const existing = existingByCombo.get(comboKey);
 
               const retail = existing ? existing.price : genDefaultPrice;
               const discount = existing && existing.discountPercentage !== undefined
@@ -775,10 +839,10 @@ function AdminProductsContent() {
               generated.push({
                 id: existing ? existing.id : `var-gen-${Date.now()}-${count++}`,
                 productId: editingProductId || '',
-                quality: q,
-                sleeve: st,
-                size: sz,
-                color: col.name,
+                quality: q.trim(),
+                sleeve: st.trim(),
+                size: sz.trim(),
+                color: colClean,
                 colorHex: col.hex,
                 price: retail,
                 discountPercentage: discount,
@@ -789,13 +853,15 @@ function AdminProductsContent() {
               });
             }
           } else {
-            const qShort = q.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
-            const stShort = st.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+            const comboKey = getVariantComboKey({ quality: q, sleeve: st, size: sz });
+            if (seenKeys.has(comboKey)) continue;
+            seenKeys.add(comboKey);
+
+            const qShort = q.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+            const stShort = st.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 3);
             const skuCode = `${prodPrefix}-${qShort}-${stShort}-${sz}`;
 
-            const existing = variantsList.find(
-              (v) => !v.color && v.quality === q && v.sleeve === st && v.size === sz
-            );
+            const existing = existingByCombo.get(comboKey);
 
             const retail = existing ? existing.price : genDefaultPrice;
             const discount = existing && existing.discountPercentage !== undefined
@@ -806,9 +872,9 @@ function AdminProductsContent() {
             generated.push({
               id: existing ? existing.id : `var-gen-${Date.now()}-${count++}`,
               productId: editingProductId || '',
-              quality: q,
-              sleeve: st,
-              size: sz,
+              quality: q.trim(),
+              sleeve: st.trim(),
+              size: sz.trim(),
               price: retail,
               discountPercentage: discount,
               salePrice: sale,
@@ -821,8 +887,9 @@ function AdminProductsContent() {
       }
     }
 
-    setVariantsList(generated);
-    showNotice(`Generated matrix with ${generated.length} variant combinations!`);
+    const dedupedWithUniqueSkus = ensureUniqueVariantSkus(generated, prodPrefix);
+    setVariantsList(dedupedWithUniqueSkus);
+    showNotice(`Generated matrix with ${dedupedWithUniqueSkus.length} variant combinations!`);
   };
 
   // ------------------ BULK APPLY DISCOUNT TO MATRIX ------------------
@@ -850,33 +917,42 @@ function AdminProductsContent() {
 
   // ------------------ ADD SINGLE CUSTOM VARIANT ------------------
   const handleAddSingleVariant = () => {
-    const q = singleVarQuality || customQualities[0] || 'High Quality';
-    const st = singleVarStyle || customStyles[0] || 'Sleeveless';
-    const sz = singleVarSize || customSizes[0] || 'L';
+    const q = (singleVarQuality || customQualities[0] || 'High Quality').trim();
+    const st = (singleVarStyle || customStyles[0] || 'Sleeveless').trim();
+    const sz = (singleVarSize || customSizes[0] || 'L').trim();
+    const colName = normalizeVariantText(singleVarColor) || undefined;
+
+    const candidateComboKey = getVariantComboKey({ quality: q, sleeve: st, size: sz, color: colName });
+    if (variantsList.some((v) => getVariantComboKey(v) === candidateComboKey)) {
+      showNotice('Duplicate color and size combination. Please check your variants.', 'error');
+      return;
+    }
 
     const prodPrefix = (prodName.trim() || 'ARH')
-      .split(' ')
+      .split(/\s+/)
+      .filter(Boolean)
       .map((w) => w[0])
       .join('')
       .toUpperCase()
-      .slice(0, 4);
-    const qShort = q.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
-    const stShort = st.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 3);
-    const autoSku = singleVarSku.trim() || `${prodPrefix}-${qShort}-${stShort}-${sz}`;
+      .slice(0, 4) || 'ARH';
+    const qShort = q.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+    const stShort = st.split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 3);
+    const colShort = colName ? colName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4) : '';
+    const autoSku = singleVarSku.trim() || (colShort ? `${prodPrefix}-${colShort}-${qShort}-${stShort}-${sz}` : `${prodPrefix}-${qShort}-${stShort}-${sz}`);
 
     const retail = Number(singleVarPrice) || 480;
     const validated = validateDiscountPercentage(singleVarDiscount);
     const discount = validated.isValid ? validated.value : 0;
     const sale = discount > 0 ? calculateSalePrice(retail, discount) : retail;
 
-    const chosenColor = prodColors.find((c) => c.name === singleVarColor);
+    const chosenColor = prodColors.find((c) => normalizeVariantText(c.name).toLowerCase() === (colName || '').toLowerCase());
     const newVariant: ProductVariant = {
       id: `var-custom-${Date.now()}`,
       productId: editingProductId || '',
       quality: q,
       sleeve: st,
       size: sz,
-      color: singleVarColor || undefined,
+      color: colName,
       colorHex: chosenColor?.hex || undefined,
       price: retail,
       discountPercentage: discount,
@@ -886,9 +962,9 @@ function AdminProductsContent() {
       isAvailable: true,
     };
 
-    setVariantsList([...variantsList, newVariant]);
+    setVariantsList(ensureUniqueVariantSkus([...variantsList, newVariant], prodPrefix));
     setIsAddSingleVarOpen(false);
-    showNotice(`Added custom variant: ${singleVarColor ? `${singleVarColor} • ` : ''}${q} • ${st} • ${sz}`);
+    showNotice(`Added custom variant: ${colName ? `${colName} • ` : ''}${q} • ${st} • ${sz}`);
   };
 
   // ------------------ MATRIX ROW UPDATES ------------------
@@ -1290,10 +1366,11 @@ function AdminProductsContent() {
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-5 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-[0.99]"
+                disabled={isSavingProduct}
+                className="inline-flex items-center gap-2 px-5 py-2 bg-champagne-500 hover:bg-champagne-400 disabled:opacity-50 disabled:cursor-not-allowed text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-all active:scale-[0.99]"
               >
                 <Save className="w-4 h-4 stroke-[2.2]" />
-                <span>Save Product</span>
+                <span>{isSavingProduct ? 'Saving...' : 'Save Product'}</span>
               </button>
             </div>
           </div>

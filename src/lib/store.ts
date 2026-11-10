@@ -21,6 +21,7 @@ import {
 } from '@/data/initialData';
 import { supabaseBrowser, isSupabaseConfigured } from './supabase/client';
 import { resolveVariantPricing } from '@/lib/pricing';
+import { mapDatabaseSettings } from '@/lib/settingsServer';
 
 const LOCAL_STORAGE_KEYS = {
   PRODUCTS: 'arh_products_v6',
@@ -497,6 +498,7 @@ export class DataStore {
         const { data: prods, error } = await db
           .from('products')
           .select('*, product_variants(*), product_media(*)')
+          .order('sort_order', { ascending: true })
           .order('created_at', { ascending: false });
 
         if (!error && prods && prods.length > 0) {
@@ -520,10 +522,13 @@ export class DataStore {
               p.product_media?.find((m: any) => m.media_type === 'size_guide')?.url ||
               undefined,
             isPublished: p.is_published ?? true,
+            sortOrder: Number(p.sort_order) || 9999,
             createdAt: p.created_at,
             colors: Array.isArray(p.colors) ? p.colors : [],
             variants: Array.isArray(p.product_variants)
-              ? p.product_variants.map((v: any) => {
+              ? p.product_variants
+                  .filter((v: any) => v.is_archived !== true)
+                  .map((v: any) => {
                   const pricing = resolveVariantPricing(v);
                   return {
                     id: v.id,
@@ -735,24 +740,19 @@ export class DataStore {
 
   static async createOrder(orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>): Promise<Order> {
     if (this.isClient()) {
-      try {
-        const res = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData),
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.order) {
-            const existing = await this.getOrders();
-            const updated = [json.order, ...existing.filter((o) => o.id !== json.order.id)];
-            localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(updated));
-            return json.order;
-          }
-        }
-      } catch (err) {
-        console.warn('API /api/orders error, falling back to direct persistence:', err);
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.order) {
+        throw new Error(json?.error || 'Failed to place order. Please check your items and try again.');
       }
+      const existing = await this.getOrders();
+      const updated = [json.order, ...existing.filter((o) => o.id !== json.order.id)];
+      localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(updated));
+      return json.order;
     }
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -1167,7 +1167,7 @@ export class DataStore {
 
     if (this.isClient()) {
       try {
-        const res = await fetch('/api/admin/settings', { cache: 'no-store' });
+        const res = await fetch('/api/settings', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.settings) {
@@ -1179,43 +1179,20 @@ export class DataStore {
           }
         }
       } catch (err) {
-        console.warn('API /api/admin/settings fetch notice, using fallback:', err);
+        console.warn('API /api/settings fetch notice, using fallback:', err);
       }
     }
 
     if (isSupabaseConfigured()) {
       try {
         const db = supabaseBrowser;
-        const { data: siteData } = await db.from('site_settings').select('*').limit(1).single();
-        const { data: shipData } = await db.from('shipping_settings').select('*').limit(1).single();
+        const [siteRes, shipRes] = await Promise.all([
+          db.from('site_settings').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+          db.from('shipping_settings').select('*').order('updated_at', { ascending: false }).limit(1).maybeSingle(),
+        ]);
 
-        if (siteData || shipData) {
-          settings = {
-            ...INITIAL_SITE_SETTINGS,
-            brandName: siteData?.brand_name || INITIAL_SITE_SETTINGS.brandName,
-            ownerName: siteData?.owner_name || INITIAL_SITE_SETTINGS.ownerName,
-            phone: siteData?.phone || INITIAL_SITE_SETTINGS.phone,
-            whatsapp: siteData?.whatsapp || INITIAL_SITE_SETTINGS.whatsapp,
-            email: siteData?.email || INITIAL_SITE_SETTINGS.email,
-            market: siteData?.market || INITIAL_SITE_SETTINGS.market,
-            currency: siteData?.currency || INITIAL_SITE_SETTINGS.currency,
-            shipping: {
-              minOrderQty: shipData?.min_order_qty !== undefined && shipData?.min_order_qty !== null ? Math.max(1, Number(shipData.min_order_qty)) : 1,
-              maxOrderQty: shipData?.max_order_qty ?? INITIAL_SITE_SETTINGS.shipping.maxOrderQty,
-              baseDeliveryCharge: shipData ? Number(shipData.base_delivery_charge) : INITIAL_SITE_SETTINGS.shipping.baseDeliveryCharge,
-              freeDeliveryThreshold: shipData?.free_delivery_threshold ?? INITIAL_SITE_SETTINGS.shipping.freeDeliveryThreshold,
-            },
-            bankDetails: {
-              bankName: siteData?.bank_name || INITIAL_SITE_SETTINGS.bankDetails.bankName,
-              accountTitle: siteData?.account_title || INITIAL_SITE_SETTINGS.bankDetails.accountTitle,
-              accountNumber: siteData?.account_number || INITIAL_SITE_SETTINGS.bankDetails.accountNumber,
-              iban: siteData?.iban || INITIAL_SITE_SETTINGS.bankDetails.iban,
-            },
-            paymentMethods: siteData?.payment_methods || INITIAL_SITE_SETTINGS.paymentMethods,
-            announcementStrips: siteData?.announcement_strips || INITIAL_SITE_SETTINGS.announcementStrips,
-            isStoreOpen: siteData?.is_store_open ?? true,
-            announcementText: siteData?.announcement_text || INITIAL_SITE_SETTINGS.announcementText,
-          };
+        if (siteRes.data || shipRes.data) {
+          settings = mapDatabaseSettings(siteRes.data, shipRes.data);
         }
       } catch (err) {
         console.warn('Supabase settings fetch error', err);
@@ -1252,6 +1229,9 @@ export class DataStore {
           throw new Error(data.error || 'Failed to save settings to database');
         }
         localStorage.setItem(LOCAL_STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings || settings));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('arh_settings_updated'));
+        }
         return;
       } catch (err: any) {
         console.error('Store.updateSettings API error:', err);

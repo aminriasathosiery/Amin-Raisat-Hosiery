@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { INITIAL_SHIPPING_SETTINGS } from '@/data/initialData';
 import { resolveVariantPricing } from '@/lib/pricing';
+import { calculateOrderDelivery, normalizeShippingSettings } from '@/lib/delivery';
+import { fetchAuthoritativeSettings } from '@/lib/settingsServer';
 
 export async function POST(req: Request) {
   try {
@@ -43,23 +45,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Fetch live shipping settings from Supabase if configured
-    let minOrderQty = 1;
-    let baseDeliveryCharge = INITIAL_SHIPPING_SETTINGS.baseDeliveryCharge;
-    let freeDeliveryThreshold = INITIAL_SHIPPING_SETTINGS.freeDeliveryThreshold;
+    // 1. Fetch live authoritative shipping settings from Supabase (never trust client delivery fee/threshold)
+    let shipping = normalizeShippingSettings(INITIAL_SHIPPING_SETTINGS);
 
     if (isSupabaseConfigured()) {
       try {
-        const { data: shipData } = await supabaseServer
-          .from('shipping_settings')
-          .select('*')
-          .limit(1)
-          .single();
-
-        if (shipData) {
-          baseDeliveryCharge = Number(shipData.base_delivery_charge) || baseDeliveryCharge;
-          freeDeliveryThreshold = Number(shipData.free_delivery_threshold) || freeDeliveryThreshold;
-        }
+        const liveSettings = await fetchAuthoritativeSettings(supabaseServer);
+        shipping = normalizeShippingSettings(liveSettings.shipping);
       } catch (err) {
         console.warn('Could not fetch server shipping settings, using fallback', err);
       }
@@ -74,7 +66,7 @@ export async function POST(req: Request) {
           .from('product_variants')
           .select('*, products(id, name, slug)');
         if (variantsData && variantsData.length > 0) {
-          dbVariants = variantsData;
+          dbVariants = variantsData.filter((v: any) => v.is_archived !== true);
         }
       } catch (err) {
         console.warn('Could not fetch variants from Supabase:', err);
@@ -185,19 +177,26 @@ export async function POST(req: Request) {
       };
     });
 
-    // Authoritative physical piece count:
-    // Deals count piecesCount * quantity; Products count quantity.
-    const totalPhysicalPieces = verifiedItems.reduce((sum: number, it: any) => {
-      if (it.dealId) {
-        return sum + (it.quantity * (Number(it.piecesCount) || 1));
-      }
-      return sum + it.quantity;
-    }, 0);
+    // Authoritative physical piece count and delivery calculation via shared server/client engine.
+    // SECURITY: Server-calculated subtotal, physical pieces, and delivery fee prevent client tampering.
+    const deliveryCalc = calculateOrderDelivery(verifiedItems, shipping);
+    const totalPhysicalPieces = deliveryCalc.totalPhysicalPieces;
 
-    // Determine final delivery fee: Free delivery if any VERIFIED deal grants free delivery OR physical pieces >= freeDeliveryThreshold.
-    // SECURITY: Server-calculated delivery fee prevents client tampering.
-    const hasFreeDeliveryDeal = verifiedItems.some((it: any) => it.dealId && it.isFreeDelivery);
-    const deliveryFee = hasFreeDeliveryDeal || totalPhysicalPieces >= freeDeliveryThreshold ? 0 : baseDeliveryCharge;
+    if (totalPhysicalPieces < shipping.minOrderQty) {
+      return NextResponse.json(
+        { error: `Minimum order quantity is ${shipping.minOrderQty} piece${shipping.minOrderQty > 1 ? 's' : ''}.` },
+        { status: 400 }
+      );
+    }
+
+    if (totalPhysicalPieces > shipping.maxOrderQty) {
+      return NextResponse.json(
+        { error: `Maximum order limit is ${shipping.maxOrderQty} pieces per order.` },
+        { status: 400 }
+      );
+    }
+
+    const deliveryFee = deliveryCalc.deliveryFee;
     const totalAmount = subtotal + deliveryFee;
     const orderNumber = `ARH-${Date.now().toString().slice(-6)}`;
     let orderId = `ord-${Date.now()}`;
@@ -501,10 +500,12 @@ export async function GET(req: Request) {
             orderId: it.order_id,
             productId: it.product_id,
             variantId: it.variant_id,
-            productName: it.product_name,
+            productName: it.deal_name || it.product_name,
             quality: it.quality,
             sleeve: it.sleeve,
             size: it.size,
+            color: it.color || undefined,
+            colorHex: it.color_hex || undefined,
             unitPrice: Number(it.unit_price) || 0,
             quantity: Number(it.quantity) || 1,
             totalPrice: Number(it.total_price) || 0,

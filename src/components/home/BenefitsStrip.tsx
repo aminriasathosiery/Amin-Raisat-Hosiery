@@ -3,18 +3,29 @@
 import React from 'react';
 import { Truck, PackageCheck, RotateCcw } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 export const BenefitsStrip: React.FC = () => {
   const { settings } = useStore();
-  const freeThreshold = settings.shipping?.freeDeliveryThreshold ?? 3;
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const freeThreshold = shipping.freeDeliveryThreshold;
+  const baseDelivery = shipping.baseDeliveryCharge;
   const returnDays = settings.exchangeReturnDays ?? 7;
 
   const benefits = [
     {
       id: 'free-delivery',
       icon: Truck,
-      title: `FREE DELIVERY ON ${freeThreshold}+ PIECES`,
-      subtitle: 'Nationwide dispatch across Pakistan',
+      title:
+        freeThreshold > 0
+          ? `FREE DELIVERY ON ${freeThreshold}+ ${freeThreshold === 1 ? 'PIECE' : 'PIECES'}`
+          : baseDelivery === 0
+          ? 'FREE NATIONWIDE DELIVERY'
+          : `FLAT RS. ${baseDelivery} NATIONWIDE DELIVERY`,
+      subtitle:
+        freeThreshold > 0
+          ? `Flat Rs. ${baseDelivery} under ${freeThreshold} pcs • Nationwide dispatch`
+          : 'Nationwide dispatch across Pakistan',
     },
     {
       id: 'branded-packaging',

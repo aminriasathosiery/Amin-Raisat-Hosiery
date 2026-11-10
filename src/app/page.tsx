@@ -12,11 +12,34 @@ import { useStore } from '@/context/StoreContext';
 import { ArrowRight, ShoppingBag, PackageCheck } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
 import { getWhatsAppUrl, DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 export default function HomePage() {
   const { products, settings } = useStore();
   const activeProducts = products.filter((p) => p.isPublished);
   const homepageProducts = activeProducts.slice(0, 8);
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const freeThreshold = shipping.freeDeliveryThreshold;
+  const baseDelivery = shipping.baseDeliveryCharge;
+  const minQty = shipping.minOrderQty;
+
+  const deliveryHeadline =
+    freeThreshold > 0
+      ? `Free Nationwide Delivery on ${freeThreshold}+ ${freeThreshold === 1 ? 'Piece' : 'Pieces'} Across Pakistan.`
+      : baseDelivery === 0
+      ? 'Free Nationwide Delivery on Every Order Across Pakistan.'
+      : `Nationwide Doorstep Delivery for Rs. ${baseDelivery} Across Pakistan.`;
+
+  const deliverySubtext =
+    freeThreshold > 1
+      ? baseDelivery === 0
+        ? `Order from ${minQty} ${minQty === 1 ? 'piece' : 'pieces'} with nationwide delivery, plus Free Delivery on ${freeThreshold}+ pieces.`
+        : `Order below ${freeThreshold} pieces with standard Rs. ${baseDelivery} delivery, or get 100% Free Delivery on any ${freeThreshold} or more garments.`
+      : freeThreshold === 1
+      ? `Order from ${minQty} ${minQty === 1 ? 'piece' : 'pieces'} and get 100% Free Delivery across Pakistan.`
+      : baseDelivery === 0
+      ? `Order from ${minQty} ${minQty === 1 ? 'piece' : 'pieces'} with 100% Free Delivery across Pakistan.`
+      : `Order from ${minQty} ${minQty === 1 ? 'piece' : 'pieces'} with a flat Rs. ${baseDelivery} nationwide delivery fee.`;
 
   return (
     <div className="space-y-0 bg-[#F7F3EA] text-[#1D2730]">
@@ -34,13 +57,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-1 text-center sm:text-left">
             <span className="text-[11px] font-bold text-[#C99A3D] uppercase tracking-wider block">
-              Direct to Doorstep • 1 Piece Valid Order
+              Direct to Doorstep • {minQty} {minQty === 1 ? 'Piece' : 'Pieces'} Valid Order
             </span>
             <h3 className="text-xl sm:text-2xl font-extrabold text-[#1D2730]">
-              Free Nationwide Delivery on 3+ Pieces Across Pakistan.
+              {deliveryHeadline}
             </h3>
             <p className="text-xs sm:text-sm text-[#66717C]">
-              Order 1 or 2 pieces with standard Rs. 200 delivery, or get 100% Free Delivery on any 3 or more garments.
+              {deliverySubtext}
             </p>
           </div>
 

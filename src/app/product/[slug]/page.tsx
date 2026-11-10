@@ -10,6 +10,7 @@ import { ProductReviews } from '@/components/product/ProductReviews';
 import { SleeveType, ProductSize } from '@/types';
 import { ChevronRight, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -248,18 +249,31 @@ export default function ProductDetailPage() {
                   <span>Nationwide Pakistan Shipping &amp; Delivery</span>
                   {openSections.shipping ? <ChevronUp className="w-4 h-4 text-[#C99A3D]" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
-                {openSections.shipping && (
-                  <div className="pt-2 text-[#66717C] space-y-1.5 font-normal leading-relaxed">
-                    <p>{product.shippingInfo}</p>
-                    <p className="font-semibold text-[#1D2730]">
-                      • 1 piece is a valid order (Minimum order quantity is 1 piece).
-                    </p>
-                    <p className="font-semibold text-[#2F7D5A]">
-                      • 100% FREE DELIVERY on 3+ pieces across Pakistan (Standard Rs. {settings.shipping?.baseDeliveryCharge ?? 200} delivery fee for 1 or 2 pieces).
-                    </p>
-                    <p>• Cash on Delivery (COD) and Direct Bank Transfer available.</p>
-                  </div>
-                )}
+                {openSections.shipping && (() => {
+                  const shipping = normalizeShippingSettings(settings?.shipping);
+                  const freeThreshold = shipping.freeDeliveryThreshold;
+                  const baseDelivery = shipping.baseDeliveryCharge;
+                  const minOrder = shipping.minOrderQty;
+                  return (
+                    <div className="pt-2 text-[#66717C] space-y-1.5 font-normal leading-relaxed">
+                      <p>{product.shippingInfo}</p>
+                      <p className="font-semibold text-[#1D2730]">
+                        • {minOrder} {minOrder === 1 ? 'piece is a valid order' : 'pieces minimum order'} (Minimum order quantity is {minOrder}).
+                      </p>
+                      <p className="font-semibold text-[#2F7D5A]">
+                        {freeThreshold > 0 ? (
+                          <>
+                            • 100% FREE DELIVERY on {freeThreshold}+ pieces across Pakistan
+                            {freeThreshold > 1 ? ` (Standard Rs. ${baseDelivery} delivery fee below ${freeThreshold} pieces).` : '.'}
+                          </>
+                        ) : (
+                          <>• Flat Rs. {baseDelivery} nationwide delivery across Pakistan.</>
+                        )}
+                      </p>
+                      <p>• Cash on Delivery (COD) and Direct Bank Transfer available.</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* 5. Exchange & Return Policy */}

@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { Product, ProductVariant, ProductMedia } from '@/types';
 import { resolveVariantPricing } from '@/lib/pricing';
+import {
+  getVariantComboKey,
+  validateVariantCombinations,
+  ensureUniqueVariantSkus,
+  normalizeVariantText,
+} from '@/lib/variants';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -91,7 +97,9 @@ export async function GET(req: Request) {
         createdAt: p.created_at,
         colors: Array.isArray(p.colors) ? p.colors : [],
         variants: Array.isArray(p.product_variants)
-          ? p.product_variants.map((v: any) => {
+          ? p.product_variants
+              .filter((v: any) => v.is_archived !== true)
+              .map((v: any) => {
               const pricing = resolveVariantPricing(v);
               return {
                 id: v.id,
@@ -160,6 +168,43 @@ export async function POST(req: Request) {
     if (!isExisting && (!body.sizeGuideUrl || !body.sizeGuideUrl.trim())) {
       return NextResponse.json({ error: 'Size Guide image is required.' }, { status: 400 });
     }
+
+    // Validate color names upfront (case-insensitive uniqueness)
+    const normalizedColors = Array.isArray(body.colors)
+      ? body.colors.map((c) => ({ ...c, name: normalizeVariantText(c.name) })).filter((c) => c.name.length > 0)
+      : [];
+    const seenColorNames = new Set<string>();
+    for (const col of normalizedColors) {
+      const key = col.name.toLowerCase();
+      if (seenColorNames.has(key)) {
+        return NextResponse.json(
+          { error: `Duplicate color "${col.name}" found. Each product color must have a unique name.` },
+          { status: 400 }
+        );
+      }
+      seenColorNames.add(key);
+    }
+
+    // Validate variant combinations upfront BEFORE any DB mutation
+    const rawVariants = Array.isArray(body.variants) ? body.variants : [];
+    const normalizedIncomingVariants = rawVariants.map((v) => ({
+      ...v,
+      quality: normalizeVariantText(v.quality || 'High Quality') || 'High Quality',
+      sleeve: normalizeVariantText(v.sleeve || 'Sleeveless') || 'Sleeveless',
+      size: normalizeVariantText(v.size || 'L') || 'L',
+      color: normalizeVariantText(v.color) || undefined,
+    }));
+
+    const variantValidation = validateVariantCombinations(normalizedIncomingVariants);
+    if (!variantValidation.valid) {
+      return NextResponse.json(
+        { error: 'Duplicate color and size combination. Please check your variants.' },
+        { status: 400 }
+      );
+    }
+
+    const hasColorVariants =
+      normalizedColors.length > 0 || normalizedIncomingVariants.some((v) => Boolean(v.color));
 
     // 1. Resolve authoritative Product ID
     let productId = isExisting ? body.id : crypto.randomUUID();
@@ -232,7 +277,7 @@ export async function POST(req: Request) {
       care_instructions: body.careInstructions || [],
       shipping_info: body.shippingInfo || '',
       is_published: body.isPublished ?? true,
-      colors: Array.isArray(body.colors) ? body.colors : [],
+      colors: normalizedColors,
       updated_at: new Date().toISOString(),
     };
 
@@ -260,7 +305,23 @@ export async function POST(req: Request) {
     savedProd = res1.data;
     prodErr = res1.error;
 
-    if (prodErr && (prodErr.code === 'PGRST204' || prodErr.code === '42703' || prodErr.message?.includes('does not exist') || prodErr.message?.includes('colors'))) {
+    if (
+      prodErr &&
+      (prodErr.code === 'PGRST204' ||
+        prodErr.code === '42703' ||
+        prodErr.message?.includes('does not exist') ||
+        prodErr.message?.includes('colors'))
+    ) {
+      if (hasColorVariants && (prodErr.message?.includes('colors') || prodErr.message?.includes('product_variants'))) {
+        return NextResponse.json(
+          {
+            error:
+              'Database color variant schema migration is required before saving color variants. Please run supabase/migration_v12_atomic_variants_and_delivery.sql in Supabase SQL Editor. No existing variants were modified.',
+          },
+          { status: 400 }
+        );
+      }
+
       delete productPayload.short_description;
       delete productPayload.video_url;
       delete productPayload.size_guide_url;
@@ -279,10 +340,7 @@ export async function POST(req: Request) {
       console.error('FULL SUPABASE PRODUCT INSERT ERROR:', prodErr);
       return NextResponse.json(
         {
-          error: `Database Product Save Failed: ${prodErr?.message || 'Unknown DB error'}`,
-          code: prodErr?.code,
-          details: prodErr?.details,
-          hint: prodErr?.hint,
+          error: `Unable to save product details: ${prodErr?.message || 'Unknown database error'}`,
         },
         { status: 400 }
       );
@@ -290,59 +348,292 @@ export async function POST(req: Request) {
 
     const confirmedProdId = savedProd.id;
 
-    // 1. Manage Variants atomically
-    await adminDb.from('product_variants').delete().eq('product_id', confirmedProdId);
+    // Fetch existing variants first (NEVER blindly delete before validating/matching!)
+    const { data: existingVarsData, error: existingVarsErr } = await adminDb
+      .from('product_variants')
+      .select('*')
+      .eq('product_id', confirmedProdId);
+
+    if (existingVarsErr) {
+      return NextResponse.json(
+        { error: `Failed to inspect existing product variants: ${existingVarsErr.message}` },
+        { status: 400 }
+      );
+    }
+
+    const existingVars = existingVarsData || [];
+    const existingByCombo = new Map<string, any>();
+    for (const ev of existingVars) {
+      existingByCombo.set(getVariantComboKey(ev), ev);
+    }
+
+    // Fetch external SKUs to ensure newly created variants have unique SKUs across the catalog
+    const externalSkus = new Set<string>();
+    try {
+      const { data: otherSkus } = await adminDb
+        .from('product_variants')
+        .select('sku')
+        .neq('product_id', confirmedProdId)
+        .not('sku', 'is', null);
+      for (const row of otherSkus || []) {
+        if (row.sku && row.sku.trim()) {
+          externalSkus.add(row.sku.trim().toUpperCase());
+        }
+      }
+    } catch {}
+
+    // Pre-assign unique SKUs (keep existing product variant SKUs intact unless duplicate inside same product)
+    const prodPrefix =
+      body.name
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 4) || 'ARH';
+
+    // Only enforce external SKU collision check on genuinely new variants
+    const existingComboKeys = new Set(existingByCombo.keys());
+    const newOnlyExternalCheck = new Set<string>();
+    const preparedWithSkus = ensureUniqueVariantSkus(
+      normalizedIncomingVariants.map((v) => {
+        const comboKey = getVariantComboKey(v);
+        const isMatchedExisting = existingComboKeys.has(comboKey);
+        let sku = (v.sku || '').trim();
+        if (!isMatchedExisting && sku && externalSkus.has(sku.toUpperCase())) {
+          // Ensure genuinely new variant SKU does not collide with another product
+          let candidate = `${sku}-${prodPrefix}`.slice(0, 40);
+          let n = 2;
+          while (externalSkus.has(candidate.toUpperCase()) || newOnlyExternalCheck.has(candidate.toUpperCase())) {
+            candidate = `${sku}-${n}`;
+            n++;
+          }
+          newOnlyExternalCheck.add(candidate.toUpperCase());
+          sku = candidate;
+        }
+        return { ...v, sku };
+      }),
+      prodPrefix
+    );
+
+    const variantsPayload = preparedWithSkus.map((v) => {
+      const pricing = resolveVariantPricing(v);
+      const comboKey = getVariantComboKey(v);
+      const existingMatch = existingByCombo.get(comboKey);
+      return {
+        id: existingMatch?.id || (isUuid(v.id) ? v.id : crypto.randomUUID()),
+        product_id: confirmedProdId,
+        quality: v.quality,
+        sleeve: v.sleeve,
+        size: v.size,
+        color: v.color || null,
+        color_hex: v.colorHex || null,
+        price: pricing.originalPrice,
+        sale_price: pricing.isOnSale ? pricing.salePrice : null,
+        discount_percentage: pricing.discountPercentage,
+        stock: Math.max(0, Number(v.stock) || 0),
+        sku: v.sku || '',
+        is_available: v.isAvailable ?? true,
+        updated_at: new Date().toISOString(),
+      };
+    });
 
     let savedVariants: any[] = [];
-    if (body.variants && body.variants.length > 0) {
-      const variantsPayload = body.variants.map((v) => {
-        const pricing = resolveVariantPricing(v);
-        return {
-          id: isUuid(v.id) ? v.id : crypto.randomUUID(),
-          product_id: confirmedProdId,
-          quality: v.quality || 'High Quality',
-          sleeve: v.sleeve || 'Sleeveless',
-          size: v.size || 'L',
-          color: v.color || null,
-          color_hex: v.colorHex || null,
-          price: pricing.originalPrice,
-          sale_price: pricing.isOnSale ? pricing.salePrice : null,
-          discount_percentage: pricing.discountPercentage,
-          stock: Number(v.stock) || 0,
-          sku: v.sku || '',
-          is_available: v.isAvailable ?? true,
-          updated_at: new Date().toISOString(),
-        };
+    if (variantsPayload.length > 0) {
+      // First attempt atomic PostgreSQL transaction via RPC if deployed
+      const { data: rpcVars, error: rpcErr } = await adminDb.rpc('sync_product_variants_atomic', {
+        p_product_id: confirmedProdId,
+        p_variants: variantsPayload,
       });
 
-      let { data: insertedVars, error: varErr } = await adminDb
-        .from('product_variants')
-        .insert(variantsPayload)
-        .select();
+      const rpcUnavailable =
+        rpcErr &&
+        (rpcErr.code === 'PGRST202' ||
+          rpcErr.code === '42883' ||
+          rpcErr.message?.includes('Could not find the function') ||
+          rpcErr.message?.includes('does not exist'));
 
-      if (varErr && (varErr.message?.includes('color') || varErr.message?.includes('discount_percentage') || varErr.code === '42703')) {
-        const fallbackPayload = variantsPayload.map(({ color, color_hex, discount_percentage, ...rest }) => rest);
-        const retryRes = await adminDb
-          .from('product_variants')
-          .insert(fallbackPayload)
-          .select();
-        insertedVars = retryRes.data;
-        varErr = retryRes.error;
-      }
-
-      if (varErr) {
-        console.error('FULL SUPABASE VARIANT INSERT ERROR:', varErr);
+      if (!rpcErr && Array.isArray(rpcVars)) {
+        savedVariants = rpcVars;
+      } else if (rpcErr && !rpcUnavailable) {
+        console.error('FULL SUPABASE ATOMIC VARIANT SYNC ERROR:', rpcErr);
+        const isDuplicate =
+          rpcErr.code === '23505' ||
+          rpcErr.message?.toLowerCase().includes('duplicate') ||
+          rpcErr.message?.includes('unique_variant');
         return NextResponse.json(
           {
-            error: `Database Variant Save Failed: ${varErr.message}`,
-            code: varErr.code,
-            details: varErr.details,
-            hint: varErr.hint,
+            error: isDuplicate
+              ? 'Duplicate color and size combination. Please check your variants.'
+              : `Unable to save variants: ${rpcErr.message}`,
           },
           { status: 400 }
         );
+      } else {
+        // Safe Idempotent TypeScript Fallback (No destructive delete-all before upsert!)
+        const matchedExistingIds = new Set<string>();
+        const toUpdate: any[] = [];
+        const toInsert: any[] = [];
+
+        for (const row of variantsPayload) {
+          const comboKey = getVariantComboKey(row);
+          const existingMatch = existingByCombo.get(comboKey);
+          if (existingMatch) {
+            matchedExistingIds.add(existingMatch.id);
+            toUpdate.push({
+              ...row,
+              id: existingMatch.id,
+            });
+          } else {
+            // Avoid colliding with an unremoved existing row ID
+            const safeId = existingVars.some((ev) => ev.id === row.id) ? crypto.randomUUID() : row.id;
+            toInsert.push({ ...row, id: safeId });
+          }
+        }
+
+        const removedIds = existingVars
+          .filter((ev) => !matchedExistingIds.has(ev.id))
+          .map((ev) => ev.id);
+
+        // 1. Update matched existing variants in-place (preserving exact variant IDs & order_items refs)
+        for (const upd of toUpdate) {
+          let { data: uData, error: uErr } = await adminDb
+            .from('product_variants')
+            .update({
+              quality: upd.quality,
+              sleeve: upd.sleeve,
+              size: upd.size,
+              color: upd.color,
+              color_hex: upd.color_hex,
+              price: upd.price,
+              sale_price: upd.sale_price,
+              discount_percentage: upd.discount_percentage,
+              stock: upd.stock,
+              sku: upd.sku,
+              is_available: upd.is_available,
+              updated_at: upd.updated_at,
+            })
+            .eq('id', upd.id)
+            .select()
+            .single();
+
+          if (
+            uErr &&
+            !hasColorVariants &&
+            (uErr.code === '42703' || uErr.code === 'PGRST204' || uErr.message?.includes('color'))
+          ) {
+            const { color: _c, color_hex: _ch, ...restUpd } = upd;
+            const retryUpd = await adminDb
+              .from('product_variants')
+              .update({
+                quality: restUpd.quality,
+                sleeve: restUpd.sleeve,
+                size: restUpd.size,
+                price: restUpd.price,
+                sale_price: restUpd.sale_price,
+                discount_percentage: restUpd.discount_percentage,
+                stock: restUpd.stock,
+                sku: restUpd.sku,
+                is_available: restUpd.is_available,
+                updated_at: restUpd.updated_at,
+              })
+              .eq('id', upd.id)
+              .select()
+              .single();
+            uData = retryUpd.data;
+            uErr = retryUpd.error;
+          }
+
+          if (uErr) {
+            console.error('Variant update error:', uErr);
+            const missingColorSchema =
+              hasColorVariants && (uErr.code === '42703' || uErr.code === 'PGRST204' || uErr.message?.includes('color'));
+            return NextResponse.json(
+              {
+                error: missingColorSchema
+                  ? 'Database color variant columns are missing. Please run supabase/migration_v12_atomic_variants_and_delivery.sql in Supabase SQL Editor.'
+                  : 'Unable to update product variants. Duplicate color and size combinations are not allowed.',
+              },
+              { status: 400 }
+            );
+          }
+          if (uData) savedVariants.push(uData);
+        }
+
+        // 2. Safely handle removed variants: archive if referenced by historical orders, delete if unreferenced
+        if (removedIds.length > 0) {
+          let referencedSet = new Set<string>();
+          try {
+            const { data: refRows } = await adminDb
+              .from('order_items')
+              .select('variant_id')
+              .in('variant_id', removedIds);
+            for (const r of refRows || []) {
+              if (r.variant_id) referencedSet.add(r.variant_id);
+            }
+          } catch {}
+
+          const referencedRemoved = removedIds.filter((id) => referencedSet.has(id));
+          const unreferencedRemoved = removedIds.filter((id) => !referencedSet.has(id));
+
+          if (referencedRemoved.length > 0) {
+            await adminDb
+              .from('product_variants')
+              .update({
+                is_available: false,
+                stock: 0,
+                updated_at: new Date().toISOString(),
+              })
+              .in('id', referencedRemoved);
+          }
+
+          if (unreferencedRemoved.length > 0) {
+            await adminDb.from('product_variants').delete().in('id', unreferencedRemoved);
+          }
+        }
+
+        // 3. Insert genuinely new combinations
+        if (toInsert.length > 0) {
+          let { data: insertedVars, error: insErr } = await adminDb
+            .from('product_variants')
+            .insert(toInsert)
+            .select();
+
+          if (
+            insErr &&
+            !hasColorVariants &&
+            (insErr.code === '42703' || insErr.code === 'PGRST204' || insErr.message?.includes('color'))
+          ) {
+            const fallbackIns = toInsert.map(({ color: _c, color_hex: _ch, ...rest }) => rest);
+            const retryIns = await adminDb.from('product_variants').insert(fallbackIns).select();
+            insertedVars = retryIns.data;
+            insErr = retryIns.error;
+          }
+
+          if (insErr) {
+            console.error('FULL SUPABASE VARIANT INSERT ERROR:', insErr);
+            const missingColorSchema =
+              hasColorVariants && (insErr.code === '42703' || insErr.code === 'PGRST204' || insErr.message?.includes('color'));
+            const isDuplicate =
+              insErr.code === '23505' ||
+              insErr.message?.toLowerCase().includes('duplicate') ||
+              insErr.message?.includes('unique_variant');
+
+            return NextResponse.json(
+              {
+                error: missingColorSchema
+                  ? 'Database color variant columns are missing. Please run supabase/migration_v12_atomic_variants_and_delivery.sql in Supabase SQL Editor before saving color variants.'
+                  : isDuplicate
+                  ? 'Duplicate color and size combination. Please check your variants.'
+                  : `Unable to save variants: ${insErr.message}`,
+              },
+              { status: 400 }
+            );
+          }
+          if (insertedVars) savedVariants.push(...insertedVars);
+        }
       }
-      savedVariants = insertedVars || [];
     }
 
     // 2. Manage Media atomically
@@ -442,6 +733,7 @@ export async function POST(req: Request) {
       sizeGuideUrl: savedProd?.size_guide_url || body.sizeGuideUrl || undefined,
       isPublished: savedProd.is_published,
       createdAt: savedProd.created_at,
+      colors: Array.isArray(savedProd.colors) ? savedProd.colors : normalizedColors,
       variants: savedVariants.map((v: any) => {
         const pricing = resolveVariantPricing(v);
         return {
@@ -450,6 +742,8 @@ export async function POST(req: Request) {
           quality: v.quality,
           sleeve: v.sleeve,
           size: v.size,
+          color: v.color || undefined,
+          colorHex: v.color_hex || undefined,
           price: pricing.originalPrice,
           discountPercentage: pricing.discountPercentage,
           salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
@@ -470,6 +764,7 @@ export async function POST(req: Request) {
           displayOrder: m.display_order || 0,
           variantQuality: m.variant_quality || undefined,
           variantSleeve: m.variant_sleeve || undefined,
+          color: m.color || undefined,
         })),
     };
 

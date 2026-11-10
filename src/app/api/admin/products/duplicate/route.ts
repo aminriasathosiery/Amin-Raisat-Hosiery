@@ -93,6 +93,7 @@ export async function POST(req: Request) {
       care_instructions: original.care_instructions || [],
       shipping_info: original.shipping_info || '',
       is_published: true,
+      colors: Array.isArray(original.colors) ? original.colors : [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -118,6 +119,7 @@ export async function POST(req: Request) {
       delete duplicatePayload.short_description;
       delete duplicatePayload.video_url;
       delete duplicatePayload.size_guide_url;
+      delete duplicatePayload.colors;
 
       const retryRes = await db
         .from('products')
@@ -133,21 +135,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: prodErr?.message || 'Failed to clone product' }, { status: 500 });
     }
 
-    // 4. Duplicate Variants
-    const originalVariants = original.product_variants || [];
-    const duplicateVariantsPayload = originalVariants.map((v: any) => {
+    // 4. Duplicate Variants with guaranteed unique SKUs
+    const originalVariants = (original.product_variants || []).filter((v: any) => v.is_archived !== true);
+    const { data: allExistingSkus } = await db.from('product_variants').select('sku').not('sku', 'is', null);
+    const usedSkus = new Set<string>(
+      (allExistingSkus || []).map((r: any) => (r.sku || '').trim().toUpperCase()).filter(Boolean)
+    );
+    const shortCopyTag = newProductId.slice(0, 4).toUpperCase();
+
+    const duplicateVariantsPayload = originalVariants.map((v: any, idx: number) => {
       const pricing = resolveVariantPricing(v);
+      let candidateSku = v.sku ? `${v.sku.replace(/-COPY.*$/i, '')}-${shortCopyTag}` : `ARH-${shortCopyTag}-${idx + 1}`;
+      let counterSuffix = 2;
+      while (usedSkus.has(candidateSku.toUpperCase())) {
+        candidateSku = `${v.sku || 'ARH'}-${shortCopyTag}-${counterSuffix}`;
+        counterSuffix++;
+      }
+      usedSkus.add(candidateSku.toUpperCase());
+
       return {
         id: crypto.randomUUID(),
         product_id: newProductId,
         quality: v.quality,
         sleeve: v.sleeve,
         size: v.size,
+        color: v.color || null,
+        color_hex: v.color_hex || null,
         price: pricing.originalPrice,
         sale_price: pricing.isOnSale ? pricing.salePrice : null,
         discount_percentage: pricing.discountPercentage,
         stock: v.stock,
-        sku: v.sku ? `${v.sku}-COPY` : null,
+        sku: candidateSku,
         is_available: v.is_available ?? true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -161,8 +179,8 @@ export async function POST(req: Request) {
         .insert(duplicateVariantsPayload)
         .select();
 
-      if (vErr && (vErr.message?.includes('discount_percentage') || vErr.code === '42703')) {
-        const fallbackPayload = duplicateVariantsPayload.map(({ discount_percentage: _dp, ...rest }: any) => rest);
+      if (vErr && (vErr.message?.includes('color') || vErr.message?.includes('discount_percentage') || vErr.code === '42703')) {
+        const fallbackPayload = duplicateVariantsPayload.map(({ color: _c, color_hex: _ch, discount_percentage: _dp, ...rest }: any) => rest);
         const retryRes = await db
           .from('product_variants')
           .insert(fallbackPayload)
@@ -190,15 +208,23 @@ export async function POST(req: Request) {
       display_order: m.display_order || 0,
       variant_quality: m.variant_quality || null,
       variant_sleeve: m.variant_sleeve || null,
+      color: m.color || null,
       created_at: new Date().toISOString(),
     }));
 
     let insertedMedia: any[] = [];
     if (duplicateMediaPayload.length > 0) {
-      const { data: mData, error: mErr } = await db
+      let { data: mData, error: mErr } = await db
         .from('product_media')
         .insert(duplicateMediaPayload)
         .select();
+
+      if (mErr && (mErr.message?.includes('color') || mErr.code === '42703')) {
+        const fallbackMedia = duplicateMediaPayload.map(({ color: _c, ...rest }: any) => rest);
+        const retryM = await db.from('product_media').insert(fallbackMedia).select();
+        mData = retryM.data;
+        mErr = retryM.error;
+      }
 
       if (mErr) {
         console.error('Failed to clone product media:', mErr);
@@ -226,6 +252,7 @@ export async function POST(req: Request) {
       sizeGuideUrl: insertedProduct.size_guide_url || original.size_guide_url || originalMedia.find((m: any) => m.media_type === 'size_guide')?.url || undefined,
       isPublished: true,
       createdAt: insertedProduct.created_at,
+      colors: Array.isArray(insertedProduct.colors) ? insertedProduct.colors : (Array.isArray(original.colors) ? original.colors : []),
       variants: insertedVariants.map((v: any) => {
         const pricing = resolveVariantPricing(v);
         return {
@@ -234,6 +261,8 @@ export async function POST(req: Request) {
           quality: v.quality,
           sleeve: v.sleeve,
           size: v.size,
+          color: v.color || undefined,
+          colorHex: v.color_hex || undefined,
           price: pricing.originalPrice,
           discountPercentage: pricing.discountPercentage,
           salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
@@ -245,16 +274,17 @@ export async function POST(req: Request) {
       media: insertedMedia
         .filter((m: any) => m.media_type !== 'size_guide' && m.media_type !== 'video')
         .map((m: any) => ({
-        id: m.id,
-        productId: newProductId,
-        type: m.media_type || 'photo',
-        url: m.url,
-        alt: m.alt_text || '',
-        title: m.title || '',
-        displayOrder: m.display_order || 0,
-        variantQuality: m.variant_quality || undefined,
-        variantSleeve: m.variant_sleeve || undefined,
-      })),
+          id: m.id,
+          productId: newProductId,
+          type: m.media_type || 'photo',
+          url: m.url,
+          alt: m.alt_text || '',
+          title: m.title || '',
+          displayOrder: m.display_order || 0,
+          variantQuality: m.variant_quality || undefined,
+          variantSleeve: m.variant_sleeve || undefined,
+          color: m.color || undefined,
+        })),
     };
 
     return NextResponse.json({

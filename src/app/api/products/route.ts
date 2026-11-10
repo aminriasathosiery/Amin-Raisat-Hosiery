@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, isSupabaseConfigured } from '@/lib/supabase';
 import { INITIAL_CATEGORIES, INITIAL_SITE_SETTINGS } from '@/data/initialData';
 import { resolveVariantPricing } from '@/lib/pricing';
+import { fetchAuthoritativeSettings } from '@/lib/settingsServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -9,9 +10,10 @@ export const revalidate = 0;
 export async function GET() {
   if (isSupabaseConfigured()) {
     try {
-      const [{ data: products }, { data: categories }] = await Promise.all([
+      const [{ data: products }, { data: categories }, liveSettings] = await Promise.all([
         supabaseServer.from('products').select('*, product_variants(*), product_media(*)').eq('is_published', true).order('sort_order', { ascending: true }),
         supabaseServer.from('categories').select('*, subcategories(*)').eq('is_active', true),
+        fetchAuthoritativeSettings(supabaseServer).catch(() => INITIAL_SITE_SETTINGS),
       ]);
 
       if (Array.isArray(products)) {
@@ -38,23 +40,28 @@ export async function GET() {
             isPublished: p.is_published ?? true,
             sortOrder: Number(p.sort_order) || 9999,
             createdAt: p.created_at,
+            colors: Array.isArray(p.colors) ? p.colors : [],
             variants: Array.isArray(p.product_variants)
-              ? p.product_variants.map((v: any) => {
-                  const pricing = resolveVariantPricing(v);
-                  return {
-                    id: v.id,
-                    productId: v.product_id,
-                    quality: v.quality,
-                    sleeve: v.sleeve,
-                    size: v.size,
-                    price: pricing.originalPrice,
-                    discountPercentage: pricing.discountPercentage,
-                    salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
-                    stock: Number(v.stock) || 0,
-                    sku: v.sku || '',
-                    isAvailable: v.is_available ?? true,
-                  };
-                })
+              ? p.product_variants
+                  .filter((v: any) => v.is_archived !== true)
+                  .map((v: any) => {
+                    const pricing = resolveVariantPricing(v);
+                    return {
+                      id: v.id,
+                      productId: v.product_id,
+                      quality: v.quality,
+                      sleeve: v.sleeve,
+                      size: v.size,
+                      color: v.color || undefined,
+                      colorHex: v.color_hex || undefined,
+                      price: pricing.originalPrice,
+                      discountPercentage: pricing.discountPercentage,
+                      salePrice: pricing.isOnSale ? pricing.salePrice : pricing.originalPrice,
+                      stock: Number(v.stock) || 0,
+                      sku: v.sku || '',
+                      isAvailable: v.is_available ?? true,
+                    };
+                  })
               : [],
             media: mediaList
               .filter((m: any) => m.media_type !== 'size_guide' && m.media_type !== 'video')
@@ -69,6 +76,7 @@ export async function GET() {
                 displayOrder: m.display_order || 0,
                 variantQuality: m.variant_quality || undefined,
                 variantSleeve: m.variant_sleeve || undefined,
+                color: m.color || undefined,
               })),
           };
         });
@@ -76,7 +84,7 @@ export async function GET() {
         return NextResponse.json({
           products: formatted,
           categories: categories || INITIAL_CATEGORIES,
-          settings: INITIAL_SITE_SETTINGS,
+          settings: liveSettings,
         });
       }
     } catch (err) {

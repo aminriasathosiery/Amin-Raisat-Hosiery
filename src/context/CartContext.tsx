@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { CartItem, DealCartItem, ProductCartItem } from '@/types';
 import { useStore } from './StoreContext';
+import { calculateOrderDelivery } from '@/lib/delivery';
 
 // Type guards
 function isDealCartItem(item: CartItem): item is DealCartItem {
@@ -72,7 +73,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isDealCartItem(item)) {
       id = `buynow_deal_${item.dealId}`;
     } else if (isProductCartItem(item)) {
-      id = `buynow_${item.productId}_${item.quality}_${item.sleeve}_${item.size}`;
+      id = `buynow_${item.productId}_${item.quality}_${item.sleeve}_${item.color || ''}_${item.size}`;
     } else {
       id = `buynow_${Date.now()}`;
     }
@@ -259,27 +260,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setItems([]);
   };
 
-  // Authoritative physical pieces count: Deals count piecesCount * quantity; Products count quantity
-  const totalPhysicalPieces = items.reduce((sum, item) => {
-    if (isDealCartItem(item)) {
-      return sum + (item.quantity * (item.piecesCount || 1));
-    }
-    return sum + item.quantity;
-  }, 0);
-  const totalQuantity = totalPhysicalPieces;
+  // Authoritative physical pieces count and delivery calculation via shared calculator
+  const deliveryCalc = calculateOrderDelivery(items, settings.shipping);
+  const totalQuantity = deliveryCalc.totalPhysicalPieces;
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-
-  // Delivery fee rules:
-  // If any deal has isFreeDelivery = true -> Free Delivery (Rs. 0)
-  // Else if totalPhysicalPieces >= freeDeliveryThreshold -> Free Delivery (Rs. 0)
-  // Else if totalPhysicalPieces > 0 & < freeDeliveryThreshold -> Base Delivery Charge (Rs. 200)
-  const hasFreeDeliveryDeal = items.some(item => isDealCartItem(item) && item.isFreeDelivery);
-  const freeThreshold = settings.shipping?.freeDeliveryThreshold || 3;
-  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalPhysicalPieces >= freeThreshold;
-  const deliveryFee =
-    totalPhysicalPieces === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : (settings.shipping?.baseDeliveryCharge ?? 200);
+  const isFreeDeliveryUnlocked = deliveryCalc.isFreeDeliveryUnlocked;
+  const deliveryFee = deliveryCalc.deliveryFee;
   const totalAmount = subtotal + deliveryFee;
-  const piecesNeededForFreeDelivery = hasFreeDeliveryDeal ? 0 : Math.max(0, freeThreshold - totalPhysicalPieces);
+  const piecesNeededForFreeDelivery = deliveryCalc.piecesNeededForFreeDelivery;
 
   return (
     <CartContext.Provider

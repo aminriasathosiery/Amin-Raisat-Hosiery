@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { PaymentMethodType, ProductSize } from '@/types';
+import { calculateOrderDelivery, normalizeShippingSettings } from '@/lib/delivery';
 import {
   ArrowLeft,
   Lock,
@@ -79,24 +80,17 @@ export default function CheckoutPage() {
   const isBuyNow = isBuyNowParam && Boolean(buyNowItem);
   const items = isBuyNow && buyNowItem ? [buyNowItem] : cartItems;
 
-  const totalPhysicalPieces = items.reduce((sum, it) => {
-    if (it.type === 'deal') {
-      return sum + (it.quantity * (it.piecesCount || 1));
-    }
-    return sum + it.quantity;
-  }, 0);
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const deliveryCalc = calculateOrderDelivery(items, shipping);
+  const totalPhysicalPieces = deliveryCalc.totalPhysicalPieces;
   const totalQuantity = totalPhysicalPieces;
   const subtotal = isBuyNow && buyNowItem ? buyNowItem.unitPrice * buyNowItem.quantity : cartSubtotal;
 
-  const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
-  const baseDeliveryCharge = settings.shipping?.baseDeliveryCharge ?? 200;
-
-  // Check if any deal has free delivery
-  const hasFreeDeliveryDeal = items.some((it) => it.type === 'deal' && it.isFreeDelivery);
-  const isFreeDeliveryUnlocked = hasFreeDeliveryDeal || totalPhysicalPieces >= freeDeliveryThreshold;
-  const deliveryFee = totalPhysicalPieces === 0 ? 0 : isFreeDeliveryUnlocked ? 0 : baseDeliveryCharge;
+  const freeDeliveryThreshold = deliveryCalc.freeDeliveryThreshold;
+  const isFreeDeliveryUnlocked = deliveryCalc.isFreeDeliveryUnlocked;
+  const deliveryFee = deliveryCalc.deliveryFee;
   const totalAmount = subtotal + deliveryFee;
-  const piecesNeededForFree = hasFreeDeliveryDeal ? 0 : Math.max(0, freeDeliveryThreshold - totalPhysicalPieces);
+  const piecesNeededForFree = deliveryCalc.piecesNeededForFreeDelivery;
 
   const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState('');
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState('');
@@ -244,7 +238,7 @@ export default function CheckoutPage() {
       router.push(`/order-confirmation/${createdOrder.id}`);
     } catch (err: any) {
       console.error('Checkout error:', err);
-      setErrorMsg('Something went wrong placing your order. Please try again.');
+      setErrorMsg(err?.message || 'Something went wrong placing your order. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -938,7 +932,9 @@ export default function CheckoutPage() {
                     <span>
                       {isFreeDeliveryUnlocked
                         ? '✓ Free Nationwide Delivery Unlocked!'
-                        : `Add ${piecesNeededForFree} more piece${piecesNeededForFree > 1 ? 's' : ''} for FREE delivery`}
+                        : freeDeliveryThreshold > 0
+                        ? `Add ${piecesNeededForFree} more piece${piecesNeededForFree > 1 ? 's' : ''} for FREE delivery`
+                        : `Standard Nationwide Delivery: Rs. ${shipping.baseDeliveryCharge}`}
                     </span>
                   </div>
                 </div>
