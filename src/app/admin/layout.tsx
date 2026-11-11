@@ -19,12 +19,10 @@ import {
   X,
   Users,
 } from 'lucide-react';
-import { useStore } from '@/context/StoreContext';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { loadOrders } = useStore();
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -42,7 +40,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         if (!isMounted) return;
         if (data && data.authenticated) {
           setIsAuthenticated(true);
-          loadOrders();
         } else {
           setIsAuthenticated(false);
           router.push('/admin/login');
@@ -57,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [pathname, router, loadOrders]);
+  }, [pathname, router]);
 
   const handleLogout = async () => {
     try {

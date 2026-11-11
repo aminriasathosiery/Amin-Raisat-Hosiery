@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
@@ -13,6 +13,11 @@ export default function CategoryPage() {
   const { categories, subcategories: allSubcategories, products } = useStore();
 
   const [activeSubcatSlug, setActiveSubcatSlug] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('featured');
+
+  useEffect(() => {
+    setActiveSubcatSlug('all');
+  }, [slug]);
 
   const currentCategory = categories.find(
     (c) => c.slug?.toLowerCase() === slug?.toLowerCase() || c.id === slug
@@ -26,22 +31,41 @@ export default function CategoryPage() {
       );
 
   // Filter products by category and active subcategory tab
-  const categoryProducts = products.filter((p) => {
-    if (!currentCategory) return false;
-    if (!p.isPublished) return false;
+  const categoryProducts = useMemo(() => {
+    const filtered = products.filter((p) => {
+      if (!currentCategory && slug !== 'men' && slug !== 'women' && slug !== 'kids') return false;
+      if (!p.isPublished) return false;
 
-    const matchesCat =
-      p.categoryId === currentCategory.id ||
-      p.categoryId === currentCategory.slug ||
-      (slug === 'men' && (!p.categoryId || p.categoryId === 'cat-men')) ||
-      (slug === 'women' && p.categoryId === 'cat-women') ||
-      (slug === 'kids' && p.categoryId === 'cat-kids');
-    if (!matchesCat) return false;
+      const matchesCat =
+        (currentCategory && (p.categoryId === currentCategory.id || p.categoryId === currentCategory.slug)) ||
+        (slug === 'men' && (!p.categoryId || p.categoryId === 'cat-men')) ||
+        (slug === 'women' && p.categoryId === 'cat-women') ||
+        (slug === 'kids' && p.categoryId === 'cat-kids');
+      if (!matchesCat) return false;
 
-    if (activeSubcatSlug === 'all') return true;
-    const activeSub = subcategories.find((s) => s.slug === activeSubcatSlug);
-    return p.subcategoryId === activeSub?.id || p.subcategoryId === activeSub?.slug;
-  });
+      if (activeSubcatSlug === 'all') return true;
+      const activeSub = subcategories.find((s) => s.slug === activeSubcatSlug);
+      return p.subcategoryId === activeSub?.id || p.subcategoryId === activeSub?.slug;
+    });
+
+    const getMinPrice = (p: typeof filtered[number]) => {
+      const prices = p.variants.map((v) => v.salePrice || v.price).filter((n) => n > 0);
+      return prices.length > 0 ? Math.min(...prices) : 0;
+    };
+
+    switch (sortBy) {
+      case 'price-asc':
+        return [...filtered].sort((a, b) => getMinPrice(a) - getMinPrice(b));
+      case 'price-desc':
+        return [...filtered].sort((a, b) => getMinPrice(b) - getMinPrice(a));
+      case 'name-asc':
+        return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+      case 'newest':
+        return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      default:
+        return filtered;
+    }
+  }, [products, currentCategory, slug, activeSubcatSlug, subcategories, sortBy]);
 
   if (!currentCategory && slug !== 'men' && slug !== 'women' && slug !== 'kids') {
     return (
@@ -152,10 +176,25 @@ export default function CategoryPage() {
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <p className="text-xs font-semibold text-[#66717C]">
                 Showing {categoryProducts.length} Product{categoryProducts.length > 1 ? 's' : ''}
               </p>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[#66717C]">Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-white border border-[#D8D0C3] rounded-xl px-3 py-2 text-xs font-semibold text-[#1D2730] focus:outline-none focus:border-[#C99A3D] shadow-xs"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="newest">Newest</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="name-asc">Name: A–Z</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

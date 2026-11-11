@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
@@ -120,6 +120,18 @@ export default function CheckoutPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const submitLockRef = useRef(false);
+  const makeIdempotencyKey = () =>
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `idem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const idempotencyKeyRef = useRef<string>(makeIdempotencyKey());
+
+  // Refresh idempotency key only when the underlying cart items/payment method change
+  const itemsSignature = items.map((i) => `${i.id}:${i.quantity}:${i.size}`).join('|');
+  useEffect(() => {
+    idempotencyKeyRef.current = makeIdempotencyKey();
+  }, [itemsSignature, formData.paymentMethod]);
 
   // Cart Empty State
   if (items.length === 0) {
@@ -140,6 +152,7 @@ export default function CheckoutPage() {
   // CHECKOUT & DELIVERY FORM
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitLockRef.current || isSubmitting) return;
     setErrorMsg('');
 
     if (!formData.fullName.trim()) {
@@ -171,9 +184,11 @@ export default function CheckoutPage() {
     }
 
     try {
+      submitLockRef.current = true;
       setIsSubmitting(true);
 
       const orderPayload = {
+        idempotencyKey: idempotencyKeyRef.current,
         userId: undefined,
         customerType: 'GUEST' as const,
         customerName: formData.fullName.trim(),
@@ -240,6 +255,7 @@ export default function CheckoutPage() {
       console.error('Checkout error:', err);
       setErrorMsg(err?.message || 'Something went wrong placing your order. Please try again.');
     } finally {
+      submitLockRef.current = false;
       setIsSubmitting(false);
     }
   };

@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
+import { Order } from '@/types';
 import { CheckCircle2, ArrowRight, Home } from 'lucide-react';
 import { createOrderReceiptWhatsAppMessage, DISPLAY_WHATSAPP_NUMBER, BUSINESS_EMAIL } from '@/lib/whatsapp';
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
@@ -12,8 +13,20 @@ export default function OrderConfirmationPage() {
   const params = useParams();
   const orderId = params?.orderId as string;
   const { orders, settings } = useStore();
+  const [cachedOrder, setCachedOrder] = useState<Order | null>(null);
 
-  const order = orders.find((o) => o.id === orderId || o.orderNumber === orderId);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !orderId) return;
+    try {
+      const raw = sessionStorage.getItem(`arh_recent_order_${orderId}`);
+      if (raw) {
+        setCachedOrder(JSON.parse(raw));
+      }
+    } catch {}
+  }, [orderId]);
+
+  const order =
+    orders.find((o) => o.id === orderId || o.orderNumber === orderId) || cachedOrder;
 
   if (!order) {
     return (

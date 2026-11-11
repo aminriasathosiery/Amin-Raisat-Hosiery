@@ -368,7 +368,7 @@ export default function ShopPage() {
                   setSelectedCategory(e.target.value);
                   setSelectedSubcategory('all');
                 }}
-                className="w-full bg-[#EEE8DC] border border-[#D8D0C3] rounded-xl p-2.5 text-xs text-[#1D2730]"
+                className="w-full bg-white border border-[#D8D0C3] rounded-xl p-2.5 text-xs font-semibold text-[#1D2730] focus:outline-none focus:border-[#C99A3D]"
               >
                 <option value="all">All Categories</option>
                 {categories.map((c) => (

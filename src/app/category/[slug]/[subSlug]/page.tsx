@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
 import { ProductCard } from '@/components/product/ProductCard';
-import { ChevronRight, Package, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Package, ShoppingBag } from 'lucide-react';
 
 export default function SubcategoryPage() {
   const params = useParams();
@@ -13,85 +13,170 @@ export default function SubcategoryPage() {
   const subSlug = params?.subSlug as string;
   const { categories, subcategories: allSubcategories, products } = useStore();
 
+  const [sortBy, setSortBy] = useState<string>('featured');
+
   const currentCategory = categories.find(
     (c) => c.slug?.toLowerCase() === slug?.toLowerCase() || c.id === slug
   );
-  
-  const currentSubcategory = (currentCategory?.subcategories && currentCategory.subcategories.length > 0)
-    ? currentCategory.subcategories.find((s) => s.slug?.toLowerCase() === subSlug?.toLowerCase() || s.id === subSlug)
-    : allSubcategories.find(
-        (s) =>
-          (s.categoryId === currentCategory?.id || !currentCategory) &&
-          (s.slug?.toLowerCase() === subSlug?.toLowerCase() || s.id === subSlug)
+
+  const categorySubcategories =
+    currentCategory?.subcategories && currentCategory.subcategories.length > 0
+      ? currentCategory.subcategories.filter((s) => s.isActive !== false)
+      : allSubcategories.filter(
+          (s) => s.categoryId === currentCategory?.id && s.isActive !== false
+        );
+
+  const currentSubcategory = categorySubcategories.find(
+    (s) => s.slug?.toLowerCase() === subSlug?.toLowerCase() || s.id === subSlug
+  ) || allSubcategories.find(
+    (s) => s.slug?.toLowerCase() === subSlug?.toLowerCase() || s.id === subSlug
+  );
+
+  const matchedProducts = useMemo(() => {
+    const filtered = products.filter((p) => {
+      if (!currentCategory && slug !== 'men' && slug !== 'women' && slug !== 'kids') return false;
+      if (!p.isPublished) return false;
+
+      const matchesCat =
+        (currentCategory && (p.categoryId === currentCategory.id || p.categoryId === currentCategory.slug)) ||
+        (slug === 'men' && (!p.categoryId || p.categoryId === 'cat-men')) ||
+        (slug === 'women' && p.categoryId === 'cat-women') ||
+        (slug === 'kids' && p.categoryId === 'cat-kids');
+      if (!matchesCat) return false;
+
+      return (
+        p.subcategoryId === currentSubcategory?.id ||
+        p.subcategoryId === currentSubcategory?.slug ||
+        (slug === 'men' && subSlug === 'vests' && (!p.subcategoryId || p.subcategoryId === 'sub-men-vests'))
       );
+    });
 
-  const matchedProducts = products.filter((p) => {
-    if (!currentCategory) return false;
-    if (!p.isPublished) return false;
+    const getMinPrice = (p: typeof filtered[number]) => {
+      const prices = p.variants.map((v) => v.salePrice || v.price).filter((n) => n > 0);
+      return prices.length > 0 ? Math.min(...prices) : 0;
+    };
 
-    const matchesCat =
-      p.categoryId === currentCategory.id ||
-      p.categoryId === currentCategory.slug ||
-      (slug === 'men' && (!p.categoryId || p.categoryId === 'cat-men')) ||
-      (slug === 'women' && p.categoryId === 'cat-women') ||
-      (slug === 'kids' && p.categoryId === 'cat-kids');
-    if (!matchesCat) return false;
+    switch (sortBy) {
+      case 'price-asc':
+        return [...filtered].sort((a, b) => getMinPrice(a) - getMinPrice(b));
+      case 'price-desc':
+        return [...filtered].sort((a, b) => getMinPrice(b) - getMinPrice(a));
+      case 'name-asc':
+        return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+      case 'newest':
+        return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      default:
+        return filtered;
+    }
+  }, [products, currentCategory, slug, subSlug, currentSubcategory, sortBy]);
+
+  if (!currentCategory && slug !== 'men' && slug !== 'women' && slug !== 'kids') {
     return (
-      p.subcategoryId === currentSubcategory?.id ||
-      p.subcategoryId === currentSubcategory?.slug ||
-      (slug === 'men' && subSlug === 'vests' && (!p.subcategoryId || p.subcategoryId === 'sub-men-vests'))
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center bg-[#F7F3EA] text-[#1D2730] min-h-[70vh] flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold text-[#1D2730]">Category Not Found</h1>
+        <p className="text-xs text-[#66717C] mt-2">The category you requested does not exist.</p>
+        <Link
+          href="/shop"
+          className="mt-6 inline-flex items-center gap-2 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] text-xs font-bold py-3 px-6 rounded-xl shadow-xs transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Browse All Products
+        </Link>
+      </div>
     );
-  });
+  }
 
   const categoryName = currentCategory?.name || (slug === 'men' ? 'Men' : slug === 'women' ? 'Women' : 'Kids');
   const subcategoryName = currentSubcategory?.name || subSlug.replace(/-/g, ' ');
 
   return (
-    <div className="min-h-[85vh] py-10 bg-[#101114] text-[#F1F0EC]">
+    <div className="min-h-[85vh] py-10 bg-[#F7F3EA] text-[#1D2730]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb Navigation */}
-        <div className="flex items-center gap-2 text-xs text-[#85888E] mb-6">
-          <Link href="/" className="hover:text-[#C9A96A] transition-colors">
+        <div className="flex items-center gap-2 text-xs text-[#66717C] mb-6 flex-wrap">
+          <Link href="/" className="hover:text-[#C99A3D] transition-colors">
             Home
           </Link>
-          <ChevronRight className="w-3 h-3 text-[#30343A]" />
-          <Link href={`/category/${slug}`} className="hover:text-[#C9A96A] capitalize transition-colors">
+          <ChevronRight className="w-3 h-3 text-[#66717C]" />
+          <Link href="/shop" className="hover:text-[#C99A3D] transition-colors">
+            Shop
+          </Link>
+          <ChevronRight className="w-3 h-3 text-[#66717C]" />
+          <Link href={`/category/${slug}`} className="hover:text-[#C99A3D] capitalize transition-colors">
             {categoryName}&apos;s Collection
           </Link>
-          <ChevronRight className="w-3 h-3 text-[#30343A]" />
-          <span className="font-bold text-[#F1F0EC] capitalize">{subcategoryName}</span>
+          <ChevronRight className="w-3 h-3 text-[#66717C]" />
+          <span className="font-bold text-[#1D2730] capitalize">{subcategoryName}</span>
         </div>
 
-        {/* Subcategory Header */}
-        <div className="bg-[#17191D] rounded-2xl p-6 sm:p-10 border border-[#30343A] shadow-card mb-8">
-          <span className="text-[10px] font-bold text-[#C9A96A] uppercase tracking-widest bg-[#1D2025] px-3 py-1 rounded-full border border-[#30343A] inline-block mb-2">
+        {/* Light Subcategory Header */}
+        <div className="bg-white rounded-2xl p-6 sm:p-10 border border-[#D8D0C3] shadow-sm mb-8">
+          <span className="text-[10px] font-bold text-[#C99A3D] uppercase tracking-widest bg-[#F7F3EA] px-3 py-1 rounded-full border border-[#D8D0C3] inline-block mb-3">
             {categoryName} &gt; {subcategoryName}
           </span>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#F1F0EC] capitalize tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-bold text-[#1D2730] capitalize tracking-tight">
             {categoryName}&apos;s {subcategoryName}
           </h1>
-          <p className="text-xs sm:text-sm text-[#B4B5BA] mt-2 leading-relaxed font-normal">
+          <p className="text-xs sm:text-sm text-[#66717C] mt-2 leading-relaxed font-normal max-w-2xl">
             {currentSubcategory?.description ||
-              `Explore high quality cotton ${subcategoryName.toLowerCase()} crafted for daily comfort.`}
+              `Explore pure combed cotton ${subcategoryName.toLowerCase()} crafted for daily breathability and comfort.`}
           </p>
         </div>
 
-        {/* Products Grid or Clean Empty State */}
+        {/* Sibling Subcategory Pills */}
+        {categorySubcategories.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <Link
+                href={`/category/${slug}`}
+                className="px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 bg-white text-[#1D2730] hover:bg-[#EEE8DC]/50 border border-[#D8D0C3]"
+              >
+                All {categoryName} Items
+              </Link>
+              {categorySubcategories.map((sub) => {
+                const isActive =
+                  sub.slug?.toLowerCase() === subSlug?.toLowerCase() ||
+                  sub.id === subSlug;
+                return (
+                  <Link
+                    key={sub.id}
+                    href={`/category/${slug}/${sub.slug}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-[#23384D] text-[#F7F3EA] border border-[#23384D] ring-1 ring-[#C99A3D]/60 shadow-xs'
+                        : 'bg-white text-[#1D2730] hover:bg-[#EEE8DC]/50 border border-[#D8D0C3]'
+                    }`}
+                  >
+                    <span>{sub.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Products Grid or Clean Light Empty State */}
         {matchedProducts.length === 0 ? (
-          <div className="bg-[#17191D] rounded-2xl p-10 sm:p-12 text-center border border-[#30343A] max-w-lg mx-auto shadow-card space-y-4">
-            <div className="w-14 h-14 bg-[#1D2025] rounded-2xl flex items-center justify-center mx-auto text-[#C9A96A] border border-[#30343A]">
+          <div className="bg-white rounded-2xl p-10 sm:p-12 text-center border border-[#D8D0C3] max-w-lg mx-auto shadow-sm space-y-4">
+            <div className="w-14 h-14 bg-[#EEE8DC]/50 rounded-2xl flex items-center justify-center mx-auto text-[#C99A3D] border border-[#D8D0C3]">
               <Package className="w-6 h-6" />
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-[#F1F0EC] capitalize">
+            <h3 className="text-lg sm:text-xl font-bold text-[#1D2730] capitalize">
               No Products in {subcategoryName}
             </h3>
-            <p className="text-xs text-[#85888E] leading-relaxed">
-              Explore our current in-stock pure cotton vests and innerwear in the main shop.
+            <p className="text-xs text-[#66717C] leading-relaxed">
+              Explore our current in-stock pure cotton vests and innerwear in the full {categoryName.toLowerCase()} collection or main shop.
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href={`/category/${slug}`}
+                className="inline-flex items-center gap-2 bg-white hover:bg-[#EEE8DC] text-[#1D2730] border border-[#D8D0C3] font-bold text-xs py-3 px-5 rounded-xl shadow-2xs transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>All {categoryName} Items</span>
+              </Link>
               <Link
                 href="/shop"
-                className="inline-flex items-center gap-2 bg-[#C9A96A] hover:bg-[#D8BD88] text-[#101114] font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 bg-[#23384D] hover:bg-[#182B3D] text-[#F7F3EA] font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition-colors"
               >
                 <ShoppingBag className="w-4 h-4 stroke-[2.2]" />
                 <span>Explore Full Shop</span>
@@ -100,10 +185,25 @@ export default function SubcategoryPage() {
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-xs font-semibold text-[#85888E]">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <p className="text-xs font-semibold text-[#66717C]">
                 Showing {matchedProducts.length} Product{matchedProducts.length > 1 ? 's' : ''}
               </p>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[#66717C]">Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-white border border-[#D8D0C3] rounded-xl px-3 py-2 text-xs font-semibold text-[#1D2730] focus:outline-none focus:border-[#C99A3D] shadow-xs"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="newest">Newest</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="name-asc">Name: A–Z</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

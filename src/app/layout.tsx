@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { StoreProvider } from '@/context/StoreContext';
 import { CartProvider } from '@/context/CartContext';
@@ -11,6 +10,7 @@ import {
   getCachedHeroSlides,
   getCachedPublicSettings,
   getCachedFeaturedDeals,
+  buildSlimCatalogSummaries,
 } from '@/lib/catalogServer';
 import { Product, Category, Subcategory, HeroSlide, SiteSettings, Deal } from '@/types';
 import { INITIAL_CATEGORIES, INITIAL_SUBCATEGORIES, INITIAL_SITE_SETTINGS } from '@/data/initialData';
@@ -80,7 +80,7 @@ export default async function RootLayout({
       getCachedPublicSettings(),
       getCachedFeaturedDeals(),
     ]);
-    initialProducts = prods;
+    initialProducts = buildSlimCatalogSummaries(prods);
     initialCategories = catData.categories;
     initialSubcategories = catData.subcategories;
     initialHeroSlides = slides;
@@ -93,22 +93,20 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-[#F7F3EA] text-[#1D2730] antialiased selection:bg-[#C99A3D] selection:text-white">
-        <ThemeProvider>
-          <AuthProvider>
-            <StoreProvider
-              initialProducts={initialProducts}
-              initialCategories={initialCategories}
-              initialSubcategories={initialSubcategories}
-              initialHeroSlides={initialHeroSlides}
-              initialSettings={initialSettings}
-              initialDeals={initialDeals}
-            >
-              <CartProvider>
-                  <PublicLayoutShell>{children}</PublicLayoutShell>
-              </CartProvider>
-            </StoreProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <StoreProvider
+            initialProducts={initialProducts}
+            initialCategories={initialCategories}
+            initialSubcategories={initialSubcategories}
+            initialHeroSlides={initialHeroSlides}
+            initialSettings={initialSettings}
+            initialDeals={initialDeals}
+          >
+            <CartProvider>
+              <PublicLayoutShell>{children}</PublicLayoutShell>
+            </CartProvider>
+          </StoreProvider>
+        </AuthProvider>
       </body>
     </html>
   );

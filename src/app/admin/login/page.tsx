@@ -42,12 +42,13 @@ export default function AdminLoginPage() {
       <div className="max-w-md w-full bg-white border border-[#D8D0C3] rounded-3xl p-8 sm:p-10 shadow-elevation space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-3">
-          <div className="relative w-20 h-20 sm:w-22 sm:h-22 mx-auto overflow-hidden flex items-center justify-center bg-[#EEE8DC]/40 rounded-2xl border border-[#D8D0C3] p-2">
+          <div className="relative w-44 h-16 mx-auto overflow-hidden flex items-center justify-center bg-[#23384D] rounded-2xl border border-[#C99A3D]/40 px-4 py-2 shadow-xs">
             <Image
               src="/logo2.png"
               alt="Amin Raisat Hosiery"
               fill
-              className="object-contain"
+              sizes="176px"
+              className="object-contain p-1.5"
               priority
             />
           </div>

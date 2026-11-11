@@ -37,8 +37,6 @@ export interface Category {
   productCount?: number;
 }
 
-export type ThemeMode = 'dark' | 'light';
-
 export interface ProductColor {
   id: string;
   name: string;

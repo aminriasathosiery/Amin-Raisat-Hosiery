@@ -76,7 +76,9 @@ interface StoreContextType {
   approveReview: (id: string, isApproved: boolean) => Promise<void>;
   deleteReview: (id: string) => Promise<void>;
   updateSettings: (newSettings: SiteSettings) => Promise<void>;
-  createOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => Promise<Order>;
+  createOrder: (
+    orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'> & { idempotencyKey?: string }
+  ) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
   bulkDeleteOrders: (orderIds: string[]) => Promise<void>;
@@ -368,9 +370,11 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
     setSettings(fresh);
   };
 
-  const createOrder = async (orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>) => {
+  const createOrder = async (
+    orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'> & { idempotencyKey?: string }
+  ) => {
     const order = await DataStore.createOrder(orderData);
-    await loadData();
+    setOrders((prev) => [order, ...prev.filter((o) => o.id !== order.id)]);
     return order;
   };
 
@@ -413,19 +417,19 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     await DataStore.updateOrderStatus(orderId, status);
-    await loadData();
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId || o.orderNumber === orderId ? { ...o, status } : o))
+    );
   };
 
   const deleteOrder = async (orderId: string) => {
     await DataStore.deleteOrder(orderId);
     setOrders((prev) => prev.filter((o) => o.id !== orderId && o.orderNumber !== orderId));
-    await loadData();
   };
 
   const bulkDeleteOrders = async (orderIds: string[]) => {
     await DataStore.deleteOrders(orderIds);
     setOrders((prev) => prev.filter((o) => !orderIds.includes(o.id) && !orderIds.includes(o.orderNumber)));
-    await loadData();
   };
 
   const loadOrders = async () => {

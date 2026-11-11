@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useStore } from '@/context/StoreContext';
 import { Order, OrderStatus } from '@/types';
 import {
@@ -14,6 +14,8 @@ import {
   Truck,
   ExternalLink,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle,
   XCircle,
   Clock,
@@ -22,24 +24,139 @@ import {
   AlertTriangle,
   ZoomIn,
   Trash2,
+  RefreshCw,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
 import { ConfirmModal } from '@/components/admin/ConfirmModal';
 import { formatWhatsAppNumber } from '@/lib/whatsapp';
 
 const ALL_STATUSES: OrderStatus[] = ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Returned'];
+const PAGE_SIZE = 20;
+
+interface OutboxNotification {
+  id: string;
+  recipient_type: string;
+  recipient_phone: string;
+  event_type: string;
+  status: string;
+  attempts: number;
+  max_attempts: number;
+  last_error?: string | null;
+  sent_at?: string | null;
+  created_at: string;
+}
 
 export default function AdminOrdersPage() {
-  const { orders, products, updateOrderStatus, deleteOrder, bulkDeleteOrders, refreshData, loadOrders, isLoading } = useStore();
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  const { products, updateOrderStatus, deleteOrder, bulkDeleteOrders } = useStore();
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [page, setPage] = useState(1);
+
+  const [pagedOrders, setPagedOrders] = useState<Order[]>([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: PAGE_SIZE, totalCount: 0, totalPages: 1 });
+  const [serverStats, setServerStats] = useState({
+    total: 0,
+    pendingVerification: 0,
+    pending: 0,
+    confirmed: 0,
+    shipped: 0,
+    delivered: 0,
+  });
+  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [detailNotifications, setDetailNotifications] = useState<OutboxNotification[]>([]);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchOrdersPage = useCallback(async (includeStats = true) => {
+    setIsOrdersLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(PAGE_SIZE),
+        status: statusFilter,
+        paymentStatus: paymentFilter,
+      });
+      if (debouncedQuery) qs.set('q', debouncedQuery);
+      if (dateFrom) qs.set('dateFrom', dateFrom);
+      if (dateTo) qs.set('dateTo', dateTo);
+      if (includeStats) qs.set('includeStats', '1');
+
+      const res = await fetch(`/api/admin/orders?${qs.toString()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.orders)) setPagedOrders(data.orders);
+      if (data.pagination) setPagination(data.pagination);
+      if (data.stats) setServerStats(data.stats);
+    } catch (err) {
+      console.warn('Admin orders paginated fetch notice:', err);
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  }, [page, statusFilter, paymentFilter, debouncedQuery, dateFrom, dateTo]);
+
+  useEffect(() => {
+    fetchOrdersPage(true);
+  }, [fetchOrdersPage]);
+
+  const openOrderDetail = async (ord: Order) => {
+    setSelectedOrder(ord);
+    setDetailNotifications([]);
+    setIsLoadingDetail(true);
+    try {
+      const res = await fetch(`/api/admin/orders?orderId=${encodeURIComponent(ord.id)}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.order) setSelectedOrder(data.order);
+        if (Array.isArray(data.notifications)) setDetailNotifications(data.notifications);
+      }
+    } catch {}
+    finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const handleRetryNotification = async (jobId?: string) => {
+    if (!selectedOrder) return;
+    setRetryingJobId(jobId || 'all');
+    try {
+      const res = await fetch('/api/admin/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobId ? { jobId } : { limit: 10 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Retry failed');
+      const detailRes = await fetch(`/api/admin/orders?orderId=${encodeURIComponent(selectedOrder.id)}`, { cache: 'no-store' });
+      if (detailRes.ok) {
+        const detailJson = await detailRes.json();
+        if (Array.isArray(detailJson.notifications)) setDetailNotifications(detailJson.notifications);
+      }
+      showToast(
+        data.cloudApiConfigured
+          ? `Processed: ${data.sent || 0} sent, ${data.failed || 0} retry scheduled.`
+          : 'WhatsApp Cloud API credentials not configured on server; use manual wa.me button.'
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to retry notification');
+    } finally {
+      setRetryingJobId(null);
+    }
+  };
 
   // Selection & Bulk Actions State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -73,38 +190,8 @@ export default function AdminOrdersPage() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((ord) => {
-      if (statusFilter !== 'all' && ord.status !== statusFilter) return false;
-      if (paymentFilter !== 'all') {
-        const pStatus = ord.paymentStatus || (ord.paymentMethod === 'cod' ? 'COD_PENDING' : 'PENDING_VERIFICATION');
-        if (pStatus !== paymentFilter) return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesNumber = ord.orderNumber.toLowerCase().includes(q);
-        const matchesName = ord.customerName.toLowerCase().includes(q);
-        const matchesPhone = ord.customerPhone.toLowerCase().includes(q);
-        const matchesCity = ord.city.toLowerCase().includes(q);
-        return matchesNumber || matchesName || matchesPhone || matchesCity;
-      }
-      return true;
-    });
-  }, [orders, statusFilter, paymentFilter, searchQuery]);
-
-  const stats = useMemo(() => {
-    return {
-      total: orders.length,
-      pendingVerification: orders.filter(
-        (o) => o.paymentStatus === 'PENDING_VERIFICATION' || (o.paymentMethod !== 'cod' && o.status === 'Pending' && !o.paymentVerifiedAt)
-      ).length,
-      pending: orders.filter((o) => o.status === 'Pending').length,
-      confirmed: orders.filter((o) => o.status === 'Confirmed' || o.status === 'Processing').length,
-      shipped: orders.filter((o) => o.status === 'Shipped').length,
-      delivered: orders.filter((o) => o.status === 'Delivered').length,
-    };
-  }, [orders]);
+  const filteredOrders = pagedOrders;
+  const stats = serverStats;
 
   const isAllSelected = useMemo(() => {
     return filteredOrders.length > 0 && filteredOrders.every((o) => selectedOrderIds.includes(o.id));
@@ -161,6 +248,7 @@ export default function AdminOrdersPage() {
         }
       }
       setDeleteModal(null);
+      await fetchOrdersPage(true);
     } catch (err: any) {
       console.error('Delete order error:', err);
       setDeleteError(err?.message || 'Failed to delete order from database.');
@@ -182,11 +270,15 @@ export default function AdminOrdersPage() {
     if (!statusConfirmModal) return;
     const { orderId, newStatus } = statusConfirmModal;
     await updateOrderStatus(orderId, newStatus);
+    setPagedOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
+    );
     if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
     setStatusConfirmModal(null);
     showToast(`Order #${statusConfirmModal.orderNumber} status updated to ${newStatus}`);
+    fetchOrdersPage(true);
   };
 
   // Payment Verification API call
@@ -207,7 +299,7 @@ export default function AdminOrdersPage() {
 
       showToast('Payment verified successfully! Order marked as Confirmed.');
       setReceiptModalOrder(null);
-      await refreshData();
+      await fetchOrdersPage(true);
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder((prev) =>
           prev ? { ...prev, paymentStatus: 'VERIFIED', status: 'Confirmed', paymentVerifiedAt: new Date().toISOString() } : null
@@ -241,7 +333,7 @@ export default function AdminOrdersPage() {
       setReceiptModalOrder(null);
       setShowRejectForm(false);
       setRejectionReasonInput('');
-      await refreshData();
+      await fetchOrdersPage(true);
       if (selectedOrder && selectedOrder.id === orderId) {
         setSelectedOrder((prev) =>
           prev ? { ...prev, paymentStatus: 'REJECTED', paymentRejectionReason: rejectionReasonInput } : null
@@ -306,7 +398,7 @@ export default function AdminOrdersPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-charcoal-900">Orders &amp; Dispatch</h1>
             <span className="text-xs font-bold bg-light-elevated text-[#B89555] border border-light-border px-2.5 py-0.5 rounded-lg whitespace-nowrap">
-              {orders.length} Total
+              {pagination.totalCount} Total
             </span>
           </div>
           <p className="text-xs text-charcoal-500 mt-1">
@@ -372,10 +464,35 @@ export default function AdminOrdersPage() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          {/* Date Range Filter */}
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setPage(1);
+            }}
+            aria-label="Filter orders from date"
+            className="px-2.5 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setPage(1);
+            }}
+            aria-label="Filter orders to date"
+            className="px-2.5 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
+          />
+
           {/* Payment Verification Filter */}
           <select
             value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value)}
+            onChange={(e) => {
+              setPaymentFilter(e.target.value);
+              setPage(1);
+            }}
             className="px-3 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
           >
             <option value="all">All Payments</option>
@@ -388,10 +505,13 @@ export default function AdminOrdersPage() {
           {/* Status Filter */}
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="px-3 py-2 text-xs bg-light-elevated border border-light-border text-charcoal-900 rounded-xl focus:border-[#B89555] focus:outline-none"
           >
-            <option value="all">All Statuses ({orders.length})</option>
+            <option value="all">All Statuses ({stats.total})</option>
             {ALL_STATUSES.map((st) => (
               <option key={st} value={st}>
                 {st}
@@ -415,7 +535,13 @@ export default function AdminOrdersPage() {
 
       {/* Orders Container */}
       <div className="bg-white rounded-2xl border border-light-border shadow-sm overflow-hidden">
-        {filteredOrders.length === 0 ? (
+        {isOrdersLoading && filteredOrders.length === 0 ? (
+          <div className="p-6 space-y-3 animate-pulse">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-12 bg-light-elevated rounded-xl" />
+            ))}
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <div className="text-center py-16 space-y-3">
             <ShoppingCart className="w-10 h-10 text-charcoal-400 mx-auto" />
             <h3 className="text-sm font-bold text-charcoal-900">No orders match your search or filter.</h3>
@@ -587,7 +713,7 @@ export default function AdminOrdersPage() {
 
                             <button
                               type="button"
-                              onClick={() => setSelectedOrder(ord)}
+                              onClick={() => openOrderDetail(ord)}
                               className="px-2.5 py-1 bg-light-elevated hover:bg-light-hover border border-light-border text-[#B89555] hover:text-champagne-500 rounded-xl text-xs font-bold transition-colors whitespace-nowrap"
                             >
                               Details
@@ -732,7 +858,7 @@ export default function AdminOrdersPage() {
 
                       <button
                         type="button"
-                        onClick={() => setSelectedOrder(ord)}
+                        onClick={() => openOrderDetail(ord)}
                         className="px-3 py-1.5 bg-champagne-500 text-charcoal-950 rounded-xl text-xs font-bold shadow-xs"
                       >
                         View
@@ -753,6 +879,35 @@ export default function AdminOrdersPage() {
               })}
             </div>
           </>
+        )}
+
+        {/* Server-Side Pagination Controls */}
+        {pagination.totalCount > 0 && (
+          <div className="px-4 py-3 border-t border-light-border bg-light-elevated/40 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <span className="text-charcoal-600 font-medium">
+              Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.totalCount} matching order{pagination.totalCount === 1 ? '' : 's'})
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={pagination.page <= 1 || isOrdersLoading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-light-hover border border-light-border text-charcoal-800 rounded-lg font-bold disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Previous</span>
+              </button>
+              <button
+                type="button"
+                disabled={pagination.page >= pagination.totalPages || isOrdersLoading}
+                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-light-hover border border-light-border text-charcoal-800 rounded-lg font-bold disabled:opacity-40 transition-colors"
+              >
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -1006,6 +1161,65 @@ export default function AdminOrdersPage() {
                 <span>Total Amount</span>
                 <span>Rs. {selectedOrder.totalAmount}</span>
               </div>
+            </div>
+
+            {/* WhatsApp Background Outbox Status & Retry */}
+            <div className="p-4 bg-light-elevated rounded-xl border border-light-border space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-charcoal-900 flex items-center gap-1.5">
+                  <WhatsAppIcon size={14} className="text-[#25D366] fill-current" />
+                  <span>WhatsApp Outbox Queue</span>
+                </span>
+                <button
+                  type="button"
+                  disabled={retryingJobId !== null}
+                  onClick={() => handleRetryNotification()}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-light-hover border border-light-border text-charcoal-800 rounded-lg text-[11px] font-bold transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${retryingJobId === 'all' ? 'animate-spin' : ''}`} />
+                  <span>Process Pending</span>
+                </button>
+              </div>
+              {isLoadingDetail ? (
+                <p className="text-[11px] text-charcoal-500">Loading order details &amp; notification status...</p>
+              ) : detailNotifications.length === 0 ? (
+                <p className="text-[11px] text-charcoal-500">No queued Cloud API jobs recorded for this order.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {detailNotifications.map((job) => (
+                    <div key={job.id} className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-light-border text-[11px]">
+                      <div>
+                        <span className="font-bold uppercase text-charcoal-900">{job.recipient_type}</span>{' '}
+                        <span className="text-charcoal-500">({job.event_type})</span>
+                        {job.last_error && (
+                          <p className="text-[10px] text-rose-600 line-clamp-1">{job.last_error}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] ${
+                          job.status === 'sent'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : job.status === 'failed'
+                            ? 'bg-rose-100 text-rose-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {job.status} ({job.attempts}/{job.max_attempts})
+                        </span>
+                        {job.status !== 'sent' && (
+                          <button
+                            type="button"
+                            disabled={retryingJobId !== null}
+                            onClick={() => handleRetryNotification(job.id)}
+                            className="px-2 py-0.5 bg-[#23384D] text-white rounded text-[10px] font-bold hover:bg-[#182B3D] disabled:opacity-50"
+                          >
+                            Retry
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Modal Actions */}

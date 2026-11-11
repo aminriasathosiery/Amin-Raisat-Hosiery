@@ -5,13 +5,13 @@ import { Deal } from '@/types';
 import { formatPKR } from '@/lib/pricing';
 import { Zap, Package, Percent, Truck, CheckCircle } from 'lucide-react';
 
-import { fetchActiveDeals } from '@/lib/deals';
+import { getCachedActiveDeals } from '@/lib/catalogServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function DealsPage() {
-  const deals = await fetchActiveDeals();
+  const deals = await getCachedActiveDeals();
 
   return (
     <div className="min-h-screen bg-[#F7F3EA] text-[#1D2730]">

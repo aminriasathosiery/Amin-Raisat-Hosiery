@@ -283,3 +283,63 @@ export const getCachedFeaturedDeals = unstable_cache(
   { revalidate: 60, tags: [CACHE_TAGS.DEALS] }
 );
 
+export const getCachedActiveDeals = unstable_cache(
+  async (): Promise<Deal[]> => {
+    if (!isServerSupabaseConfigured()) return [];
+    try {
+      const { data, error } = await supabaseServer
+        .from('deals')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error || !Array.isArray(data)) return [];
+      return data.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        subtitle: row.subtitle || undefined,
+        description: row.description || undefined,
+        imageUrl: row.image_url || undefined,
+        piecesCount: Number(row.pieces_count) || 1,
+        originalPrice: Number(row.original_price) || 0,
+        discountPercentage: Number(row.discount_percentage) || 0,
+        salePrice: Number(row.sale_price) || 0,
+        isFreeDelivery: row.is_free_delivery ?? true,
+        isActive: row.is_active ?? true,
+        isFeatured: row.is_featured ?? false,
+        sortOrder: Number(row.sort_order) || 9999,
+        badgeText: row.badge_text || undefined,
+        createdAt: row.created_at,
+      }));
+    } catch {
+      return [];
+    }
+  },
+  ['cached-active-deals-v1'],
+  { revalidate: 60, tags: [CACHE_TAGS.DEALS] }
+);
+
+/**
+ * Strips bulky product-detail-only fields (long descriptions, care lists, features,
+ * and extra color gallery photos) for fast RootLayout SSR catalog hydration across
+ * /, /shop, /category/*, /cart, /checkout. Detail pages fetch full product on demand.
+ */
+export function buildSlimCatalogSummaries(products: Product[]): Product[] {
+  return products.map((p) => {
+    // Keep only non-color fallback image (up to 1) when coverImage is unset
+    const fallbackMedia = !p.coverImage
+      ? (p.media || []).filter((m) => !m.color).slice(0, 1)
+      : [];
+    return {
+      ...p,
+      description: '',
+      features: [],
+      careInstructions: [],
+      shippingInfo: '',
+      sizeGuideUrl: '',
+      media: fallbackMedia.length > 0 ? fallbackMedia : (p.coverImage ? [] : (p.media || []).slice(0, 1)),
+    };
+  });
+}
+

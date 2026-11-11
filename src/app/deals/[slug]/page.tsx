@@ -1,12 +1,14 @@
 import { notFound } from 'next/navigation';
 import { DealDetailClient } from './DealDetailClient';
+import { getCachedActiveDeals } from '@/lib/catalogServer';
 import { fetchDealBySlug } from '@/lib/deals';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function DealPage({ params }: { params: { slug: string } }) {
-  const deal = await fetchDealBySlug(params.slug);
+  const cachedDeals = await getCachedActiveDeals();
+  const deal = cachedDeals.find((d) => d.slug === params.slug) || (await fetchDealBySlug(params.slug));
 
   if (!deal) {
     notFound();

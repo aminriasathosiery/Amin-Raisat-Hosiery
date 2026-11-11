@@ -466,7 +466,10 @@ export class DataStore {
     // 1. Client-side authoritative fetch through server API route
     if (this.isClient()) {
       try {
-        const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+        const isAdminRoute =
+          typeof window !== 'undefined' &&
+          window.location.pathname.startsWith('/admin') &&
+          !window.location.pathname.startsWith('/admin/login');
         const endpoint = isAdminRoute ? '/api/admin/products' : '/api/products';
         const res = await fetch(endpoint, { cache: 'no-store' });
         if (res.ok) {
@@ -742,20 +745,26 @@ export class DataStore {
     return [];
   }
 
-  static async createOrder(orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'>): Promise<Order> {
+  static async createOrder(
+    orderData: Omit<Order, 'id' | 'orderNumber' | 'createdAt' | 'status'> & { idempotencyKey?: string }
+  ): Promise<Order> {
     if (this.isClient()) {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (orderData.idempotencyKey) {
+        headers['Idempotency-Key'] = orderData.idempotencyKey;
+      }
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(orderData),
       });
       const json = await res.json();
       if (!res.ok || !json.success || !json.order) {
         throw new Error(json?.error || 'Failed to place order. Please check your items and try again.');
       }
-      const existing = await this.getOrders();
-      const updated = [json.order, ...existing.filter((o) => o.id !== json.order.id)];
-      localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(updated));
+      try {
+        sessionStorage.setItem(`arh_recent_order_${json.order.id}`, JSON.stringify(json.order));
+      } catch {}
       return json.order;
     }
 
@@ -1315,7 +1324,10 @@ export class DataStore {
   static async getReviews(productId?: string): Promise<ProductReview[]> {
     if (this.isClient()) {
       try {
-        const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+        const isAdminRoute =
+          typeof window !== 'undefined' &&
+          window.location.pathname.startsWith('/admin') &&
+          !window.location.pathname.startsWith('/admin/login');
         const url = isAdminRoute
           ? '/api/admin/reviews'
           : productId

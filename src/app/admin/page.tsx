@@ -1,7 +1,8 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/context/StoreContext';
+import { Order } from '@/types';
 import {
   ShoppingCart,
   Clock,
@@ -18,30 +19,40 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
-  const { orders, products, reviews, loadOrders, isLoading } = useStore();
+  const { products, reviews, isLoading } = useStore();
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [orderStats, setOrderStats] = useState({
+    total: 0,
+    pending: 0,
+    processing: 0,
+    delivered: 0,
+    totalSales: 0,
+    deliveredSales: 0,
+  });
 
   useEffect(() => {
-    loadOrders();
+    let active = true;
+    fetch('/api/admin/orders?page=1&limit=5&includeStats=1', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active || !data) return;
+        if (Array.isArray(data.orders)) setRecentOrders(data.orders);
+        if (data.stats) setOrderStats(data.stats);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   const lowStockThreshold = 10;
 
-  // Real-time calculations from Supabase data
-  const totalOrders = orders.length;
-
-  const pendingOrders = orders.filter((o) => o.status === 'Pending').length;
-  const processingOrders = orders.filter(
-    (o) => o.status === 'Confirmed' || o.status === 'Processing' || o.status === 'Packed' || o.status === 'Shipped'
-  ).length;
-  const deliveredOrders = orders.filter((o) => o.status === 'Delivered').length;
-
-  const totalSales = orders.reduce(
-    (sum, o) => sum + (o.status !== 'Cancelled' && o.status !== 'Returned' ? o.totalAmount : 0),
-    0
-  );
-  const deliveredSales = orders
-    .filter((o) => o.status === 'Delivered')
-    .reduce((sum, o) => sum + o.totalAmount, 0);
+  const totalOrders = orderStats.total;
+  const pendingOrders = orderStats.pending;
+  const processingOrders = orderStats.processing;
+  const deliveredOrders = orderStats.delivered;
+  const totalSales = orderStats.totalSales;
+  const deliveredSales = orderStats.deliveredSales;
 
   const allVariants = products.flatMap((p) => p.variants || []);
   const totalStockUnits = allVariants.reduce((sum, v) => sum + (v.stock || 0), 0);
@@ -49,7 +60,6 @@ export default function AdminDashboardPage() {
   const outOfStockVariants = allVariants.filter((v) => v.stock === 0);
   const totalProducts = products.length;
 
-  const recentOrders = orders.slice(0, 5);
   const latestReviews = reviews.slice(0, 4);
 
   // Identify low stock products for the warning section
