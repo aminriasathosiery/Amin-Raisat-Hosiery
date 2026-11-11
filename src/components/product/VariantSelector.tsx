@@ -9,6 +9,8 @@ import { useStore } from '@/context/StoreContext';
 import { ShoppingBag, Truck, HelpCircle, X, ShieldAlert, Zap, Check } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/WhatsAppIcon';
 import { createProductWhatsAppMessage, DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
+import { resolvePrimaryCoverImage } from '@/lib/productMedia';
+import { normalizeShippingSettings } from '@/lib/delivery';
 
 interface VariantSelectorProps {
   product: Product;
@@ -17,7 +19,7 @@ interface VariantSelectorProps {
   selectedSize: ProductSize;
   setSelectedSize: (size: ProductSize) => void;
   selectedColor?: string;
-  setSelectedColor?: (color: string) => void;
+  setSelectedColor?: (color: string | undefined) => void;
 }
 
 const SIZES: ProductSize[] = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -38,6 +40,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isAddedToast, setIsAddedToast] = useState(false);
+  const [colorSelectPrompt, setColorSelectPrompt] = useState('');
 
   // Close size guide modal on Escape
   React.useEffect(() => {
@@ -67,11 +70,12 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
     });
   }, [product.colors, product.variants]);
 
-  // Auto-switch color if current is invalid
+  // Keep selectedColor optional so default view preserves the Primary Cover Image;
+  // only clear if the selected color no longer exists on the product.
   React.useEffect(() => {
-    if (availableColors.length > 0 && setSelectedColor) {
-      if (!selectedColor || !availableColors.some((c) => c.name === selectedColor)) {
-        setSelectedColor(availableColors[0].name);
+    if (selectedColor && availableColors.length > 0 && setSelectedColor) {
+      if (!availableColors.some((c) => c.name === selectedColor)) {
+        setSelectedColor(undefined);
       }
     }
   }, [availableColors, selectedColor, setSelectedColor]);
@@ -132,37 +136,39 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   const stock = currentVariant ? currentVariant.stock : 50;
   const isAvailable = currentVariant ? currentVariant.isAvailable && stock > 0 : true;
 
-  const minOrder = 1;
-  const maxOrder = Math.min(settings.shipping?.maxOrderQty || 100, stock > 0 ? stock : 100);
-  const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
-  const baseDeliveryCharge = settings.shipping?.baseDeliveryCharge ?? 200;
+  const shipping = normalizeShippingSettings(settings?.shipping);
+  const minOrder = shipping.minOrderQty;
+  const maxOrder = Math.min(shipping.maxOrderQty || 100, stock > 0 ? stock : 100);
+  const freeDeliveryThreshold = shipping.freeDeliveryThreshold;
+  const baseDeliveryCharge = shipping.baseDeliveryCharge;
 
   const totalPrice = unitPrice * quantity;
-  const isFreeDeliveryForThis = quantity >= freeDeliveryThreshold;
-  const piecesNeededForFree = Math.max(0, freeDeliveryThreshold - quantity);
+  const isFreeDeliveryForThis = freeDeliveryThreshold > 0 && quantity >= freeDeliveryThreshold;
+  const piecesNeededForFree = freeDeliveryThreshold > 0 ? Math.max(0, freeDeliveryThreshold - quantity) : 0;
 
-  const matchedColor = availableColors.find((c) => c.name === selectedColor);
+  // Authoritative color used for Cart & Buy Now: explicit selectedColor or single configured color
+  const effectiveColor = selectedColor || (availableColors.length === 1 ? availableColors[0].name : undefined);
+  const matchedColor = availableColors.find((c) => c.name === effectiveColor);
 
   const getVariantMediaUrl = () => {
-    if (selectedColor) {
-      const colorMatch = product.media?.find(
-        (m) =>
-          m.color === selectedColor &&
-          (!m.variantSleeve || m.variantSleeve === 'All' || m.variantSleeve === selectedSleeve)
-      );
-      if (colorMatch?.url) return colorMatch.url;
-    }
-    const match = product.media?.find(
-      (m) => !m.variantSleeve || m.variantSleeve === 'All' || m.variantSleeve === selectedSleeve
-    );
-    return match?.url || product.media?.[0]?.url || '/images/products/sleevless high.jpeg';
+    return resolvePrimaryCoverImage(product, effectiveColor, selectedSleeve);
   };
 
-  const colorSuffix = selectedColor ? `_${selectedColor}` : '';
+  const colorSuffix = effectiveColor ? `_${effectiveColor}` : '';
   const cartItemId = `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${selectedSize}${colorSuffix}`;
+
+  const ensureColorSelectedForAction = (): boolean => {
+    if (availableColors.length > 1 && !selectedColor) {
+      setColorSelectPrompt('Please select a color option above before continuing.');
+      return false;
+    }
+    setColorSelectPrompt('');
+    return true;
+  };
 
   const handleBuyNow = () => {
     if (!isAvailable) return;
+    if (!ensureColorSelectedForAction()) return;
 
     setBuyNowItem({
       id: cartItemId,
@@ -174,7 +180,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
-      color: selectedColor,
+      color: effectiveColor,
       colorHex: matchedColor?.hex || currentVariant?.colorHex,
       unitPrice,
       originalPrice: regularPrice || unitPrice,
@@ -188,6 +194,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
 
   const handleAddToCart = () => {
     if (!isAvailable) return;
+    if (!ensureColorSelectedForAction()) return;
 
     addItem({
       id: cartItemId,
@@ -199,7 +206,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       quality: currentVariant?.quality || 'High Quality',
       sleeve: selectedSleeve,
       size: selectedSize,
-      color: selectedColor,
+      color: effectiveColor,
       colorHex: matchedColor?.hex || currentVariant?.colorHex,
       unitPrice,
       originalPrice: regularPrice || unitPrice,
@@ -281,18 +288,36 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
       {/* 2. Color Selector (Daraz-style Image Thumbnails) */}
       {availableColors.length > 0 && (
         <div className="space-y-2.5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <label className="text-xs font-bold uppercase tracking-wider text-[#1D2730] flex items-center gap-1.5">
               <span>Color:</span>
-              {selectedColor && (
+              {selectedColor ? (
                 <span className="text-[#C99A3D] font-extrabold capitalize text-xs tracking-normal">
                   {selectedColor}
                 </span>
+              ) : (
+                <span className="text-[#66717C] font-medium capitalize text-xs tracking-normal">
+                  Select a color (showing Cover View)
+                </span>
               )}
             </label>
-            <span className="text-[11px] text-[#66717C]">
-              {availableColors.length} color{availableColors.length > 1 ? 's' : ''} available
-            </span>
+            <div className="flex items-center gap-2">
+              {selectedColor && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setColorSelectPrompt('');
+                    setSelectedColor && setSelectedColor(undefined);
+                  }}
+                  className="text-[11px] font-semibold text-[#C99A3D] hover:underline"
+                >
+                  Show Cover
+                </button>
+              )}
+              <span className="text-[11px] text-[#66717C]">
+                {availableColors.length} color{availableColors.length > 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
@@ -301,7 +326,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
               const colorMatchingPhoto = product.media?.find(
                 (m) => m.color === col.name && (m.type === 'photo' || (m as any).media_type === 'photo')
               )?.url;
-              const displayImg = (col as any).image || colorMatchingPhoto || product.media?.find((m) => m.type === 'photo')?.url;
+              const displayImg = (col as any).image || colorMatchingPhoto || product.coverImage || product.media?.find((m) => m.type === 'photo')?.url;
 
               // Check if color has any available stock in any size
               const colorVariants = product.variants.filter((v) => v.color === col.name);
@@ -313,13 +338,16 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
                   key={col.name}
                   type="button"
                   disabled={isColorOutOfStock}
-                  onClick={() => setSelectedColor && setSelectedColor(col.name)}
+                  onClick={() => {
+                    setColorSelectPrompt('');
+                    setSelectedColor && setSelectedColor(isSelected ? undefined : col.name);
+                  }}
                   className={`group relative flex items-center gap-2.5 p-1.5 pr-3 rounded-xl border-2 transition-all ${
                     isSelected
                       ? 'border-[#23384D] bg-[#23384D]/5 shadow-sm scale-102 ring-1 ring-[#23384D]'
                       : 'border-[#D8D0C3] bg-white hover:border-[#C99A3D]'
                   } ${isColorOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  title={`${col.name}${isColorOutOfStock ? ' (Out of stock)' : ''}`}
+                  title={`${col.name}${isColorOutOfStock ? ' (Out of stock)' : isSelected ? ' (Click to return to cover view)' : ''}`}
                 >
                   {/* Miniature Product Image Thumbnail */}
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg overflow-hidden bg-[#F7F3EA] border border-black/10 flex-shrink-0 relative">
@@ -454,7 +482,10 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
               Quantity (Pieces)
             </label>
             <span className="text-[11px] text-[#66717C] font-normal">
-              1 piece is a valid order • Free delivery on {freeDeliveryThreshold}+ pieces
+              {minOrder > 1 ? `Minimum ${minOrder} pieces` : '1 piece is a valid order'} •{' '}
+              {freeDeliveryThreshold > 0
+                ? `Free delivery on ${freeDeliveryThreshold}+ pieces`
+                : 'Standard nationwide delivery rates apply'}
             </span>
           </div>
 
@@ -488,13 +519,23 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
           <div className="flex items-center gap-2 text-[#2F7D5A] font-semibold">
             <Truck className="w-4 h-4 flex-shrink-0" />
             <span>
-              {isFreeDeliveryForThis
-                ? '🚚 Free Delivery Unlocked across Pakistan!'
-                : `🚚 Add ${piecesNeededForFree} more piece${piecesNeededForFree > 1 ? 's' : ''} for FREE delivery (otherwise Rs. ${baseDeliveryCharge})`}
+              {freeDeliveryThreshold <= 0
+                ? `Flat Nationwide Delivery: Rs. ${baseDeliveryCharge}`
+                : isFreeDeliveryForThis
+                ? 'Free Delivery Unlocked across Pakistan!'
+                : `Add ${piecesNeededForFree} more piece${piecesNeededForFree > 1 ? 's' : ''} for FREE delivery (otherwise Rs. ${baseDeliveryCharge})`}
             </span>
           </div>
         </div>
       </div>
+
+      {/* Color Selection Prompt */}
+      {colorSelectPrompt && (
+        <div className="p-3 rounded-xl bg-amber-50 border border-[#C99A3D]/50 text-[#1D2730] text-xs font-semibold flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-[#C99A3D] flex-shrink-0" />
+          <span>{colorSelectPrompt}</span>
+        </div>
+      )}
 
       {/* 5. ACTION BUTTONS */}
       <div className="space-y-3 pt-1">

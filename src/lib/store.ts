@@ -478,7 +478,10 @@ export class DataStore {
             try {
               localStorage.setItem(LOCAL_STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
             } catch {}
-            // Return immediately — the API response is the single source of truth.
+            // Return immediately — avoid extra review waterfall on public storefront routes
+            if (!isAdminRoute) {
+              return products;
+            }
             const allReviews = await this.getReviews();
             return products.map((prod) => ({
               ...prod,
@@ -521,6 +524,7 @@ export class DataStore {
               p.size_guide_url ||
               p.product_media?.find((m: any) => m.media_type === 'size_guide')?.url ||
               undefined,
+            coverImage: p.cover_image || undefined,
             isPublished: p.is_published ?? true,
             sortOrder: Number(p.sort_order) || 9999,
             createdAt: p.created_at,

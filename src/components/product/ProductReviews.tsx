@@ -21,10 +21,11 @@ interface ProductReviewsProps {
 export const ProductReviews: React.FC<ProductReviewsProps> = ({
   productId,
   productName,
-  reviews = [],
+  reviews: initialReviews,
 }) => {
   const { submitReview } = useStore();
 
+  const [reviews, setReviews] = useState<ProductReview[]>(() => initialReviews || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerCity, setCustomerCity] = useState('');
@@ -33,6 +34,26 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // Load reviews on demand for this product if not preloaded
+  useEffect(() => {
+    if (initialReviews && initialReviews.length > 0) {
+      setReviews(initialReviews);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/reviews?productId=${encodeURIComponent(productId)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data && Array.isArray(data.reviews)) {
+          setReviews(data.reviews);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, initialReviews]);
 
   // Close review modal on Escape
   useEffect(() => {
@@ -98,61 +119,61 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
   };
 
   return (
-    <div className="space-y-6 pt-10 border-t border-dark-border select-none">
+    <div className="space-y-6 pt-10 mt-10 border-t border-[#D8D0C3] select-none text-[#1D2730]">
       {/* Header Summary & Rating Breakdown */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-100">Customer Reviews</h3>
+          <h3 className="text-lg font-bold text-[#1D2730]">Customer Reviews</h3>
           {totalReviews > 0 ? (
             <div className="space-y-3 mt-2">
               <div className="flex items-center gap-3">
-                <span className="text-3xl font-extrabold text-gold-400">{averageRating}</span>
+                <span className="text-3xl font-extrabold text-[#C99A3D]">{averageRating}</span>
                 <div>
-                  <div className="flex text-gold-500">
+                  <div className="flex text-[#C99A3D]">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Star
                         key={star}
                         className={`w-4 h-4 ${
-                          star <= Math.round(Number(averageRating)) ? 'fill-current' : 'text-gray-600'
+                          star <= Math.round(Number(averageRating)) ? 'fill-current' : 'text-[#D8D0C3]'
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="text-xs text-gray-400 font-normal">Based on {totalReviews} reviews</span>
+                  <span className="text-xs text-[#66717C] font-normal">Based on {totalReviews} reviews</span>
                 </div>
               </div>
 
               {/* Star Rating Breakdown Bars */}
-              <div className="space-y-1.5 w-64 text-xs text-gray-400">
+              <div className="space-y-1.5 w-64 text-xs text-[#66717C]">
                 {starCounts.map((s) => (
                   <div key={s.stars} className="flex items-center gap-2">
-                    <span className="w-12 text-[11px] font-medium">{s.stars} stars</span>
-                    <div className="flex-1 h-2 bg-dark-surface rounded-full overflow-hidden border border-dark-border">
+                    <span className="w-12 text-[11px] font-medium text-[#1D2730]">{s.stars} stars</span>
+                    <div className="flex-1 h-2 bg-[#EEE8DC] rounded-full overflow-hidden border border-[#D8D0C3]">
                       <div
-                        className="h-full bg-gold-500 rounded-full"
+                        className="h-full bg-[#C99A3D] rounded-full"
                         style={{ width: `${s.percentage}%` }}
                       />
                     </div>
-                    <span className="w-6 text-[10px] text-gray-500 text-right">{s.count}</span>
+                    <span className="w-6 text-[10px] text-[#66717C] text-right">{s.count}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 mt-1 font-normal">
+            <p className="text-xs text-[#66717C] mt-1 font-normal">
               No reviews yet. Be the first to share your experience!
             </p>
           )}
         </div>
 
-        {/* Write a Review button — open to all visitors */}
+        {/* Write a Review button */}
         <div className="self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-dark-card hover:bg-dark-hover text-gold-400 border border-dark-border hover:border-gold-500 rounded-xl text-xs font-bold transition-colors shadow-xs"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-[#EEE8DC] text-[#23384D] border border-[#D8D0C3] hover:border-[#C99A3D] rounded-xl text-xs font-bold transition-colors shadow-xs"
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="w-4 h-4 text-[#C99A3D]" />
             <span>Write a Review</span>
           </button>
         </div>
@@ -160,9 +181,9 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
 
       {/* Reviews List */}
       {totalReviews === 0 ? (
-        <div className="p-8 bg-dark-surface rounded-2xl border border-dark-border text-center space-y-2">
-          <p className="text-xs font-bold text-gray-200">Be the First to Review</p>
-          <p className="text-xs text-gray-400 max-w-md mx-auto">
+        <div className="p-8 bg-white rounded-2xl border border-[#D8D0C3] text-center space-y-2 shadow-sm">
+          <p className="text-xs font-bold text-[#1D2730]">Be the First to Review</p>
+          <p className="text-xs text-[#66717C] max-w-md mx-auto">
             Share your experience with the fabric quality, stitching, and fit to help other customers.
           </p>
         </div>
@@ -171,28 +192,28 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
           {reviews.map((rev) => (
             <div
               key={rev.id}
-              className="p-5 bg-dark-surface rounded-2xl border border-dark-border space-y-2 shadow-card"
+              className="p-5 bg-white rounded-2xl border border-[#D8D0C3] space-y-2 shadow-sm"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs text-gray-100">{rev.customerName}</span>
+                  <span className="font-bold text-xs text-[#1D2730]">{rev.customerName}</span>
                   {rev.customerCity && (
-                    <span className="text-xs text-gray-400">({rev.customerCity})</span>
+                    <span className="text-xs text-[#66717C]">({rev.customerCity})</span>
                   )}
                 </div>
-                <div className="flex text-gold-500">
+                <div className="flex text-[#C99A3D]">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                       key={star}
                       className={`w-3.5 h-3.5 ${
-                        star <= rev.rating ? 'fill-current' : 'text-gray-600'
+                        star <= rev.rating ? 'fill-current' : 'text-[#D8D0C3]'
                       }`}
                     />
                   ))}
                 </div>
               </div>
-              <p className="text-xs text-gray-300 leading-relaxed font-normal">{rev.comment}</p>
-              <div className="text-[10px] text-gray-500">
+              <p className="text-xs text-[#334155] leading-relaxed font-normal">{rev.comment}</p>
+              <div className="text-[10px] text-[#66717C]">
                 {new Date(rev.createdAt).toLocaleDateString('en-PK', {
                   year: 'numeric',
                   month: 'short',
@@ -204,57 +225,60 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
         </div>
       )}
 
-      {/* Review Submission Modal */}
+      {/* Review Submission Modal (Light Theme) */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-[#1D2730]/50 backdrop-blur-xs flex items-center justify-center p-4"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="bg-dark-surface rounded-2xl p-6 max-w-md w-full shadow-elevation border border-dark-border space-y-4"
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-elevation border border-[#D8D0C3] space-y-4 text-[#1D2730]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-dark-border pb-3">
+            <div className="flex items-center justify-between border-b border-[#D8D0C3] pb-3">
               <div>
-                <h4 className="font-bold text-gray-100 text-sm">Write a Review for {productName}</h4>
-                <p className="text-[11px] text-gray-400 mt-0.5">Share your honest experience with other customers.</p>
+                <h4 className="font-bold text-[#1D2730] text-sm">Write a Review for {productName}</h4>
+                <p className="text-[11px] text-[#66717C] mt-0.5">Share your honest experience with other customers.</p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-100"
+                className="p-1 rounded-lg text-[#66717C] hover:text-[#1D2730] hover:bg-[#EEE8DC] transition-colors"
+                aria-label="Close review modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {isSubmitted ? (
-              <div className="p-6 bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 rounded-xl text-center space-y-2">
-                <Check className="w-6 h-6 mx-auto text-emerald-400" />
+              <div className="p-6 bg-emerald-50 border border-emerald-200 text-[#2F7D5A] rounded-xl text-center space-y-2">
+                <Check className="w-6 h-6 mx-auto text-[#2F7D5A]" />
                 <p className="text-xs font-bold">Thank you for your feedback!</p>
-                <p className="text-[11px]">Your review has been published successfully.</p>
+                <p className="text-[11px]">Your review has been submitted and is pending moderation.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
                 {submitError && (
-                  <div className="p-3 bg-rose-950/40 border border-rose-800 text-rose-300 rounded-xl text-xs flex items-center gap-2">
+                  <div className="p-3 bg-rose-50 border border-rose-200 text-[#B8423A] rounded-xl text-xs flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <span>{submitError}</span>
                   </div>
                 )}
 
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">Your Rating *</label>
+                  <label className="block font-semibold text-[#1D2730] mb-1">Your Rating *</label>
                   <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
                         onClick={() => setRating(star)}
-                        className="p-1 text-gold-500 hover:scale-110 transition-transform"
+                        className="p-1 text-[#C99A3D] hover:scale-110 transition-transform"
+                        aria-label={`Rate ${star} stars`}
                       >
                         <Star
                           className={`w-6 h-6 ${
-                            star <= rating ? 'fill-current' : 'text-gray-600'
+                            star <= rating ? 'fill-current' : 'text-[#D8D0C3]'
                           }`}
                         />
                       </button>
@@ -263,37 +287,37 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">Your Name *</label>
+                  <label className="block font-semibold text-[#1D2730] mb-1">Your Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Ali Raza"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-dark-card border border-dark-border text-gray-100 rounded-xl focus:outline-none focus:border-gold-500"
+                    className="w-full px-3.5 py-2.5 bg-[#F7F3EA] border border-[#D8D0C3] text-[#1D2730] placeholder-[#8E8A80] rounded-xl focus:outline-none focus:border-[#C99A3D]"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">City (Optional)</label>
+                  <label className="block font-semibold text-[#1D2730] mb-1">City (Optional)</label>
                   <input
                     type="text"
                     placeholder="e.g. Lahore, Karachi, Faisalabad"
                     value={customerCity}
                     onChange={(e) => setCustomerCity(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-dark-card border border-dark-border text-gray-100 rounded-xl focus:outline-none focus:border-gold-500"
+                    className="w-full px-3.5 py-2.5 bg-[#F7F3EA] border border-[#D8D0C3] text-[#1D2730] placeholder-[#8E8A80] rounded-xl focus:outline-none focus:border-[#C99A3D]"
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-300 mb-1">Your Review *</label>
+                  <label className="block font-semibold text-[#1D2730] mb-1">Your Review *</label>
                   <textarea
                     rows={3}
                     required
                     placeholder="Share your experience with the combed cotton fabric, stitching, and fit..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-dark-card border border-dark-border text-gray-100 rounded-xl focus:outline-none focus:border-gold-500"
+                    className="w-full px-3.5 py-2.5 bg-[#F7F3EA] border border-[#D8D0C3] text-[#1D2730] placeholder-[#8E8A80] rounded-xl focus:outline-none focus:border-[#C99A3D]"
                   />
                 </div>
 
@@ -302,14 +326,14 @@ export const ProductReviews: React.FC<ProductReviewsProps> = ({
                     type="button"
                     onClick={() => setIsModalOpen(false)}
                     disabled={isSubmitting}
-                    className="py-2.5 px-4 bg-dark-card text-gray-300 rounded-xl font-semibold hover:bg-dark-hover border border-dark-border"
+                    className="py-2.5 px-4 bg-[#EEE8DC] text-[#1D2730] rounded-xl font-semibold hover:bg-[#E8E1D3] border border-[#D8D0C3]"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="py-2.5 px-5 bg-gold-500 text-black rounded-xl font-bold hover:bg-gold-400 shadow-glow-gold flex items-center gap-2"
+                    className="py-2.5 px-5 bg-[#23384D] hover:bg-[#182B3D] text-white rounded-xl font-bold shadow-xs flex items-center gap-2 transition-colors"
                   >
                     {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                     <span>{isSubmitting ? 'Submitting...' : 'Submit Review'}</span>

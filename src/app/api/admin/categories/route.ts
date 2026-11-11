@@ -3,6 +3,7 @@ import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/s
 import { Category, Subcategory } from '@/types';
 import { INITIAL_CATEGORIES, INITIAL_SUBCATEGORIES } from '@/data/initialData';
 import { verifyAdminSession } from '@/lib/auth/adminAuth';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -133,6 +134,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error?.message || 'Failed to save category in DB' }, { status: 400 });
       }
 
+      revalidatePublicStoreCache([CACHE_TAGS.CATEGORIES, CACHE_TAGS.CATALOG]);
       return NextResponse.json({ success: true, category: savedCat });
     }
 
@@ -184,6 +186,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error?.message || 'Failed to save subcategory in DB' }, { status: 400 });
       }
 
+      revalidatePublicStoreCache([CACHE_TAGS.CATEGORIES, CACHE_TAGS.CATALOG]);
       return NextResponse.json({ success: true, subcategory: savedSub });
     }
 
@@ -224,6 +227,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.CATEGORIES, CACHE_TAGS.CATALOG]);
     return NextResponse.json({ success: true, message: `${type} deleted successfully.` });
   } catch (err: any) {
     console.error('API /api/admin/categories DELETE exception:', err);

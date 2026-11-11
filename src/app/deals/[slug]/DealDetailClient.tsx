@@ -63,6 +63,7 @@ export function DealDetailClient({ deal }: { deal: Deal }) {
                   src={deal.imageUrl}
                   alt={deal.name}
                   fill
+                  sizes="(max-width: 1024px) 95vw, 600px"
                   className="object-cover"
                   priority
                 />

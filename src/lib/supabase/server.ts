@@ -18,6 +18,10 @@ export const supabaseUrl = isValidHttpUrl(rawUrl)
   ? rawUrl!
   : 'https://placeholder-project.supabase.co';
 
+export function isServerSupabaseConfigured(): boolean {
+  return isValidHttpUrl(rawUrl) && getRuntimeKeyInfo().keyType !== 'missing';
+}
+
 export function getRuntimeKeyInfo(): {
   serviceRoleKeyPresent: boolean;
   keyType: 'server-secret' | 'publishable' | 'anon' | 'missing';

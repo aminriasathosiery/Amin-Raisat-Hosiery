@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { verifyAdminSession } from '@/lib/auth/adminAuth';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 import {
   isReviewDeleted,
   getReviewApprovalOverride,
@@ -112,6 +113,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: true, review: { id: reviewId, isApproved } });
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.REVIEWS, CACHE_TAGS.CATALOG]);
     return NextResponse.json({ success: true, review: updated?.[0] || { id: reviewId, isApproved } });
   } catch (err: any) {
     console.error('Admin PATCH review exception:', err);
@@ -155,6 +157,7 @@ export async function DELETE(req: Request) {
       console.warn('Admin DELETE review database notice:', error.message);
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.REVIEWS, CACHE_TAGS.CATALOG]);
     return NextResponse.json({
       success: true,
       reviewId,

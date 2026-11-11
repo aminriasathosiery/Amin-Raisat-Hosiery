@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { Product } from '@/types';
 import { resolveVariantPricing } from '@/lib/pricing';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -107,6 +108,9 @@ export async function POST(req: Request) {
     if (original.size_guide_url !== undefined) {
       duplicatePayload.size_guide_url = original.size_guide_url;
     }
+    if (original.cover_image !== undefined) {
+      duplicatePayload.cover_image = original.cover_image;
+    }
 
     let { data: insertedProduct, error: prodErr } = await db
       .from('products')
@@ -120,6 +124,7 @@ export async function POST(req: Request) {
       delete duplicatePayload.video_url;
       delete duplicatePayload.size_guide_url;
       delete duplicatePayload.colors;
+      delete duplicatePayload.cover_image;
 
       const retryRes = await db
         .from('products')
@@ -250,6 +255,7 @@ export async function POST(req: Request) {
       returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
       videoUrl: insertedProduct.video_url || original.video_url || originalMedia.find((m: any) => m.media_type === 'video')?.url || undefined,
       sizeGuideUrl: insertedProduct.size_guide_url || original.size_guide_url || originalMedia.find((m: any) => m.media_type === 'size_guide')?.url || undefined,
+      coverImage: insertedProduct.cover_image || original.cover_image || undefined,
       isPublished: true,
       createdAt: insertedProduct.created_at,
       colors: Array.isArray(insertedProduct.colors) ? insertedProduct.colors : (Array.isArray(original.colors) ? original.colors : []),
@@ -287,6 +293,7 @@ export async function POST(req: Request) {
         })),
     };
 
+    revalidatePublicStoreCache([CACHE_TAGS.CATALOG, CACHE_TAGS.CATEGORIES]);
     return NextResponse.json({
       success: true,
       message: 'Product duplicated successfully in Supabase.',

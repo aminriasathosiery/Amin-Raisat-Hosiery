@@ -4,6 +4,7 @@ import { INITIAL_SHIPPING_SETTINGS } from '@/data/initialData';
 import { resolveVariantPricing } from '@/lib/pricing';
 import { calculateOrderDelivery, normalizeShippingSettings } from '@/lib/delivery';
 import { fetchAuthoritativeSettings } from '@/lib/settingsServer';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 
 export async function POST(req: Request) {
   try {
@@ -351,6 +352,8 @@ export async function POST(req: Request) {
               }
             }
           }
+          // Stock updated; immediately revalidate cached public catalog so stock counts stay live
+          revalidatePublicStoreCache([CACHE_TAGS.CATALOG]);
         }
       } catch (err) {
         console.warn('Supabase server order insertion error', err);

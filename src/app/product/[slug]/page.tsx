@@ -2,15 +2,20 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/context/StoreContext';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { VariantSelector } from '@/components/product/VariantSelector';
-import { ProductReviews } from '@/components/product/ProductReviews';
 import { SleeveType, ProductSize } from '@/types';
 import { ChevronRight, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { DISPLAY_WHATSAPP_NUMBER } from '@/lib/whatsapp';
 import { normalizeShippingSettings } from '@/lib/delivery';
+
+const ProductReviews = dynamic(
+  () => import('@/components/product/ProductReviews').then((mod) => mod.ProductReviews),
+  { ssr: false }
+);
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -20,28 +25,17 @@ export default function ProductDetailPage() {
 
   const product = products.find((p) => p.slug === slug || p.id === slug) || products[0];
 
-  // Variant Selections State
+  // Variant Selections State (selectedColor defaults to undefined so Primary Cover Image displays initially)
   const [selectedSleeve, setSelectedSleeve] = useState<SleeveType>(() => {
     return product?.variants?.[0]?.sleeve || 'Sleeveless';
   });
   const [selectedSize, setSelectedSize] = useState<ProductSize>('L');
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(() => {
-    const colors = product?.colors?.filter((c) => c.isActive !== false) || [];
-    if (colors.length > 0) return colors[0].name;
-    const varColors = Array.from(new Set(product?.variants?.map((v) => v.color).filter(Boolean))) as string[];
-    return varColors.length > 0 ? varColors[0] : undefined;
-  });
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
 
-  // Reset selectedColor if product changes
+  // Reset selectedColor to default Cover View whenever navigating to a different product
   React.useEffect(() => {
-    const colors = product?.colors?.filter((c) => c.isActive !== false) || [];
-    if (colors.length > 0) {
-      setSelectedColor(colors[0].name);
-    } else {
-      const varColors = Array.from(new Set(product?.variants?.map((v) => v.color).filter(Boolean))) as string[];
-      setSelectedColor(varColors.length > 0 ? varColors[0] : undefined);
-    }
-  }, [product]);
+    setSelectedColor(undefined);
+  }, [product?.id]);
 
   // Accordion Sections State
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
@@ -129,6 +123,8 @@ export default function ProductDetailPage() {
             <ProductGallery
               media={product.media}
               productName={product.name}
+              coverImage={product.coverImage}
+              colors={product.colors}
               selectedSleeve={selectedSleeve}
               selectedColor={selectedColor}
               videoUrl={product.videoUrl}

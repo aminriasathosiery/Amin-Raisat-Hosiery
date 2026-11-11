@@ -50,6 +50,7 @@ export default async function DealsPage() {
                       src={deal.imageUrl}
                       alt={deal.name}
                       fill
+                      sizes="(max-width: 768px) 92vw, (max-width: 1024px) 46vw, 380px"
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (

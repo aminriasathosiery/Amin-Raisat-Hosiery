@@ -44,6 +44,7 @@ import {
 import { ConfirmModal } from '@/components/admin/ConfirmModal';
 import { optimizeImageForUpload } from '@/lib/imageOptimizer';
 import { parseVideoUrl } from '@/lib/videoParser';
+import { resolvePrimaryCoverImage } from '@/lib/productMedia';
 
 function AdminProductsContent() {
   const router = useRouter();
@@ -145,6 +146,9 @@ function AdminProductsContent() {
   const [variantsList, setVariantsList] = useState<ProductVariant[]>([]);
 
   // ------------------ 3. MEDIA UPLOAD STATE ------------------
+  const [prodCoverImage, setProdCoverImage] = useState('');
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isCoverMediaPickerOpen, setIsCoverMediaPickerOpen] = useState(false);
   const [mediaList, setMediaList] = useState<ProductMedia[]>([]);
   const [uploadQualityTarget, setUploadQualityTarget] = useState<string>('All');
   const [uploadSleeveTarget, setUploadSleeveTarget] = useState<string>('All');
@@ -210,6 +214,7 @@ function AdminProductsContent() {
     setProdDesc('');
     setProdVideoUrl('');
     setProdSizeGuideUrl('');
+    setProdCoverImage('');
     const defaultCat = categories[0]?.id || '';
     setProdCategoryId(defaultCat);
     const defaultSub = subcategories.find((s) => s.categoryId === defaultCat)?.id || '';
@@ -260,6 +265,7 @@ function AdminProductsContent() {
     setProdDesc(prod.description || '');
     setProdVideoUrl(prod.videoUrl || prod.media?.find((m) => m.type === 'video')?.url || '');
     setProdSizeGuideUrl(prod.sizeGuideUrl || prod.media?.find((m) => m.type === 'size_guide' || m.variantSleeve === 'size_guide')?.url || '');
+    setProdCoverImage(prod.coverImage || '');
     setProdCategoryId(prod.categoryId);
     setProdSubcategoryId(prod.subcategoryId || '');
     setProdIsPublished(prod.isPublished);
@@ -521,6 +527,7 @@ function AdminProductsContent() {
       subtitle: prodSubtitle.trim(),
       shortDescription: prodShortDesc.trim() || undefined,
       description: prodDesc.trim(),
+      coverImage: prodCoverImage.trim() || undefined,
       videoUrl: prodVideoUrl.trim() || undefined,
       sizeGuideUrl: prodSizeGuideUrl.trim(),
       features: featuresArray,
@@ -1004,6 +1011,31 @@ function AdminProductsContent() {
   };
 
   // ------------------ MEDIA UPLOADS ------------------
+  const handleUploadCoverImage = async (file: File) => {
+    if (!file || isUploadingCover) return;
+    setIsUploadingCover(true);
+    try {
+      let fileToUpload = file;
+      try {
+        fileToUpload = await optimizeImageForUpload(file, { maxWidth: 1600, quality: 0.84 });
+      } catch (optErr: any) {
+        console.warn('Cover optimization notice, using original:', optErr?.message);
+      }
+
+      const folder = editingProductId ? `products/${editingProductId}/cover` : 'products/cover';
+      const uploadedUrl = await uploadMediaFile(fileToUpload, 'product-media', folder);
+      if (uploadedUrl.startsWith('data:image')) {
+        throw new Error('Cover upload generated Base64 data. Supabase upload failed.');
+      }
+      setProdCoverImage(uploadedUrl);
+      showNotice('Primary Product Cover Image updated!');
+    } catch (err: any) {
+      showNotice(err?.message || 'Cover image upload failed.', 'error');
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
   const handleImageFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -1219,7 +1251,7 @@ function AdminProductsContent() {
                 const prices = prod.variants.map((v) => v.price).filter((p) => p > 0);
                 const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
                 const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
-                const firstImage = prod.media?.find((m) => m.type === 'photo')?.url || '/images/hero/product 1.png';
+                const firstImage = resolvePrimaryCoverImage(prod);
 
                 const uniqueQualities = Array.from(new Set(prod.variants.map((v) => v.quality).filter(Boolean)));
                 const uniqueSleeves = Array.from(new Set(prod.variants.map((v) => v.sleeve).filter(Boolean)));
@@ -2550,6 +2582,101 @@ function AdminProductsContent() {
           {/* ========================================================================= */}
           {editorTab === 'media' && (
             <div className="bg-white p-5 sm:p-6 rounded-2xl border border-light-border shadow-sm space-y-6 animate-in fade-in">
+              {/* PRIMARY PRODUCT COVER IMAGE */}
+              <div className="p-5 bg-[#F7F3EA]/80 rounded-2xl border-2 border-[#B89555]/40 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-[#23384D]">
+                        <ImageIcon className="w-4 h-4 text-[#B89555]" />
+                        PRIMARY PRODUCT COVER IMAGE
+                      </span>
+                      {prodCoverImage ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Dedicated Cover Set
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                          Using Fallback Gallery Image
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-charcoal-600 mt-1">
+                      Shown on storefront product cards and as the main product cover before a customer picks a color. Color-specific photos in Product Colors remain completely separate.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="relative w-24 h-28 sm:w-28 sm:h-32 rounded-xl overflow-hidden bg-white border border-light-border flex-shrink-0 flex items-center justify-center shadow-xs">
+                    {prodCoverImage ? (
+                      <img
+                        src={prodCoverImage}
+                        alt="Primary product cover preview"
+                        className="w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="text-center px-2 space-y-1 text-charcoal-400">
+                        <ImageIcon className="w-6 h-6 mx-auto opacity-60" />
+                        <span className="text-[10px] font-medium block leading-tight">No dedicated cover</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label
+                        className={`cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-all ${
+                          isUploadingCover ? 'opacity-50 pointer-events-none' : ''
+                        }`}
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>
+                          {isUploadingCover
+                            ? 'Uploading Cover...'
+                            : prodCoverImage
+                              ? 'Replace Cover Image'
+                              : 'Upload Cover Image'}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleUploadCoverImage(file);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsCoverMediaPickerOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-light-hover text-charcoal-900 border border-light-border text-xs font-bold rounded-xl shadow-xs transition-colors"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-[#B89555]" />
+                        <span>Media Center</span>
+                      </button>
+
+                      {prodCoverImage && (
+                        <button
+                          type="button"
+                          onClick={() => setProdCoverImage('')}
+                          className="inline-flex items-center gap-1 px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove Cover</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-charcoal-500">
+                      Recommended: Portrait 4:5 photo (e.g. 1000×1250 px, WebP/JPEG). Selecting or removing this cover will not overwrite any color images.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <h3 className="font-bold text-sm text-charcoal-900">
                   Variant-Specific Product Photos &amp; Video Demonstration
@@ -3116,6 +3243,141 @@ function AdminProductsContent() {
                 <button
                   type="button"
                   onClick={() => setMediaPickerColorId(null)}
+                  className="px-5 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MEDIA CENTER SELECTION MODAL FOR PRIMARY PRODUCT COVER IMAGE */}
+      {isCoverMediaPickerOpen && (() => {
+        const candidateMap = new Map<string, { url: string; label?: string }>();
+        if (prodCoverImage) {
+          candidateMap.set(prodCoverImage, { url: prodCoverImage, label: 'Current Cover' });
+        }
+        mediaList
+          .filter((m) => (m.type === 'photo' || !m.type) && m.url)
+          .forEach((m) => {
+            if (!candidateMap.has(m.url)) {
+              candidateMap.set(m.url, { url: m.url, label: m.color || m.variantSleeve || m.title || 'Gallery' });
+            }
+          });
+        prodColors.forEach((c) => {
+          if (c.image && !candidateMap.has(c.image)) {
+            candidateMap.set(c.image, { url: c.image, label: c.name });
+          }
+          (c.additionalImages || []).forEach((u) => {
+            if (u && !candidateMap.has(u)) {
+              candidateMap.set(u, { url: u, label: `${c.name} Extra` });
+            }
+          });
+        });
+        const candidates = Array.from(candidateMap.values());
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-light-border overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-light-border flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-charcoal-900 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-[#B89555]" />
+                    <span>Select Primary Product Cover Image</span>
+                  </h3>
+                  <p className="text-xs text-charcoal-500 mt-0.5">
+                    Choose an existing product photo or upload a dedicated cover image.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCoverMediaPickerOpen(false)}
+                  className="p-1.5 text-charcoal-400 hover:text-charcoal-900 rounded-lg hover:bg-light-hover"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+                <div className="p-3 bg-light-elevated rounded-xl border border-light-border flex items-center justify-between gap-3">
+                  <div className="text-xs">
+                    <span className="font-bold text-charcoal-900 block">Upload new cover from computer</span>
+                    <span className="text-charcoal-500 text-[11px]">Assigns directly as this product&apos;s Primary Cover Image</span>
+                  </div>
+                  <label
+                    className={`cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-colors ${
+                      isUploadingCover ? 'opacity-50 pointer-events-none' : ''
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{isUploadingCover ? 'Uploading...' : 'Upload Cover'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          await handleUploadCoverImage(file);
+                          setIsCoverMediaPickerOpen(false);
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {candidates.length === 0 ? (
+                  <div className="p-8 text-center border-2 border-dashed border-light-border rounded-xl text-xs text-charcoal-500">
+                    No photos uploaded yet for this product. Upload a cover image above or upload gallery photos first.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {candidates.map((item) => {
+                      const isSelected = prodCoverImage === item.url;
+                      return (
+                        <button
+                          key={item.url}
+                          type="button"
+                          onClick={() => {
+                            setProdCoverImage(item.url);
+                            setIsCoverMediaPickerOpen(false);
+                            showNotice('Primary Product Cover Image selected.');
+                          }}
+                          className={`group text-left rounded-xl overflow-hidden border-2 transition-all bg-white ${
+                            isSelected
+                              ? 'border-[#B89555] ring-2 ring-[#B89555]/20'
+                              : 'border-light-border hover:border-[#B89555]/50'
+                          }`}
+                        >
+                          <div className="relative aspect-[4/5] bg-light-elevated">
+                            <img
+                              src={item.url}
+                              alt={item.label || 'Product photo'}
+                              className="w-full h-full object-cover object-top"
+                            />
+                            {isSelected && (
+                              <span className="absolute top-2 right-2 px-2 py-0.5 bg-[#B89555] text-charcoal-950 font-bold text-[10px] rounded shadow">
+                                ✓ Cover
+                              </span>
+                            )}
+                          </div>
+                          <div className="p-2 text-[11px] font-semibold text-charcoal-800 truncate border-t border-light-border">
+                            {item.label || 'Photo'}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-light-border bg-light-elevated/50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsCoverMediaPickerOpen(false)}
                   className="px-5 py-2 bg-champagne-500 hover:bg-champagne-400 text-charcoal-950 text-xs font-bold rounded-xl shadow-xs transition-colors"
                 >
                   Done

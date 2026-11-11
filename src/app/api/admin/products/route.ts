@@ -8,6 +8,7 @@ import {
   ensureUniqueVariantSkus,
   normalizeVariantText,
 } from '@/lib/variants';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -92,6 +93,7 @@ export async function GET(req: Request) {
         returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
         videoUrl: p.video_url || videoMedia?.url || undefined,
         sizeGuideUrl: p.size_guide_url || sizeGuideMedia?.url || undefined,
+        coverImage: p.cover_image || undefined,
         isPublished: p.is_published ?? true,
         sortOrder: Number(p.sort_order) || 9999,
         createdAt: p.created_at,
@@ -292,6 +294,7 @@ export async function POST(req: Request) {
     if (body.sizeGuideUrl !== undefined) {
       productPayload.size_guide_url = body.sizeGuideUrl.trim();
     }
+    productPayload.cover_image = body.coverImage?.trim() || null;
 
     let savedProd: any = null;
     let prodErr: any = null;
@@ -310,7 +313,8 @@ export async function POST(req: Request) {
       (prodErr.code === 'PGRST204' ||
         prodErr.code === '42703' ||
         prodErr.message?.includes('does not exist') ||
-        prodErr.message?.includes('colors'))
+        prodErr.message?.includes('colors') ||
+        prodErr.message?.includes('cover_image'))
     ) {
       if (hasColorVariants && (prodErr.message?.includes('colors') || prodErr.message?.includes('product_variants'))) {
         return NextResponse.json(
@@ -322,10 +326,21 @@ export async function POST(req: Request) {
         );
       }
 
+      if (body.coverImage?.trim() && prodErr.message?.includes('cover_image')) {
+        return NextResponse.json(
+          {
+            error:
+              'Primary Cover Image column is not yet present in Supabase. Please run supabase/migration_v13_cover_image_and_perf_indexes.sql in Supabase SQL Editor first.',
+          },
+          { status: 400 }
+        );
+      }
+
       delete productPayload.short_description;
       delete productPayload.video_url;
       delete productPayload.size_guide_url;
       delete productPayload.colors;
+      delete productPayload.cover_image;
 
       const res2 = await adminDb
         .from('products')
@@ -731,6 +746,7 @@ export async function POST(req: Request) {
       returnPolicy: 'Hassle-free exchange within 7 days of delivery for sizing or manufacturing defect.',
       videoUrl: savedProd?.video_url || (body.videoUrl?.trim() ? body.videoUrl.trim() : undefined),
       sizeGuideUrl: savedProd?.size_guide_url || body.sizeGuideUrl || undefined,
+      coverImage: savedProd?.cover_image || (body.coverImage?.trim() ? body.coverImage.trim() : undefined),
       isPublished: savedProd.is_published,
       createdAt: savedProd.created_at,
       colors: Array.isArray(savedProd.colors) ? savedProd.colors : normalizedColors,
@@ -768,6 +784,7 @@ export async function POST(req: Request) {
         })),
     };
 
+    revalidatePublicStoreCache([CACHE_TAGS.CATALOG, CACHE_TAGS.CATEGORIES]);
     return NextResponse.json({ success: true, product: finalProduct }, { status: 200 });
   } catch (err: any) {
     console.error('API /api/admin/products POST exception:', err);
@@ -803,6 +820,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.CATALOG, CACHE_TAGS.CATEGORIES]);
     return NextResponse.json({ success: true, message: `Product ${id} deleted successfully.` });
   } catch (err: any) {
     console.error('API /api/admin/products DELETE exception:', err);

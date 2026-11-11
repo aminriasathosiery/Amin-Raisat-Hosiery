@@ -4,6 +4,7 @@ import { INITIAL_SITE_SETTINGS } from '@/data/initialData';
 import { SiteSettings } from '@/types';
 import { fetchAuthoritativeSettings } from '@/lib/settingsServer';
 import { normalizeShippingSettings } from '@/lib/delivery';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -204,6 +205,7 @@ export async function POST(req: Request) {
       },
     };
 
+    revalidatePublicStoreCache([CACHE_TAGS.SETTINGS]);
     return NextResponse.json({ success: true, settings: updatedSettings });
   } catch (err: any) {
     console.error('API /api/admin/settings POST error:', err);

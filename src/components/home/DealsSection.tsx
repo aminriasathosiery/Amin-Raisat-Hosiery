@@ -5,28 +5,39 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Deal } from '@/types';
 import { formatPKR } from '@/lib/pricing';
+import { useStore } from '@/context/StoreContext';
 import { Zap, Package, Percent, Truck, ArrowRight } from 'lucide-react';
 
 export function DealsSection() {
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { featuredDeals } = useStore();
+  const [deals, setDeals] = useState<Deal[]>(() => featuredDeals || []);
+  const [loading, setLoading] = useState(() => !(featuredDeals && featuredDeals.length > 0));
 
   useEffect(() => {
+    if (featuredDeals && featuredDeals.length > 0) {
+      setDeals(featuredDeals);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
     async function fetchDeals() {
       try {
         const res = await fetch('/api/deals?featured=true');
-        if (res.ok) {
+        if (res.ok && !cancelled) {
           const data = await res.json();
           setDeals(data.deals || []);
         }
       } catch (err) {
         console.error('Failed to fetch featured deals:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchDeals();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [featuredDeals]);
 
   if (loading) {
     return null;
@@ -75,6 +86,9 @@ export function DealsSection() {
                     src={deal.imageUrl}
                     alt={deal.name}
                     fill
+                    loading="lazy"
+                    sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 380px"
+                    quality={80}
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (

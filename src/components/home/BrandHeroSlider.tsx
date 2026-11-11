@@ -147,11 +147,10 @@ export const BrandHeroSlider: React.FC = () => {
                     src={imageSrc}
                     alt={slide.title || `Amin Raisat Hosiery Campaign ${idx + 1}`}
                     fill
-                    priority={false}
+                    priority={idx === 0}
                     fetchPriority={idx === 0 ? 'high' : 'auto'}
-                    loading={idx === 0 ? 'eager' : 'lazy'}
                     sizes="(max-width: 1280px) 100vw, 1240px"
-                    quality={85}
+                    quality={82}
                     className="object-cover w-full h-full rounded-2xl lg:rounded-[20px]"
                   />
                 </Link>
@@ -243,9 +242,8 @@ export const BrandHeroSlider: React.FC = () => {
                     fill
                     priority={idx === 0}
                     fetchPriority={idx === 0 ? 'high' : 'auto'}
-                    loading={idx === 0 ? 'eager' : 'lazy'}
                     sizes="(max-width: 768px) 100vw, 1080px"
-                    quality={85}
+                    quality={82}
                     className="object-cover w-full h-full rounded-xl sm:rounded-2xl"
                   />
                 </Link>

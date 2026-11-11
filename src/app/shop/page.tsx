@@ -17,6 +17,11 @@ export default function ShopPage() {
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>('featured');
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState<number>(12);
+
+  React.useEffect(() => {
+    setVisibleCount(12);
+  }, [selectedCategory, selectedSubcategory, selectedSleeve, selectedSize, inStockOnly, sortBy]);
 
   // Close mobile filter drawer on Escape
   React.useEffect(() => {
@@ -314,13 +319,24 @@ export default function ShopPage() {
             ) : (
               <div>
                 <p className="text-xs font-medium text-[#66717C] mb-4">
-                  Showing {filteredProducts.length} Product{filteredProducts.length > 1 ? 's' : ''}
+                  Showing {Math.min(visibleCount, filteredProducts.length)} of {filteredProducts.length} Product{filteredProducts.length > 1 ? 's' : ''}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredProducts.map((prod) => (
+                  {filteredProducts.slice(0, visibleCount).map((prod) => (
                     <ProductCard key={prod.id} product={prod} />
                   ))}
                 </div>
+                {filteredProducts.length > visibleCount && (
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + 12)}
+                      className="px-6 py-3 bg-[#23384D] hover:bg-[#182B3D] text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm transition-colors cursor-pointer"
+                    >
+                      Load More Products ({filteredProducts.length - visibleCount} remaining)
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

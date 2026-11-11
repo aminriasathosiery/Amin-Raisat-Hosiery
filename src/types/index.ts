@@ -110,6 +110,7 @@ export interface Product {
   returnPolicy?: string;
   videoUrl?: string;
   sizeGuideUrl?: string;
+  coverImage?: string; // Explicit Primary Product Cover Image (separate from color images)
   rating?: number;
   reviewsCount?: number;
   isPublished: boolean;

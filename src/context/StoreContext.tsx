@@ -1,9 +1,50 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Product, Category, Subcategory, SiteSettings, Order, ProductVariant, ProductMedia, OrderStatus, ProductReview, HeroSlide } from '@/types';
+import {
+  Product,
+  Category,
+  Subcategory,
+  SiteSettings,
+  Order,
+  ProductVariant,
+  ProductMedia,
+  OrderStatus,
+  ProductReview,
+  HeroSlide,
+  Deal,
+} from '@/types';
 import { DataStore } from '@/lib/store';
 import { INITIAL_CATEGORIES, INITIAL_SUBCATEGORIES, INITIAL_SITE_SETTINGS, INITIAL_HERO_SLIDES } from '@/data/initialData';
+
+function computeCategoriesWithCounts(
+  prods: Product[],
+  cats: Category[],
+  subcats: Subcategory[]
+): { categories: Category[]; subcategories: Subcategory[] } {
+  const activeProducts = prods.filter((p) => p.isPublished);
+  const subcatsWithCount = subcats.map((sub) => ({
+    ...sub,
+    productCount: activeProducts.filter(
+      (p) => p.subcategoryId === sub.id || p.subcategoryId === sub.slug
+    ).length,
+  }));
+
+  const catsWithCount = cats.map((cat) => ({
+    ...cat,
+    productCount: activeProducts.filter(
+      (p) =>
+        p.categoryId === cat.id ||
+        p.categoryId === cat.slug ||
+        (cat.slug === 'men' && (!p.categoryId || p.categoryId === 'cat-men')) ||
+        (cat.slug === 'women' && p.categoryId === 'cat-women') ||
+        (cat.slug === 'kids' && p.categoryId === 'cat-kids')
+    ).length,
+    subcategories: subcatsWithCount.filter((sub) => sub.categoryId === cat.id),
+  }));
+
+  return { categories: catsWithCount, subcategories: subcatsWithCount };
+}
 
 interface StoreContextType {
   products: Product[];
@@ -13,6 +54,7 @@ interface StoreContextType {
   orders: Order[];
   reviews: ProductReview[];
   heroSlides: HeroSlide[];
+  featuredDeals: Deal[];
   isLoading: boolean;
   refreshData: () => Promise<void>;
   updateProductVariants: (productId: string, variants: ProductVariant[]) => Promise<void>;
@@ -47,15 +89,21 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 interface StoreProviderProps {
   children: React.ReactNode;
   initialProducts?: Product[];
+  initialCategories?: Category[];
+  initialSubcategories?: Subcategory[];
   initialHeroSlides?: HeroSlide[];
   initialSettings?: SiteSettings;
+  initialDeals?: Deal[];
 }
 
 export const StoreProvider: React.FC<StoreProviderProps> = ({
   children,
   initialProducts,
+  initialCategories,
+  initialSubcategories,
   initialHeroSlides,
   initialSettings,
+  initialDeals,
 }) => {
   const [products, setProducts] = useState<Product[]>(() => {
     if (initialProducts && initialProducts.length > 0) {
@@ -63,11 +111,17 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
     }
     return [];
   });
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>(INITIAL_SUBCATEGORIES);
+  const initialMapped = computeCategoriesWithCounts(
+    initialProducts || [],
+    initialCategories && initialCategories.length > 0 ? initialCategories : INITIAL_CATEGORIES,
+    initialSubcategories && initialSubcategories.length > 0 ? initialSubcategories : INITIAL_SUBCATEGORIES
+  );
+  const [categories, setCategories] = useState<Category[]>(initialMapped.categories);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>(initialMapped.subcategories);
   const [settings, setSettings] = useState<SiteSettings>(() => initialSettings || INITIAL_SITE_SETTINGS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [featuredDeals] = useState<Deal[]>(() => initialDeals || []);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
     if (initialHeroSlides && initialHeroSlides.length > 0) {
       return initialHeroSlides;
@@ -85,7 +139,10 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
     }
     return INITIAL_HERO_SLIDES;
   });
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => {
+    // Do NOT flash a full-screen spinner if SSR already hydrated products!
+    return !(initialProducts && initialProducts.length > 0);
+  });
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) {
@@ -120,32 +177,34 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
       } catch {}
     };
 
-    // Instant local storage check
-    syncHeroSlides();
-
-    // Fast background fetch from Supabase specifically for hero slides without waiting for products
-    DataStore.getHeroSlides().then((slides) => {
-      if (slides && slides.length > 0) {
-        setHeroSlides(slides);
-        try {
-          localStorage.setItem('arh_hero_slides_v5', JSON.stringify(slides));
-        } catch {}
-      }
-    }).catch((err) => console.warn('Fast hero fetch notice:', err));
+    // Instant local storage check when no SSR slides were passed
+    if (!initialHeroSlides || initialHeroSlides.length === 0) {
+      syncHeroSlides();
+      DataStore.getHeroSlides().then((slides) => {
+        if (slides && slides.length > 0) {
+          setHeroSlides(slides);
+          try {
+            localStorage.setItem('arh_hero_slides_v5', JSON.stringify(slides));
+          } catch {}
+        }
+      }).catch((err) => console.warn('Fast hero fetch notice:', err));
+    }
 
     // Listen for custom slide update events and cross-tab storage changes
     const handleUpdate = () => syncHeroSlides();
     window.addEventListener('arh_hero_slides_updated', handleUpdate);
-    window.addEventListener('storage', (e) => {
+    const handleStorage = (e: StorageEvent) => {
       if (e.key === 'arh_hero_slides_v5') {
         syncHeroSlides();
       }
-    });
+    };
+    window.addEventListener('storage', handleStorage);
 
     return () => {
       window.removeEventListener('arh_hero_slides_updated', handleUpdate);
+      window.removeEventListener('storage', handleStorage);
     };
-  }, []);
+  }, [initialHeroSlides]);
 
   const loadData = async () => {
     try {
@@ -157,39 +216,20 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
         DataStore.getHeroSlides(),
       ]);
 
-      const activeProducts = prods.filter((p) => p.isPublished);
-
-      const subcatsWithCount = subcats.map((sub) => ({
-        ...sub,
-        productCount: activeProducts.filter(
-          (p) => p.subcategoryId === sub.id || p.subcategoryId === sub.slug
-        ).length,
-      }));
-
-      const catsWithCount = cats.map((cat) => ({
-        ...cat,
-        productCount: activeProducts.filter(
-          (p) =>
-            p.categoryId === cat.id ||
-            p.categoryId === cat.slug ||
-            (cat.slug === 'men' && (!p.categoryId || p.categoryId === 'cat-men')) ||
-            (cat.slug === 'women' && p.categoryId === 'cat-women') ||
-            (cat.slug === 'kids' && p.categoryId === 'cat-kids')
-        ).length,
-        subcategories: subcatsWithCount.filter((sub) => sub.categoryId === cat.id),
-      }));
+      const computed = computeCategoriesWithCounts(prods, cats, subcats);
 
       setProducts(prods);
-      setCategories(catsWithCount);
-      setSubcategories(subcatsWithCount);
+      setCategories(computed.categories);
+      setSubcategories(computed.subcategories);
       setSettings(sets);
       setHeroSlides(slides);
       setIsLoading(false);
 
-      // Non-blocking background fetch for public reviews
-      DataStore.getReviews().then((revs) => {
-        if (revs && revs.length > 0) setReviews(revs);
-      }).catch((err) => console.warn('Non-critical reviews fetch notice:', err));
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
+        DataStore.getReviews().then((revs) => {
+          if (revs && revs.length > 0) setReviews(revs);
+        }).catch((err) => console.warn('Non-critical reviews fetch notice:', err));
+      }
     } catch (err) {
       console.error('Failed to load store data:', err);
       setIsLoading(false);
@@ -197,7 +237,15 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
   };
 
   useEffect(() => {
-    loadData();
+    const isAdminRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    const hasInitialHydration = Boolean(initialProducts && initialProducts.length > 0);
+    // Avoid 7 redundant client-side fetches on public storefront when SSR already hydrated the catalog
+    if (isAdminRoute || !hasInitialHydration) {
+      loadData();
+    } else {
+      setIsLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateProductVariants = async (productId: string, variants: ProductVariant[]) => {
@@ -401,6 +449,7 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({
         orders,
         reviews,
         heroSlides,
+        featuredDeals,
         isLoading,
         refreshData: loadData,
         updateProductVariants,

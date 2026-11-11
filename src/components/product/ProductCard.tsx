@@ -7,20 +7,23 @@ import { useRouter } from 'next/navigation';
 import { Product, ProductSize, SleeveType } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
+import { resolvePrimaryCoverImage } from '@/lib/productMedia';
 import { ShoppingBag, Zap, Check, Play, Star } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCardComponent: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
   const { addItem, openDrawer, setBuyNowItem } = useCart();
   const { categories, settings } = useStore();
 
   // 1. Available Colors
   const productColors = useMemo(() => {
-    if (product.colors && product.colors.length > 0) return product.colors;
+    if (product.colors && product.colors.length > 0) {
+      return product.colors.filter((c) => c.isActive !== false);
+    }
     const variantColors = Array.from(
       new Set(product.variants.map((v) => v.color).filter(Boolean) as string[])
     );
@@ -31,9 +34,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }));
   }, [product.colors, product.variants]);
 
-  const [selectedColor, setSelectedColor] = useState<string>(() => {
-    return productColors[0]?.name || '';
-  });
+  // Default to unselected ('') so the listing always displays the Primary Cover Image
+  const [selectedColor, setSelectedColor] = useState<string>('');
 
   // 2. Sleeve Style
   const [selectedSleeve, setSelectedSleeve] = useState<SleeveType>(() => {
@@ -114,27 +116,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     return (product.media || []).filter((m) => m.type !== 'video' && m.type !== 'size_guide');
   }, [product.media]);
 
-  // Resolve matching photo for chosen color and sleeve
+  // Resolve Primary Cover Image by default, or switch to color image when customer clicks a swatch
   const currentPhoto = useMemo(() => {
-    if (selectedColor) {
-      const colorMatch = photoMedia.find((m) => m.color === selectedColor);
-      if (colorMatch?.url) return colorMatch.url;
-    }
-    const match = photoMedia.find(
-      (m) => !m.variantSleeve || m.variantSleeve === 'All' || m.variantSleeve === selectedSleeve
+    return resolvePrimaryCoverImage(
+      product,
+      selectedColor || undefined,
+      selectedColor ? selectedSleeve : undefined
     );
-    return match?.url || photoMedia[0]?.url || '/images/products/sleevless high.jpeg';
-  }, [photoMedia, selectedColor, selectedSleeve]);
+  }, [product, selectedColor, selectedSleeve]);
 
-  const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold || 3;
+  const freeDeliveryThreshold = settings.shipping?.freeDeliveryThreshold ?? 3;
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!isAvailable) return;
 
-    const variantColor = currentVariant?.color || selectedColor || undefined;
+    const variantColor = currentVariant?.color || selectedColor || productColors[0]?.name || undefined;
     const variantColorHex = currentVariant?.colorHex || productColors.find((c) => c.name === variantColor)?.hex;
+    const variantPhoto = resolvePrimaryCoverImage(product, variantColor, selectedSleeve);
 
     setBuyNowItem({
       id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${variantColor || ''}_${selectedSize}`,
@@ -152,7 +152,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       originalPrice: comparePrice || price,
       discountPercentage: discountPercentage,
       quantity: 1,
-      image: currentPhoto,
+      image: variantPhoto,
     });
     router.push('/checkout?buyNow=1');
   };
@@ -162,8 +162,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.stopPropagation();
     if (!isAvailable) return;
 
-    const variantColor = currentVariant?.color || selectedColor || undefined;
+    const variantColor = currentVariant?.color || selectedColor || productColors[0]?.name || undefined;
     const variantColorHex = currentVariant?.colorHex || productColors.find((c) => c.name === variantColor)?.hex;
+    const variantPhoto = resolvePrimaryCoverImage(product, variantColor, selectedSleeve);
 
     addItem({
       id: `${product.id}_${currentVariant?.quality || 'High Quality'}_${selectedSleeve}_${variantColor || ''}_${selectedSize}`,
@@ -181,7 +182,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       originalPrice: comparePrice || price,
       discountPercentage: discountPercentage,
       quantity: 1,
-      image: currentPhoto,
+      image: variantPhoto,
     });
     setJustAdded(true);
     setTimeout(() => {
@@ -206,8 +207,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               alt={product.name}
               fill
               loading="lazy"
-              sizes="(max-width: 640px) 95vw, (max-width: 1024px) 48vw, 320px"
-              quality={85}
+              sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 290px"
+              quality={78}
               className="object-cover object-center w-full h-full transition-transform duration-500 ease-out group-hover:scale-105"
               priority={false}
             />
@@ -277,11 +278,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     <button
                       key={col.name}
                       type="button"
-                      onClick={() => setSelectedColor(col.name)}
+                      onClick={() => setSelectedColor(isSelected ? '' : col.name)}
                       className={`group/swatch relative p-0.5 rounded-lg transition-transform ${
                         isSelected ? 'scale-105 ring-2 ring-[#23384D]' : 'hover:scale-102 ring-1 ring-[#D8D0C3]'
                       }`}
-                      title={col.name}
+                      title={isSelected ? `${col.name} (Click for cover)` : col.name}
                       aria-label={`Select color ${col.name}`}
                     >
                       {colorImg ? (
@@ -373,9 +374,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </span>
             )}
           </div>
-          <span className="text-[10.5px] font-semibold text-[#2F7D5A] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap">
-            Free Delivery {freeDeliveryThreshold}+ pcs
-          </span>
+          {freeDeliveryThreshold > 0 && (
+            <span className="text-[10.5px] font-semibold text-[#2F7D5A] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md whitespace-nowrap">
+              Free Delivery {freeDeliveryThreshold}+ pcs
+            </span>
+          )}
         </div>
 
         {/* Action Row */}
@@ -417,3 +420,5 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     </div>
   );
 };
+
+export const ProductCard = React.memo(ProductCardComponent);

@@ -3,6 +3,7 @@ import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/s
 import { verifyAdminSession } from '@/lib/auth/adminAuth';
 import { calculateSalePrice } from '@/lib/pricing';
 import { Deal } from '@/types';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -136,6 +137,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.DEALS]);
     return NextResponse.json({ success: true, deal: mapRowToDeal(data) });
   } catch (err: any) {
     if (err?.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
@@ -172,6 +174,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.DEALS]);
     return NextResponse.json({ success: true });
   } catch (err: any) {
     if (err?.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {

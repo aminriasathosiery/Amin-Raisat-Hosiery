@@ -5,9 +5,15 @@ import { AuthProvider } from '@/context/AuthContext';
 import { StoreProvider } from '@/context/StoreContext';
 import { CartProvider } from '@/context/CartContext';
 import { PublicLayoutShell } from '@/components/layout/PublicLayoutShell';
-import { DataStore } from '@/lib/store';
-import { Product, HeroSlide, SiteSettings } from '@/types';
-import { INITIAL_SITE_SETTINGS } from '@/data/initialData';
+import {
+  getCachedPublicProducts,
+  getCachedPublicCategories,
+  getCachedHeroSlides,
+  getCachedPublicSettings,
+  getCachedFeaturedDeals,
+} from '@/lib/catalogServer';
+import { Product, Category, Subcategory, HeroSlide, SiteSettings, Deal } from '@/types';
+import { INITIAL_CATEGORIES, INITIAL_SUBCATEGORIES, INITIAL_SITE_SETTINGS } from '@/data/initialData';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -15,7 +21,7 @@ export const revalidate = 0;
 export async function generateMetadata(): Promise<Metadata> {
   let freeThreshold = INITIAL_SITE_SETTINGS.shipping.freeDeliveryThreshold;
   try {
-    const liveSettings = await DataStore.getSettings();
+    const liveSettings = await getCachedPublicSettings();
     freeThreshold = liveSettings?.shipping?.freeDeliveryThreshold ?? freeThreshold;
   } catch {}
 
@@ -61,17 +67,25 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   let initialProducts: Product[] = [];
+  let initialCategories: Category[] = INITIAL_CATEGORIES;
+  let initialSubcategories: Subcategory[] = INITIAL_SUBCATEGORIES;
   let initialHeroSlides: HeroSlide[] = [];
   let initialSettings: SiteSettings = INITIAL_SITE_SETTINGS;
+  let initialDeals: Deal[] = [];
   try {
-    const [prods, slides, sets] = await Promise.all([
-      DataStore.getProducts(),
-      DataStore.getHeroSlides(),
-      DataStore.getSettings(),
+    const [prods, catData, slides, sets, deals] = await Promise.all([
+      getCachedPublicProducts(),
+      getCachedPublicCategories(),
+      getCachedHeroSlides(),
+      getCachedPublicSettings(),
+      getCachedFeaturedDeals(),
     ]);
     initialProducts = prods;
+    initialCategories = catData.categories;
+    initialSubcategories = catData.subcategories;
     initialHeroSlides = slides;
     initialSettings = sets;
+    initialDeals = deals;
   } catch (err) {
     console.warn('RootLayout initial data fetch notice:', err);
   }
@@ -83,8 +97,11 @@ export default async function RootLayout({
           <AuthProvider>
             <StoreProvider
               initialProducts={initialProducts}
+              initialCategories={initialCategories}
+              initialSubcategories={initialSubcategories}
               initialHeroSlides={initialHeroSlides}
               initialSettings={initialSettings}
+              initialDeals={initialDeals}
             >
               <CartProvider>
                   <PublicLayoutShell>{children}</PublicLayoutShell>

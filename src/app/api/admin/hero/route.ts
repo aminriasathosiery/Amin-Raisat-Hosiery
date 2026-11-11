@@ -3,6 +3,7 @@ import { supabaseServer, createAdminClient, isSupabaseConfigured } from '@/lib/s
 import { HeroSlide } from '@/types';
 import { INITIAL_HERO_SLIDES } from '@/data/initialData';
 import { verifyAdminSession } from '@/lib/auth/adminAuth';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -116,6 +117,7 @@ export async function POST(req: Request) {
       });
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.HERO]);
     return NextResponse.json({ success: true, slide: savedSlide });
   } catch (err: any) {
     console.error('API /api/admin/hero POST exception:', err);
@@ -154,6 +156,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: 400 });
     }
 
+    revalidatePublicStoreCache([CACHE_TAGS.HERO]);
     return NextResponse.json({ success: true, message: 'Hero slide deleted successfully.' });
   } catch (err: any) {
     console.error('API /api/admin/hero DELETE exception:', err);

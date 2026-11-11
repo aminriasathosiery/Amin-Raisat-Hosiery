@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase';
 import { verifyAdminSession } from '@/lib/auth/adminAuth';
+import { revalidatePublicStoreCache, CACHE_TAGS } from '@/lib/catalogServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
     );
 
     await Promise.all(updates);
+    revalidatePublicStoreCache([CACHE_TAGS.CATALOG]);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
